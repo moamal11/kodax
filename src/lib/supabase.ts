@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/constants';
@@ -28,7 +27,9 @@ if (typeof window !== 'undefined' && window.localStorage) {
       return Promise.resolve(keys);
     },
     async multiGet(keys: string[]) {
-      return Promise.resolve(keys.map((k) => [k, window.localStorage.getItem(k)]));
+      return Promise.resolve(
+        keys.map((k) => [k, window.localStorage.getItem(k)])
+      );
     },
     async multiSet(entries: [string, string][]) {
       entries.forEach(([k, v]) => window.localStorage.setItem(k, v));
@@ -45,7 +46,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
   const mem = new Map<string, string>();
   storage = {
     async getItem(key: string) {
-      return Promise.resolve(mem.has(key) ? mem.get(key) ?? null : null);
+      return Promise.resolve(mem.has(key) ? (mem.get(key) ?? null) : null);
     },
     async setItem(key: string, value: string) {
       mem.set(key, value);

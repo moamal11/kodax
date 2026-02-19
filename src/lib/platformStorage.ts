@@ -35,7 +35,9 @@ if (typeof window !== 'undefined' && window.localStorage) {
       }
     },
     async multiGet(keys: string[]) {
-      return Promise.resolve(keys.map((k) => [k, window.localStorage.getItem(k)]));
+      return Promise.resolve(
+        keys.map((k) => [k, window.localStorage.getItem(k)])
+      );
     },
     async multiSet(entries: [string, string][]) {
       entries.forEach(([k, v]) => window.localStorage.setItem(k, v));
@@ -54,14 +56,30 @@ if (typeof window !== 'undefined' && window.localStorage) {
   } catch (e) {
     // Fallback stub to avoid runtime errors during builds
     storage = {
-      async getItem() { return null; },
-      async setItem() { return; },
-      async removeItem() { return; },
-      async clear() { return; },
-      async getAllKeys() { return []; },
-      async multiGet() { return []; },
-      async multiSet() { return; },
-      async multiRemove() { return; },
+      async getItem() {
+        return null;
+      },
+      async setItem() {
+        return;
+      },
+      async removeItem() {
+        return;
+      },
+      async clear() {
+        return;
+      },
+      async getAllKeys() {
+        return [];
+      },
+      async multiGet() {
+        return [];
+      },
+      async multiSet() {
+        return;
+      },
+      async multiRemove() {
+        return;
+      },
     };
   }
 }

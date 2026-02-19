@@ -4,63 +4,105 @@
  * 2. Create 404.html for SPA fallback (when direct file doesn't exist, Vercel serves 404.html)
  */
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
-const srcDir = path.join(
-  __dirname,
-  "..",
-  "dist",
-  "assets",
-  "node_modules",
-  "@expo",
-  "vector-icons",
-  "build",
-  "vendor",
-  "react-native-vector-icons",
-  "Fonts",
-);
+const distDir = path.join(__dirname, '..', 'dist');
 
-const destDir = path.join(__dirname, "..", "dist", "_expo", "static", "fonts");
-const distDir = path.join(__dirname, "..", "dist");
+// possible locations where Metro may place the vector-icons fonts
+const possibleSrcDirs = [
+  path.join(
+    __dirname,
+    '..',
+    'dist',
+    'assets',
+    'node_modules',
+    '@expo',
+    'vector-icons',
+    'build',
+    'vendor',
+    'react-native-vector-icons',
+    'Fonts'
+  ),
+  path.join(
+    __dirname,
+    '..',
+    'dist',
+    'assets',
+    'node_modules',
+    '@expo',
+    'vector-icons',
+    'build',
+    'react-native-vector-icons',
+    'Fonts'
+  ),
+  path.join(__dirname, '..', 'dist', 'assets', 'Fonts'),
+];
 
-// Create destination directory
-if (!fs.existsSync(destDir)) {
-  fs.mkdirSync(destDir, { recursive: true });
+let srcDir = null;
+for (const p of possibleSrcDirs) {
+  if (fs.existsSync(p)) {
+    srcDir = p;
+    break;
+  }
 }
 
-// 1. Copy fonts
-if (fs.existsSync(srcDir)) {
-  const files = fs.readdirSync(srcDir).filter((f) => f.endsWith(".ttf"));
+const destDir = path.join(__dirname, '..', 'dist', '_expo', 'static', 'fonts');
 
-  for (const file of files) {
-    // Strip the content hash: Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf → Ionicons.ttf
-    const cleanName = file.replace(/\.[a-f0-9]{32}\.ttf$/, ".ttf");
-    fs.copyFileSync(path.join(srcDir, file), path.join(destDir, cleanName));
+try {
+  // Create destination directory
+  if (!fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true });
   }
 
-  console.log(
-    `✅ Copied ${files.length} font files to dist/_expo/static/fonts/`,
-  );
-} else {
-  console.warn("⚠️  Metro font source directory not found:", srcDir);
-  console.warn(
-    "   Fonts will only be available via Metro's default asset paths.",
-  );
+  // 1. Copy fonts
+  if (srcDir && fs.existsSync(srcDir)) {
+    const files = fs.readdirSync(srcDir).filter((f) => f.endsWith('.ttf'));
+
+    if (files.length === 0) {
+      console.warn('⚠️  No .ttf font files found in:', srcDir);
+    } else {
+      for (const file of files) {
+        // Strip the content hash if present: Ionicons.b4eb097d....ttf → Ionicons.ttf
+        const cleanName = file.replace(/\.[a-f0-9]{16,64}\.ttf$/, '.ttf');
+        try {
+          fs.copyFileSync(
+            path.join(srcDir, file),
+            path.join(destDir, cleanName)
+          );
+        } catch (copyErr) {
+          console.warn(`⚠️ Failed to copy ${file}:`, copyErr.message);
+        }
+      }
+
+      console.log(`✅ Copied ${files.length} font files to ${destDir}`);
+    }
+  } else {
+    console.warn('⚠️  Metro font source directory not found among candidates:');
+    possibleSrcDirs.forEach((p) => console.warn('   -', p));
+    console.warn(
+      "   Fonts will only be available via Metro's default asset paths."
+    );
+  }
+} catch (err) {
+  console.warn('⚠️  Unexpected error while copying fonts:', err.message);
 }
 
 // 2. Create 404.html for SPA fallback routing
 try {
-  const indexPath = path.join(distDir, "index.html");
-  const notFoundPath = path.join(distDir, "404.html");
+  const indexPath = path.join(distDir, 'index.html');
+  const notFoundPath = path.join(distDir, '404.html');
 
   if (fs.existsSync(indexPath)) {
-    const indexContent = fs.readFileSync(indexPath, "utf-8");
+    const indexContent = fs.readFileSync(indexPath, 'utf-8');
     fs.writeFileSync(notFoundPath, indexContent);
-    console.log("✅ Created 404.html for SPA fallback routing");
+    console.log('✅ Created 404.html for SPA fallback routing');
   } else {
-    console.warn("⚠️  index.html not found:", indexPath);
+    console.warn('⚠️  index.html not found:', indexPath);
   }
 } catch (err) {
-  console.error("❌ Error creating 404.html:", err.message);
+  console.warn('⚠️ Error creating 404.html:', err.message);
 }
+
+// Ensure the script never fails the build — log and set exit code 0
+process.exitCode = 0;
