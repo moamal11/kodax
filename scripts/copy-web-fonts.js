@@ -106,3 +106,20 @@ try {
 
 // Ensure the script never fails the build — log and set exit code 0
 process.exitCode = 0;
+
+// Create a minimal package.json in dist so Vercel's static builder detects the output
+try {
+  const pkgPath = path.join(distDir, 'package.json');
+  if (!fs.existsSync(pkgPath)) {
+    const pkg = {
+      name: 'kodax-dist',
+      private: true,
+      version: '1.0.0',
+      description: 'Static export artifacts for Kodax',
+    };
+    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf-8');
+    console.log('✅ Created minimal dist/package.json for Vercel');
+  }
+} catch (pkgErr) {
+  console.warn('⚠️ Failed to create dist/package.json:', pkgErr.message);
+}
