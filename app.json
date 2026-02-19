@@ -31,7 +31,20 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "static",
+      "description": "Kodax AI App",
+      "config": {
+        "pwa": {
+          "name": "Kodax",
+          "shortName": "Kodax",
+          "themeColor": "#0a0a0f",
+          "backgroundColor": "#0a0a0f",
+          "display": "standalone",
+          "orientation": "portrait",
+          "icon": "./assets/icon.png"
+        }
+      }
     },
     "plugins": [
       "expo-router",
