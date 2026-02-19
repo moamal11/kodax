@@ -5,7 +5,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/lib/platformStorage';
 
 // ===== مفاتيح التخزين =====
 const STORAGE_KEYS = {

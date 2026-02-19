@@ -4,7 +4,7 @@
  * مع مزامنة التقدم اليومي إلى Supabase
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/lib/platformStorage';
 import { badgeService } from '@/services/badgeService';
 import { supabase } from '@/lib/supabase';
 

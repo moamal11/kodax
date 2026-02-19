@@ -4,7 +4,7 @@
  * النقاط منفصلة عن XP - النقاط للشراء فقط
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/lib/platformStorage';
 
 // ===== ثوابت النظام =====
 const STORAGE_KEY = '@kodax_points_data';

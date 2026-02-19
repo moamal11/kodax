@@ -5,7 +5,7 @@
  * حل جذري لمنع تسرب البيانات بين الحسابات
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/lib/platformStorage';
 
 /**
  * مسح جميع بيانات Kodax من AsyncStorage

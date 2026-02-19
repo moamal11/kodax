@@ -5,7 +5,7 @@
  * تعمل محلياً عبر AsyncStorage مع مزامنة Supabase للمشاركة بين الأجهزة
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/lib/platformStorage';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 

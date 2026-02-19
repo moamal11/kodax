@@ -1514,7 +1514,7 @@ npm install @react-native-async-storage/async-storage
 \`\`\`
 
 \`\`\`javascript
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/lib/platformStorage';
 
 // حفظ قيمة نصية
 await AsyncStorage.setItem('username', 'أحمد');

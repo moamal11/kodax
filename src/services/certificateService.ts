@@ -8,7 +8,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { SUPABASE_URL } from '@/constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/lib/platformStorage';
 import {
   Certificate,
   CertificateLevel,

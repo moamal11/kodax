@@ -12,7 +12,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/lib/platformStorage';
 
 // ===== أنواع البيانات =====
 export interface ProgressData {
