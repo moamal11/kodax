@@ -9,5 +9,11 @@ config.transformer.minifierConfig = {
     drop_console: false,
   },
 };
-
+config.resolver.assetExts.push(
+  // Add font extensions
+  'ttf',
+  'otf',
+  'woff',
+  'woff2'
+);
 module.exports = config;
