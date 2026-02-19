@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30 # لمنع التعليق لساعات
 
     steps:
       - uses: actions/checkout@v4
@@ -17,26 +18,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm' # تفعيل كاش المكتبات
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 17
+          cache: 'gradle' # تفعيل كاش الجرادل (يوفر وقت ضخم)
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci # أسرع وأكثر أماناً من install في الـ CI
 
       - name: Generate native android
-        run: npx expo prebuild --platform android --clean
+        # إضافة --no-interactive لمنع التوقف بانتظار إدخال مستخدم
+        run: npx expo prebuild --platform android --clean --no-interactive
 
       - name: Build Release APK
         run: |
           cd android
+          chmod +x gradlew  # إعطاء صلاحية التنفيذ للجرادل
           ./gradlew assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/release/*.apk # تحسين المسار لجلب أي APK ينتج
