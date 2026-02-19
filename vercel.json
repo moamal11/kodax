@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "buildCommand": "npm run build:web",
+  "buildCommand": "npx expo export --platform web --output dist && node scripts/copy-web-fonts.js",
   "outputDirectory": "dist",
   "headers": [
     {
