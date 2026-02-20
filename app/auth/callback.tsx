@@ -68,15 +68,69 @@ export default function AuthCallbackScreen() {
       // ===== WEB FLOW =====
       console.log('🌐 Web flow detected');
 
-      const { error } = await supabase.auth.setSession({
-        access_token,
-        refresh_token,
-      });
+      // Try to set session with retries — some browsers may time out acquiring
+      // the Navigator LockManager lock. Retry a few times with backoff.
+      const setSessionWithRetries = async () => {
+        const maxAttempts = 4;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            const { error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
 
-      if (error) throw error;
+            if (error) throw error;
+            return;
+          } catch (err: any) {
+            const msg = err?.message || '';
+            const isLockError =
+              msg.includes('Lock') ||
+              msg.includes('lock:') ||
+              msg.includes('timed out') ||
+              msg.includes('Navigator LockManager');
+
+            if (attempt === maxAttempts || !isLockError) {
+              throw err;
+            }
+
+            console.warn(
+              `supabase setSession attempt ${attempt} failed, retrying...`,
+              msg
+            );
+            // exponential-ish backoff
+            await new Promise((res) => setTimeout(res, 300 * attempt));
+          }
+        }
+      };
+
+      await setSessionWithRetries();
 
       // تنظيف الرابط من التوكن (مهم أمنيًا)
       window.history.replaceState({}, document.title, '/');
+
+      // On web there are cases where the auth state change listener may not
+      // be delivered immediately (Navigator Lock contention). To ensure the
+      // root layout picks up the new session we write a short-lived flag to
+      // localStorage and then navigate to `/` (the layout will listen for
+      // the flag and re-fetch the session). This helps both single-tab and
+      // multi-tab flows.
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        try {
+          try {
+            window.localStorage.setItem(
+              'kodax_auth_update',
+              Date.now().toString()
+            );
+          } catch (e) {
+            // ignore localStorage errors
+          }
+
+          window.location.replace('/');
+          return;
+        } catch (e) {
+          // ignore and fall through to router navigation
+        }
+      }
 
       router.replace('/(tabs)');
     } catch (error: any) {

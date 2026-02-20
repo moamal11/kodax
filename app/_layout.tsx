@@ -232,6 +232,54 @@ export default function RootLayout() {
     };
   }, []);
 
+  // Listen for cross-window/session signals from the OAuth callback on web.
+  // The callback writes `kodax_auth_update` to localStorage; when we see it
+  // we re-fetch the session so the app won't remain stuck on the loading UI.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const handleStorage = async (e: StorageEvent) => {
+      try {
+        if (e.key === 'kodax_auth_update') {
+          const {
+            data: { session: newSession },
+          } = await supabase.auth.getSession();
+          setSession(newSession);
+          setIsLoading(false);
+          try {
+            window.localStorage.removeItem('kodax_auth_update');
+          } catch (e) {}
+        }
+      } catch (err) {
+        console.warn('Failed to sync session from storage event', err);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+
+    // If the callback wrote the flag before this listener was attached,
+    // read and process it immediately.
+    try {
+      const flag = window.localStorage.getItem('kodax_auth_update');
+      if (flag) {
+        (async () => {
+          try {
+            const {
+              data: { session: newSession },
+            } = await supabase.auth.getSession();
+            setSession(newSession);
+            setIsLoading(false);
+            window.localStorage.removeItem('kodax_auth_update');
+          } catch (e) {
+            /* ignore */
+          }
+        })();
+      }
+    } catch (e) {}
+
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   // ===== Background Sync - مزامنة التقدم في الخلفية =====
   useEffect(() => {
     const currentUserId = session?.user?.id || null;
@@ -314,7 +362,19 @@ export default function RootLayout() {
     const hasSegments = segments.length > 0;
 
     // Only redirect if we have segments (router is ready)
-    if (!hasSegments) return;
+    if (!hasSegments) {
+      // On web, after an OAuth callback we may land on `/` before the
+      // router has populated `segments`. If we already have a session,
+      // proactively navigate to the tabs route to avoid a stuck loading UI.
+      if (Platform.OS === 'web' && session) {
+        setTimeout(() => {
+          try {
+            router.replace('/(tabs)');
+          } catch (e) {}
+        }, 100);
+      }
+      return;
+    }
 
     // On web, skip redundant redirects - the auth state change handler takes care of it
     if (Platform.OS === 'web' && hasNavigatedRef.current) return;

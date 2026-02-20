@@ -1,8 +1,8 @@
-// File: C:\Users\moamal\myProjects\kodax\kodax-admin\src\app\page.tsx
-import * as entry from '../../../src/app/page.js'
+// File: C:\Users\moamal\myProjects\kodax\kodax-admin\src\app\dashboard\messages\page.tsx
+import * as entry from '../../../../../src/app/dashboard/messages/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../src/app/page.js')
+type TEntry = typeof import('../../../../../src/app/dashboard/messages/page.js')
 
 type SegmentParams<T extends Object = any> = T extends Record<string, any>
   ? { [K in keyof T]: T[K] extends string ? string | string[] | undefined : never }
