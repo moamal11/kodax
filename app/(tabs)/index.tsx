@@ -1087,7 +1087,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 19,
-    color: 'gold',
+    color: 'rgb(190, 50, 248)',
     marginBottom: 8,
     fontWeight: '700',
   },
