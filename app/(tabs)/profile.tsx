@@ -45,6 +45,7 @@ import { showAlert } from '@/utils/crossPlatformAlert';
 import { getProfile, ProfileData } from '@/services/profileService';
 import { getFollowInfo } from '@/services/followService';
 import ProfileEditModal from '@/components/ui/ProfileEditModal';
+import { useApp } from '@/contexts/AppContext';
 
 // Web-specific styles (typed separately to avoid StyleSheet inference issues)
 const webStyles = {
@@ -323,8 +324,23 @@ export default function ProfileScreen() {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
 
-  const { isLargeScreen, isWeb, contentPaddingTop, contentPaddingBottom } =
-    useResponsiveLayout();
+  const {
+    isLargeScreen,
+    isWeb,
+    isTablet,
+    isDesktop,
+    contentPaddingTop,
+    contentPaddingBottom,
+  } = useResponsiveLayout();
+
+  // AppContext — auto-refresh profile on login
+  const {
+    profile: appProfile,
+    followersCount: appFollowers,
+    followingCount: appFollowing,
+    authVersion,
+    refreshProfile,
+  } = useApp();
 
   // ===== نظام Hybrid: إحصائيات من Supabase =====
   const {
@@ -396,6 +412,15 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadProfileData();
   }, [loadProfileData]);
+
+  // Sync from AppContext when authVersion changes (login event)
+  useEffect(() => {
+    if (appProfile) {
+      setProfileData(appProfile);
+      setFollowersCount(appFollowers);
+      setFollowingCount(appFollowing);
+    }
+  }, [appProfile, appFollowers, appFollowing, authVersion]);
 
   // بيانات حقيقية من نظام الإحصائيات
   const completedLessonsCount = stats.completedLessons;
@@ -530,11 +555,23 @@ export default function ProfileScreen() {
           },
         ]}
       >
-        {/* Web Layout - Two Columns */}
+        {/* Web Layout - Two Columns (Desktop) or Single Column wider (Tablet) */}
         {isLargeScreen && isWeb ? (
-          <View style={webStyles.webContainer}>
+          <View
+            style={[
+              webStyles.webContainer,
+              // Tablet: single column layout instead of two-column
+              isTablet && { flexDirection: 'column', gap: 20 },
+            ]}
+          >
             {/* Left Column - Profile Info */}
-            <View style={webStyles.webLeftColumn}>
+            <View
+              style={[
+                webStyles.webLeftColumn,
+                // Tablet: make profile card full width
+                isTablet && { maxWidth: '100%', width: '100%' },
+              ]}
+            >
               {/* Profile Header */}
               <Animated.View entering={FadeInDown.delay(100).springify()}>
                 <GlassCard gradient style={webStyles.profileCardWeb}>
@@ -874,7 +911,9 @@ export default function ProfileScreen() {
             </View>
 
             {/* Right Column - Points, Badges, Progress */}
-            <View style={webStyles.webRightColumn}>
+            <View
+              style={[webStyles.webRightColumn, isTablet && { width: '100%' }]}
+            >
               {/* Points Card - Web */}
               <Animated.View entering={FadeInDown.delay(150).springify()}>
                 <View style={webStyles.sectionHeaderWeb}>

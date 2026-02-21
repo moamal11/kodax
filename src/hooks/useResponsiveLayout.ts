@@ -2,17 +2,24 @@
  * useResponsiveLayout.ts
  *
  * Hook for responsive layout adjustments
+ * Breakpoints:
+ *   - Mobile: < 768px
+ *   - Tablet: 768px - 1000px
+ *   - Desktop: > 1000px
  */
 
 import { useWindowDimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MOBILE_BREAKPOINT = 768;
+const TABLET_BREAKPOINT = 1000;
 
 export function useResponsiveLayout() {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isLargeScreen = width >= MOBILE_BREAKPOINT;
+  const isTablet = width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT;
+  const isDesktop = width >= TABLET_BREAKPOINT;
   const isWeb = Platform.OS === 'web';
   const isMobile = !isWeb || width < MOBILE_BREAKPOINT;
 
@@ -32,6 +39,8 @@ export function useResponsiveLayout() {
 
   return {
     isLargeScreen,
+    isTablet,
+    isDesktop,
     isWeb,
     isMobile,
     width,

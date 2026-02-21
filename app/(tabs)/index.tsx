@@ -45,6 +45,7 @@ import {
   ALL_LESSONS,
 } from '@/constants/courseData';
 import { useUserStats } from '@/hooks/useHybridProgress';
+import { useApp } from '@/contexts/AppContext';
 
 const { width } = Dimensions.get('window');
 
@@ -170,6 +171,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { contentPaddingTop, contentPaddingBottom, isLargeScreen, isWeb } =
     useResponsiveLayout();
+  const { authVersion } = useApp();
 
   // ===== نظام Hybrid: إحصائيات من Supabase، كورسات من البيانات المحلية =====
   const {
@@ -254,7 +256,7 @@ export default function HomeScreen() {
       }
     };
     fetchTopUsers();
-  }, [user?.id]);
+  }, [user?.id, authVersion]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

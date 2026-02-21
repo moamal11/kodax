@@ -14,18 +14,14 @@ import {
   RefreshControl,
   FlatList,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { useRouter, Stack } from 'expo-router';
-import {
-  CosmicBackground,
-  ParticleBackground,
-  CosmicCard,
-  LeaderboardCard,
-} from '@/components';
+import { CosmicCard, LeaderboardCard } from '@/components';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { supabaseService } from '@/services/supabaseService';
 import { useAuth } from './_layout';
@@ -169,8 +165,18 @@ export default function LeaderboardScreen() {
         <Text style={styles.title}>التصنيفات</Text>
       </View>
 
-      {/* Placeholder for alignment */}
-      <View style={{ width: 40 }} />
+      {/* Web refresh button / Placeholder for alignment */}
+      {Platform.OS === 'web' ? (
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={onRefresh}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="refresh" size={22} color="#9ca3af" />
+        </TouchableOpacity>
+      ) : (
+        <View style={{ width: 40 }} />
+      )}
     </View>
   );
 
@@ -240,14 +246,25 @@ export default function LeaderboardScreen() {
           <View style={[styles.topThreeBadge, styles.silverBadge]}>
             <MaterialIcons name="emoji-events" size={24} color="#9ca3af" />
           </View>
+          {top3[1]?.id === user?.id && (
+            <View style={styles.topThreeYouBadge}>
+              <Text style={styles.topThreeYouText}>أنت</Text>
+            </View>
+          )}
           <UserAvatar
             userId={top3[1]?.id}
             avatarUrl={top3[1]?.avatar}
             name={top3[1]?.name}
             size="large"
-            color="#9ca3af"
+            color={top3[1]?.id === user?.id ? '#7c3aed' : '#9ca3af'}
           />
-          <Text style={styles.topThreeName} numberOfLines={1}>
+          <Text
+            style={[
+              styles.topThreeName,
+              top3[1]?.id === user?.id && styles.currentUserNameText,
+            ]}
+            numberOfLines={1}
+          >
             {top3[1]?.name}
           </Text>
           <Text style={styles.topThreeXP}>
@@ -266,15 +283,24 @@ export default function LeaderboardScreen() {
           <View style={[styles.topThreeBadge, styles.goldBadge]}>
             <MaterialIcons name="emoji-events" size={32} color="#f59e0b" />
           </View>
+          {top3[0]?.id === user?.id && (
+            <View style={styles.topThreeYouBadge}>
+              <Text style={styles.topThreeYouText}>أنت</Text>
+            </View>
+          )}
           <UserAvatar
             userId={top3[0]?.id}
             avatarUrl={top3[0]?.avatar}
             name={top3[0]?.name}
             size="xlarge"
-            color="#f59e0b"
+            color={top3[0]?.id === user?.id ? '#7c3aed' : '#f59e0b'}
           />
           <Text
-            style={[styles.topThreeName, { fontSize: 16 }]}
+            style={[
+              styles.topThreeName,
+              { fontSize: 16 },
+              top3[0]?.id === user?.id && styles.currentUserNameText,
+            ]}
             numberOfLines={1}
           >
             {top3[0]?.name}
@@ -289,14 +315,25 @@ export default function LeaderboardScreen() {
           <View style={[styles.topThreeBadge, styles.bronzeBadge]}>
             <MaterialIcons name="emoji-events" size={24} color="#f97316" />
           </View>
+          {top3[2]?.id === user?.id && (
+            <View style={styles.topThreeYouBadge}>
+              <Text style={styles.topThreeYouText}>أنت</Text>
+            </View>
+          )}
           <UserAvatar
             userId={top3[2]?.id}
             avatarUrl={top3[2]?.avatar}
             name={top3[2]?.name}
             size="large"
-            color="#f97316"
+            color={top3[2]?.id === user?.id ? '#7c3aed' : '#f97316'}
           />
-          <Text style={styles.topThreeName} numberOfLines={1}>
+          <Text
+            style={[
+              styles.topThreeName,
+              top3[2]?.id === user?.id && styles.currentUserNameText,
+            ]}
+            numberOfLines={1}
+          >
             {top3[2]?.name}
           </Text>
           <Text style={styles.topThreeXP}>
@@ -359,15 +396,43 @@ export default function LeaderboardScreen() {
           <Text style={styles.listTitle}>
             {leaderboard.length < 3 ? 'المتسابقين' : 'جميع المتسابقين'}
           </Text>
-          {otherUsers.map((user, index) => (
-            <LeaderboardCard
-              key={user.id}
-              user={user}
-              rank={startRank + index}
-              animated
-              delay={Math.min(index * 30, 300)}
-            />
-          ))}
+          {otherUsers.map((leaderUser, index) => {
+            const isCurrentUser = leaderUser.id === user?.id;
+            return (
+              <View key={leaderUser.id}>
+                {isCurrentUser ? (
+                  <View style={styles.currentUserHighlight}>
+                    <LinearGradient
+                      colors={[
+                        'rgba(124, 58, 237, 0.15)',
+                        'rgba(59, 130, 246, 0.1)',
+                      ]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.currentUserGradient}
+                    >
+                      <View style={styles.currentUserBadge}>
+                        <Text style={styles.currentUserBadgeText}>أنت</Text>
+                      </View>
+                      <LeaderboardCard
+                        user={leaderUser}
+                        rank={startRank + index}
+                        animated
+                        delay={Math.min(index * 30, 300)}
+                      />
+                    </LinearGradient>
+                  </View>
+                ) : (
+                  <LeaderboardCard
+                    user={leaderUser}
+                    rank={startRank + index}
+                    animated
+                    delay={Math.min(index * 30, 300)}
+                  />
+                )}
+              </View>
+            );
+          })}
 
           {otherUsers.length === 0 && leaderboard.length >= 3 && (
             <View style={styles.emptyState}>
@@ -383,7 +448,6 @@ export default function LeaderboardScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <CosmicBackground intensity={0.5} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#7c3aed" />
           <Text style={styles.loadingText}>جاري تحميل التصنيفات...</Text>
@@ -396,9 +460,6 @@ export default function LeaderboardScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.container} edges={['top']}>
-        <CosmicBackground intensity={0.6} />
-        <ParticleBackground density={6} color="#f59e0b" speed={0.6} />
-
         {renderHeader()}
 
         <ScrollView
@@ -628,5 +689,47 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 12,
     fontSize: 14,
+  },
+  // Current user highlight styles
+  currentUserHighlight: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(124, 58, 237, 0.3)',
+  },
+  currentUserGradient: {
+    position: 'relative',
+    borderRadius: 16,
+  },
+  currentUserBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    zIndex: 10,
+  },
+  currentUserBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  currentUserNameText: {
+    color: '#a78bfa',
+  },
+  topThreeYouBadge: {
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  topThreeYouText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

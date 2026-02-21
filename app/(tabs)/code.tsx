@@ -37,6 +37,7 @@ import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '../_layout';
 import { useResponsiveLayout } from '@/hooks';
+import { useApp } from '@/contexts/AppContext';
 import {
   getPublicSnippets,
   checkUserLikes,
@@ -370,7 +371,13 @@ function EmptyState({ hasFilter }: { hasFilter: boolean }) {
 export default function CodeFeedScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { isLargeScreen } = useResponsiveLayout();
+  const { isLargeScreen, isWeb } = useResponsiveLayout();
+  const {
+    likedSnippets,
+    toggleLike: globalToggleLike,
+    isLikeInProgress,
+    authVersion,
+  } = useApp();
 
   // State
   const [snippets, setSnippets] = useState<FeedSnippet[]>([]);
@@ -385,7 +392,9 @@ export default function CodeFeedScreen() {
   const [sortBy, setSortBy] = useState<
     'recent' | 'popular' | 'most_liked' | 'most_viewed' | 'most_commented'
   >('recent');
-  const [likedSnippets, setLikedSnippets] = useState<Set<string>>(new Set());
+  const [localLikedSnippets, setLocalLikedSnippets] = useState<Set<string>>(
+    new Set()
+  );
   const [followedUsers, setFollowedUsers] = useState<Set<string>>(new Set());
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [langSearchQuery, setLangSearchQuery] = useState('');
@@ -425,7 +434,7 @@ export default function CodeFeedScreen() {
             try {
               const ids = data.map((s) => s.id);
               const liked = await checkUserLikes(user.id, ids);
-              setLikedSnippets((prev) => {
+              setLocalLikedSnippets((prev) => {
                 const next = new Set(prev);
                 liked.forEach((id) => next.add(id));
                 ids.forEach((id) => {
@@ -482,6 +491,14 @@ export default function CodeFeedScreen() {
     };
   }, [searchQuery]);
 
+  // Reload data when auth changes (after login)
+  useEffect(() => {
+    if (authVersion > 0 && user?.id) {
+      setPage(0);
+      loadSnippets(0);
+    }
+  }, [authVersion]);
+
   // Pull to refresh
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -498,10 +515,16 @@ export default function CodeFeedScreen() {
     loadSnippets(nextPage, true);
   }, [page, loadingMore, hasMore, loading, loadSnippets]);
 
-  // Like handler with optimistic update
+  // Like handler with optimistic update + debounce protection
+  const likeCooldownRef = useRef<Set<string>>(new Set());
   const handleLike = useCallback(
     async (snippetId: string) => {
       if (!user?.id) return;
+
+      // Prevent double-tap (cooldown per snippet)
+      if (likeCooldownRef.current.has(snippetId)) return;
+      likeCooldownRef.current.add(snippetId);
+      setTimeout(() => likeCooldownRef.current.delete(snippetId), 500);
 
       if (Platform.OS !== 'web') {
         try {
@@ -509,10 +532,10 @@ export default function CodeFeedScreen() {
         } catch {}
       }
 
-      const wasLiked = likedSnippets.has(snippetId);
+      const wasLiked = localLikedSnippets.has(snippetId);
 
-      // Optimistic update
-      setLikedSnippets((prev) => {
+      // Optimistic update — local liked set + snippet count
+      setLocalLikedSnippets((prev) => {
         const next = new Set(prev);
         wasLiked ? next.delete(snippetId) : next.add(snippetId);
         return next;
@@ -520,15 +543,40 @@ export default function CodeFeedScreen() {
       setSnippets((prev) =>
         prev.map((s) =>
           s.id === snippetId
-            ? { ...s, likes_count: s.likes_count + (wasLiked ? -1 : 1) }
+            ? {
+                ...s,
+                likes_count: Math.max(0, s.likes_count + (wasLiked ? -1 : 1)),
+              }
             : s
         )
       );
 
-      const { error } = await toggleLike(user.id, snippetId);
-      if (error) {
-        // Revert on failure
-        setLikedSnippets((prev) => {
+      try {
+        const { error } = await toggleLike(user.id, snippetId);
+        if (error) {
+          // Rollback on failure
+          setLocalLikedSnippets((prev) => {
+            const next = new Set(prev);
+            wasLiked ? next.add(snippetId) : next.delete(snippetId);
+            return next;
+          });
+          setSnippets((prev) =>
+            prev.map((s) =>
+              s.id === snippetId
+                ? {
+                    ...s,
+                    likes_count: Math.max(
+                      0,
+                      s.likes_count + (wasLiked ? 1 : -1)
+                    ),
+                  }
+                : s
+            )
+          );
+        }
+      } catch {
+        // Rollback on exception
+        setLocalLikedSnippets((prev) => {
           const next = new Set(prev);
           wasLiked ? next.add(snippetId) : next.delete(snippetId);
           return next;
@@ -536,13 +584,16 @@ export default function CodeFeedScreen() {
         setSnippets((prev) =>
           prev.map((s) =>
             s.id === snippetId
-              ? { ...s, likes_count: s.likes_count + (wasLiked ? 1 : -1) }
+              ? {
+                  ...s,
+                  likes_count: Math.max(0, s.likes_count + (wasLiked ? 1 : -1)),
+                }
               : s
           )
         );
       }
     },
-    [user?.id, likedSnippets]
+    [user?.id, localLikedSnippets]
   );
 
   // Copy code
@@ -595,7 +646,7 @@ export default function CodeFeedScreen() {
     ({ item, index }: { item: FeedSnippet; index: number }) => (
       <SnippetCard
         snippet={item}
-        liked={likedSnippets.has(item.id)}
+        liked={localLikedSnippets.has(item.id)}
         onPress={() => handleSnippetPress(item.id)}
         onLike={() => handleLike(item.id)}
         onCopy={() => handleCopy(item.code)}
@@ -609,7 +660,7 @@ export default function CodeFeedScreen() {
       />
     ),
     [
-      likedSnippets,
+      localLikedSnippets,
       followedUsers,
       handleSnippetPress,
       handleLike,
@@ -647,6 +698,16 @@ export default function CodeFeedScreen() {
             <Text style={styles.headerTitle}>كود</Text>
           </View>
           <View style={styles.headerRight}>
+            {/* Web refresh button */}
+            {Platform.OS === 'web' && (
+              <TouchableOpacity
+                style={[styles.headerBtn, { marginRight: 4 }]}
+                onPress={handleRefresh}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="refresh" size={20} color="#6b7280" />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.headerBtn} onPress={handleAddPress}>
               <MaterialIcons name="add" size={24} color="#8b5cf6" />
             </TouchableOpacity>

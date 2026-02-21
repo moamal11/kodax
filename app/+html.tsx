@@ -65,6 +65,22 @@ export default function Root({ children }: PropsWithChildren) {
         />
         <meta name="apple-mobile-web-app-title" content="KODAX" />
 
+        {/* PWA Manifest */}
+        <link rel="manifest" href="/manifest.json" />
+
+        {/* Apple Touch Icons — required for iOS Add to Home Screen */}
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon.png" />
+
+        {/* Standard favicon */}
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon.ico" />
+
+        {/* Apple splash screens */}
+        <link rel="apple-touch-startup-image" href="/apple-touch-icon.png" />
+
         {/* Prevent scroll restoration issues */}
         <ScrollViewStyleReset />
 

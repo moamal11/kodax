@@ -21,6 +21,7 @@ import {
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { PointsProvider, usePoints } from '@/contexts/PointsContext';
 import { BadgeProvider } from '@/contexts/BadgeContext';
+import { AppProvider } from '@/contexts/AppContext';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { hybridSyncService } from '@/services/hybridSyncService';
@@ -442,55 +443,57 @@ export default function RootLayout() {
   return (
     <AuthContext.Provider value={authContextValue}>
       <GestureHandlerRootView style={styles.container}>
-        <PointsProvider userId={session?.user?.id}>
-          <SubscriptionProvider userId={session?.user?.id || ''}>
-            <BadgeProviderConnected userId={session?.user?.id}>
-              <StatusBar style="light" backgroundColor="#0f0f1e" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: '#0f0f1e' },
-                  animation: 'fade',
-                }}
-              >
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="download" />
-                <Stack.Screen name="course/[id]" />
-                <Stack.Screen name="lesson/[id]" />
-                <Stack.Screen name="challenge/[id]" />
-                <Stack.Screen name="certificate/index" />
-                <Stack.Screen name="certificate/[id]" />
-                <Stack.Screen name="certificate/verify" />
-                <Stack.Screen name="certificate/download" />
-              </Stack>
-              <ToastContainer />
-              {/* مدير الرسائل العامة من لوحة التحكم */}
-              {session?.user?.id && (
-                <BroadcastManager
-                  userId={session.user.id}
-                  userName={broadcastUserName}
+        <AppProvider userId={session?.user?.id}>
+          <PointsProvider userId={session?.user?.id}>
+            <SubscriptionProvider userId={session?.user?.id || ''}>
+              <BadgeProviderConnected userId={session?.user?.id}>
+                <StatusBar style="light" backgroundColor="#0f0f1e" />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: '#0f0f1e' },
+                    animation: 'fade',
+                  }}
+                >
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="download" />
+                  <Stack.Screen name="course/[id]" />
+                  <Stack.Screen name="lesson/[id]" />
+                  <Stack.Screen name="challenge/[id]" />
+                  <Stack.Screen name="certificate/index" />
+                  <Stack.Screen name="certificate/[id]" />
+                  <Stack.Screen name="certificate/verify" />
+                  <Stack.Screen name="certificate/download" />
+                </Stack>
+                <ToastContainer />
+                {/* مدير الرسائل العامة من لوحة التحكم */}
+                {session?.user?.id && (
+                  <BroadcastManager
+                    userId={session.user.id}
+                    userName={broadcastUserName}
+                  />
+                )}
+                {/* مربع حوار البيانات الإجبارية */}
+                {session?.user?.id && (
+                  <MandatoryDataModal
+                    visible={showMandatoryData}
+                    userId={session.user.id}
+                    onComplete={() => setShowMandatoryData(false)}
+                  />
+                )}
+                {/* مربع حوار التحديث الذكي (موبايل فقط) */}
+                <UpdateModal
+                  visible={showUpdate}
+                  update={pendingUpdate}
+                  currentVersion={currentAppVersion}
+                  isForced={updateForced}
+                  onDismiss={() => setShowUpdate(false)}
                 />
-              )}
-              {/* مربع حوار البيانات الإجبارية */}
-              {session?.user?.id && (
-                <MandatoryDataModal
-                  visible={showMandatoryData}
-                  userId={session.user.id}
-                  onComplete={() => setShowMandatoryData(false)}
-                />
-              )}
-              {/* مربع حوار التحديث الذكي (موبايل فقط) */}
-              <UpdateModal
-                visible={showUpdate}
-                update={pendingUpdate}
-                currentVersion={currentAppVersion}
-                isForced={updateForced}
-                onDismiss={() => setShowUpdate(false)}
-              />
-            </BadgeProviderConnected>
-          </SubscriptionProvider>
-        </PointsProvider>
+              </BadgeProviderConnected>
+            </SubscriptionProvider>
+          </PointsProvider>
+        </AppProvider>
       </GestureHandlerRootView>
     </AuthContext.Provider>
   );
