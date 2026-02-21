@@ -5,6 +5,8 @@
  * تعرض زر تحميل للأندرويد + تعليمات إضافة للشاشة الرئيسية للآيفون
  * تكشف beforeinstallprompt للـ PWA على أندرويد
  * تصميم احترافي متوافق مع هوية KODAX
+ *
+ * زر التحميل يجلب رابط آخر إصدار تلقائياً من جدول app_updates في Supabase
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
@@ -18,15 +20,18 @@ import {
   Linking,
   Platform,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const PLAY_STORE_URL =
+// Fallback URL if no update found in database
+const FALLBACK_DOWNLOAD_URL =
   'https://play.google.com/store/apps/details?id=com.kodax.app';
 
 // === Platform detection for web ===
@@ -121,7 +126,48 @@ export default function DownloadPage() {
   const deferredPromptRef = useRef<any>(null);
   const [canInstallPWA, setCanInstallPWA] = useState(false);
 
+  // Dynamic download info from app_updates table
+  const [downloadUrl, setDownloadUrl] = useState<string>(FALLBACK_DOWNLOAD_URL);
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+  const [releaseNotes, setReleaseNotes] = useState<string | null>(null);
+  const [isLoadingUpdate, setIsLoadingUpdate] = useState(true);
+
+  // ===== Fetch latest update from database =====
   useEffect(() => {
+    const fetchLatestUpdate = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('app_updates')
+          .select('version, download_url, release_notes, build_number')
+          .eq('is_active', true)
+          .or('platform.eq.android,platform.eq.all')
+          .order('build_number', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!error && data) {
+          if (data.download_url) {
+            setDownloadUrl(data.download_url);
+          }
+          setLatestVersion(data.version);
+          setReleaseNotes(data.release_notes);
+        }
+      } catch (_e) {
+        // Use fallback URL
+      } finally {
+        setIsLoadingUpdate(false);
+      }
+    };
+
+    fetchLatestUpdate();
+  }, []);
+
+  // ===== حماية: الموبايل لا يجب أن يرى هذه الصفحة =====
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      router.replace('/(auth)/login');
+      return;
+    }
     setPlatform(detectPlatform());
     setIsSafari(isIOSSafari());
 
@@ -201,17 +247,39 @@ export default function DownloadPage() {
                 حمّل التطبيق APK واستمتع بتجربة أصلية كاملة
               </Text>
 
+              {latestVersion && (
+                <View style={styles.versionBadge}>
+                  <Ionicons name="sparkles" size={14} color="#22c55e" />
+                  <Text style={styles.versionText}>
+                    الإصدار {latestVersion}
+                  </Text>
+                </View>
+              )}
+
+              {releaseNotes && (
+                <Text style={styles.releaseNotes}>{releaseNotes}</Text>
+              )}
+
               <TouchableOpacity
                 style={styles.primaryBtn}
-                onPress={() => Linking.openURL(PLAY_STORE_URL)}
+                onPress={() => Linking.openURL(downloadUrl)}
                 activeOpacity={0.8}
+                disabled={isLoadingUpdate}
               >
                 <LinearGradient
                   colors={['#22c55e', '#16a34a']}
                   style={styles.primaryBtnGradient}
                 >
-                  <Ionicons name="download" size={20} color="#fff" />
-                  <Text style={styles.primaryBtnText}>تحميل</Text>
+                  {isLoadingUpdate ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="download" size={20} color="#fff" />
+                      <Text style={styles.primaryBtnText}>
+                        تحميل {latestVersion ? `v${latestVersion}` : ''}
+                      </Text>
+                    </>
+                  )}
                 </LinearGradient>
               </TouchableOpacity>
 
@@ -283,15 +351,37 @@ export default function DownloadPage() {
         </View>
       </Animated.View>
 
-      {/* ===== Web Version Link ===== */}
+      {/* ===== Web CTA Buttons ===== */}
       <Animated.View entering={FadeInUp.delay(300).duration(600)}>
         <View style={styles.webSection}>
+          <Text style={styles.webSectionTitle}>هل لديك حساب بالفعل؟</Text>
+
+          {/* زر تسجيل الدخول - الأبرز */}
           <TouchableOpacity
-            style={styles.webLink}
+            style={styles.loginBtn}
             onPress={() => router.replace('/(auth)/login')}
+            activeOpacity={0.85}
           >
-            <Text style={styles.webLinkText}>أو تابع استخدام نسخة الويب</Text>
-            <Ionicons name="arrow-back" size={16} color="#7c3aed" />
+            <LinearGradient
+              colors={['#7c3aed', '#6d28d9']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.loginBtnGradient}
+            >
+              <Ionicons name="log-in-outline" size={22} color="#fff" />
+              <Text style={styles.loginBtnText}>تسجيل الدخول</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* زر إنشاء حساب جديد */}
+          <TouchableOpacity
+            style={styles.continueBtn}
+            onPress={() => router.replace('/(auth)/login')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="person-add-outline" size={20} color="#a78bfa" />
+            <Text style={styles.continueBtnText}>إنشاء حساب جديد</Text>
+            <Ionicons name="arrow-back" size={18} color="#a78bfa" />
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -352,7 +442,7 @@ export default function DownloadPage() {
               <Text style={styles.statLabel}>دورة تعليمية</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>100+</Text>
+              <Text style={styles.statNumber}>150+</Text>
               <Text style={styles.statLabel}>تحدي برمجي</Text>
             </View>
             <View style={styles.statItem}>
@@ -457,6 +547,29 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 8,
   },
+  versionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(34,197,94,0.12)',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    marginBottom: 4,
+  },
+  versionText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#22c55e',
+  },
+  releaseNotes: {
+    fontSize: 13,
+    color: '#9ca3af',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 4,
+    fontStyle: 'italic',
+  },
   primaryBtn: {
     borderRadius: 14,
     overflow: 'hidden',
@@ -524,10 +637,68 @@ const styles = StyleSheet.create({
   },
   safariHintText: { fontSize: 12, color: '#f59e0b', flex: 1 },
 
-  // Web link
-  webSection: { alignItems: 'center', paddingVertical: 8 },
-  webLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  webLinkText: { fontSize: 14, color: '#7c3aed', fontWeight: '500' },
+  // Web CTA
+  webSection: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    gap: 16,
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  webSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#e5e7eb',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  // زر تسجيل الدخول الرئيسي
+  loginBtn: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    width: '100%',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 8px 32px rgba(124,58,237,0.35)' }
+      : ({} as any)),
+  },
+  loginBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+  },
+  loginBtnText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  // زر الاستمرار الثانوي
+  continueBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(124,58,237,0.4)',
+    backgroundColor: 'rgba(124,58,237,0.08)',
+    width: '100%',
+  },
+  continueBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#a78bfa',
+    flex: 1,
+    textAlign: 'center',
+  },
 
   // Features
   featuresSection: {

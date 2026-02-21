@@ -20,13 +20,15 @@ export function useResponsiveLayout() {
   const topBarHeight = isLargeScreen && isWeb ? 60 + (insets.top || 0) : 0;
 
   // Bottom bar height - adjusted for web to prevent content overlap
+  // On native Android, the system navigation bar (gesture/buttons) can clip
+  // the bottom of pages. We add extra padding to ensure nothing is hidden.
   const bottomBarHeight = isWeb
     ? isMobile
       ? 80
-      : 0 // في الويب الموبايل: 80px
+      : 0 // Web mobile: 80px
     : isMobile
-      ? 100 + Math.max(insets.bottom, 10)
-      : 0; // في التطبيق الأصلي
+      ? 110 + Math.max(insets.bottom, 20)
+      : 0; // Native: increased to prevent Android nav bar overlap
 
   return {
     isLargeScreen,

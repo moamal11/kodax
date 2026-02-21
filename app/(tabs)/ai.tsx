@@ -35,6 +35,7 @@ import { usePoints } from '@/contexts/PointsContext';
 import PointsModal from '@/components/subscription/PointsModal';
 import { supabase } from '@/lib/supabase';
 import { useResponsiveLayout } from '@/hooks';
+import { useAuth } from '../_layout';
 import {
   aiChatService,
   ChatMessage,
@@ -98,6 +99,9 @@ export default function AIScreen() {
   const { isLargeScreen, isWeb, contentPaddingTop, contentPaddingBottom } =
     useResponsiveLayout();
 
+  // userId is now derived from useAuth — no longer fetched via getSession()
+  // This ensures it updates reactively when auth state changes after OAuth
+  const { user: authUser } = useAuth();
   const [userId, setUserId] = useState('');
   const [showPointsModal, setShowPointsModal] = useState(false);
 
@@ -132,9 +136,14 @@ export default function AIScreen() {
 
   const w = Dimensions.get('window').width;
 
+  // Sync userId from auth context — reacts to auth state changes (e.g. after OAuth)
   useEffect(() => {
-    loadUser();
-  }, []); // Empty dependency - only run once on mount
+    if (authUser?.id && authUser.id !== userId) {
+      setUserId(authUser.id);
+      aiChatService.setUser(authUser.id);
+      conversationsService.setUser(authUser.id);
+    }
+  }, [authUser?.id]);
 
   useEffect(() => {
     if (userId && isPremium) {
@@ -144,17 +153,6 @@ export default function AIScreen() {
       contextMemoryService.setUser(userId);
     }
   }, [userId, isPremium]); // Only re-run when these values change
-
-  const loadUser = useCallback(async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session?.user) {
-      setUserId(session.user.id);
-      aiChatService.setUser(session.user.id);
-      conversationsService.setUser(session.user.id);
-    }
-  }, []);
 
   const scrollToBottom = useCallback((force = false) => {
     try {

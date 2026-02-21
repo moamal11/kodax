@@ -60,11 +60,6 @@ class HybridSyncService {
   private progressCache: Map<string, CourseProgressSummary> = new Map();
   private unlockCache: Map<string, UnlockStatus> = new Map();
 
-  // ===== مفتاح الكاش مع userId =====
-  private getCacheKey(prefix: string, suffix: string = ''): string {
-    return `${prefix}${this.userId}_${suffix}`;
-  }
-
   // ===== تهيئة المستخدم =====
   async setUser(userId: string) {
     // إذا تغير المستخدم، مسح الكاش القديم
@@ -91,7 +86,7 @@ class HybridSyncService {
     try {
       const keys = await AsyncStorage.getAllKeys();
       const userKeys = keys.filter(
-        (k) => k.includes(`_${userId}_`) || k.endsWith(`_${userId}`)
+        (k: string) => k.includes(`_${userId}_`) || k.endsWith(`_${userId}`)
       );
       if (userKeys.length > 0) {
         await AsyncStorage.multiRemove(userKeys);
@@ -1145,7 +1140,7 @@ class HybridSyncService {
     this.progressCache.clear();
     this.unlockCache.clear();
     const keys = await AsyncStorage.getAllKeys();
-    const kodaxKeys = keys.filter((k) => k.startsWith('@kodax_'));
+    const kodaxKeys = keys.filter((k: string) => k.startsWith('@kodax_'));
     await AsyncStorage.multiRemove(kodaxKeys);
   }
 }

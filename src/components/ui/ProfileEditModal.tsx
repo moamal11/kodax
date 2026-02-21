@@ -221,8 +221,9 @@ export default function ProfileEditModal({
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         style={styles.overlay}
+        keyboardVerticalOffset={Platform.OS === 'android' ? -50 : 0}
       >
         <View
           style={[
@@ -307,8 +308,12 @@ export default function ProfileEditModal({
 
               <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[
+                  styles.scrollContent,
+                  { paddingBottom: Platform.OS === 'android' ? 80 : 20 },
+                ]}
                 keyboardShouldPersistTaps="handled"
+                automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
               >
                 {activeTab === 'info' ? (
                   <>

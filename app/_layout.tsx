@@ -96,6 +96,7 @@ export default function RootLayout() {
   const [showMandatoryData, setShowMandatoryData] = useState(false);
   const hasNavigatedRef = useRef(false);
   const lastAuthEventRef = useRef<string | null>(null);
+  const authReadyRef = useRef(false); // Track if auth initialization completed
 
   // حالة التحديث الذكي (موبايل فقط)
   const [showUpdate, setShowUpdate] = useState(false);
@@ -126,6 +127,105 @@ export default function RootLayout() {
   useEffect(() => {
     let mounted = true;
 
+    // ===== Safety timeout: if auth hangs, force ready after 7s =====
+    const safetyTimer = setTimeout(() => {
+      if (mounted && !authReadyRef.current) {
+        console.warn('[Auth] Safety timeout reached — forcing ready');
+        authReadyRef.current = true;
+        setIsReady(true);
+        setIsLoading(false);
+        SplashScreen.hideAsync().catch(() => {});
+      }
+    }, 7000);
+
+    /**
+     * Helper: mark auth as ready (called once)
+     * Ensures SplashScreen hides and loading stops regardless of path.
+     */
+    const markReady = () => {
+      if (!mounted || authReadyRef.current) return;
+      authReadyRef.current = true;
+      clearTimeout(safetyTimer);
+      setIsReady(true);
+      setIsLoading(false);
+      SplashScreen.hideAsync().catch(() => {});
+    };
+
+    // ===== 1. Listen for auth changes FIRST (before getSession) =====
+    // This ensures we catch SIGNED_IN events even if they fire before
+    // getSession() returns (e.g. web OAuth with detectSessionInUrl).
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (!mounted) return;
+
+      // Always update session state
+      setSession(newSession);
+
+      // Mark ready on any auth event (resolves web OAuth race condition)
+      markReady();
+
+      if (event === 'SIGNED_IN' && newSession) {
+        // Deduplicate
+        if (lastAuthEventRef.current === 'SIGNED_IN') return;
+        lastAuthEventRef.current = 'SIGNED_IN';
+        hasNavigatedRef.current = false;
+
+        // ===== Check if user is banned =====
+        try {
+          const { data: restrictions } = await supabase.rpc(
+            'check_user_restrictions',
+            { p_user_id: newSession.user.id }
+          );
+          if (restrictions?.is_banned) {
+            await supabase.auth.signOut();
+            if (mounted) {
+              setSession(null);
+              lastAuthEventRef.current = null;
+              hasNavigatedRef.current = false;
+            }
+            setTimeout(() => {
+              showAlert(
+                'تم تقييد الحساب',
+                restrictions.ban_reason ||
+                  'تم تقييد حسابك. يرجى التواصل مع الإدارة.'
+              );
+            }, 200);
+            return;
+          }
+        } catch (_e) {
+          // RPC not found or connection failed → allow login
+        }
+
+        // ===== Navigate to home =====
+        if (mounted && !hasNavigatedRef.current) {
+          hasNavigatedRef.current = true;
+          setTimeout(() => {
+            if (mounted) router.replace('/(tabs)');
+          }, 150);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        lastAuthEventRef.current = 'SIGNED_OUT';
+        hasNavigatedRef.current = false;
+        clearAllKodaxData().then(() => {
+          badgeService.resetState();
+          notificationService.resetState();
+          progressService.resetState();
+          hybridSyncService.clearUser();
+          clearBroadcastCache();
+        });
+        setTimeout(() => {
+          if (mounted) router.replace('/(auth)/login');
+        }, 100);
+      } else if (event === 'TOKEN_REFRESHED' && newSession) {
+        // Session refreshed — just update state (already done above)
+      } else if (event === 'INITIAL_SESSION') {
+        // Supabase v2 fires INITIAL_SESSION on startup.
+        // Session state is already set above. markReady() ensures app proceeds.
+      }
+    });
+
+    // ===== 2. Restore session from persistent storage =====
     const initAuth = async () => {
       try {
         const {
@@ -133,21 +233,14 @@ export default function RootLayout() {
           error,
         } = await supabase.auth.getSession();
 
-        if (error) {
-          // Error getting session
-        } else {
-          if (mounted) {
-            setSession(initialSession);
-          }
+        if (!error && mounted) {
+          setSession(initialSession);
         }
-      } catch (error) {
-        // Auth init error
+      } catch (_err) {
+        // Auth init error — safety timeout or onAuthStateChange will handle it
       } finally {
-        if (mounted) {
-          setIsReady(true);
-          setIsLoading(false);
-          SplashScreen.hideAsync();
-        }
+        // Mark ready after getSession completes
+        markReady();
       }
     };
 
@@ -156,128 +249,19 @@ export default function RootLayout() {
     // Initialize deep link listener for mobile OAuth flow
     const cleanupDeepLink = initializeDeepLinkAuthListener(
       () => {
-        // Success callback - user authenticated via deep link
-        // The auth state listener will handle navigation
+        // Success callback — onAuthStateChange listener handles navigation
       },
       (error) => {
-        // Error callback
         showAlert('خطأ', error);
       }
     );
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (mounted) {
-        setSession(newSession);
-        setIsLoading(false);
-
-        // Only navigate on explicit sign-in/sign-out events
-        // Skip TOKEN_REFRESHED and INITIAL_SESSION to prevent reload loops on web
-        if (event === 'SIGNED_IN' && newSession && !hasNavigatedRef.current) {
-          // Prevent duplicate navigation
-          if (lastAuthEventRef.current === 'SIGNED_IN') return;
-          lastAuthEventRef.current = 'SIGNED_IN';
-
-          // ===== التحقق من حظر المستخدم قبل السماح بالدخول =====
-          try {
-            const { data: restrictions } = await supabase.rpc(
-              'check_user_restrictions',
-              { p_user_id: newSession.user.id }
-            );
-            if (restrictions?.is_banned) {
-              // المستخدم محظور → تسجيل خروج فوري
-              await supabase.auth.signOut();
-              setSession(null);
-              lastAuthEventRef.current = null;
-              setTimeout(() => {
-                showAlert(
-                  'تم تقييد الحساب',
-                  restrictions.ban_reason ||
-                    'تم تقييد حسابك. يرجى التواصل مع الإدارة.'
-                );
-                router.replace('/(auth)/login');
-              }, 200);
-              return;
-            }
-          } catch (e) {
-            // إذا فشل التحقق (RPC غير موجود بعد)، نسمح بالدخول
-          }
-
-          hasNavigatedRef.current = true;
-          setTimeout(() => {
-            router.replace('/(tabs)');
-          }, 100);
-        } else if (event === 'SIGNED_OUT') {
-          lastAuthEventRef.current = 'SIGNED_OUT';
-          hasNavigatedRef.current = false;
-          // مسح جذري عند أي حدث خروج (حتى لو لم يمر بـ signOut)
-          clearAllKodaxData().then(() => {
-            badgeService.resetState();
-            notificationService.resetState();
-            progressService.resetState();
-            hybridSyncService.clearUser();
-            clearBroadcastCache();
-          });
-          setTimeout(() => router.replace('/(auth)/login'), 100);
-        }
-      }
-    });
-
     return () => {
       mounted = false;
+      clearTimeout(safetyTimer);
       subscription.unsubscribe();
       cleanupDeepLink();
     };
-  }, []);
-
-  // Listen for cross-window/session signals from the OAuth callback on web.
-  // The callback writes `kodax_auth_update` to localStorage; when we see it
-  // we re-fetch the session so the app won't remain stuck on the loading UI.
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-
-    const handleStorage = async (e: StorageEvent) => {
-      try {
-        if (e.key === 'kodax_auth_update') {
-          const {
-            data: { session: newSession },
-          } = await supabase.auth.getSession();
-          setSession(newSession);
-          setIsLoading(false);
-          try {
-            window.localStorage.removeItem('kodax_auth_update');
-          } catch (e) {}
-        }
-      } catch (err) {
-        console.warn('Failed to sync session from storage event', err);
-      }
-    };
-
-    window.addEventListener('storage', handleStorage);
-
-    // If the callback wrote the flag before this listener was attached,
-    // read and process it immediately.
-    try {
-      const flag = window.localStorage.getItem('kodax_auth_update');
-      if (flag) {
-        (async () => {
-          try {
-            const {
-              data: { session: newSession },
-            } = await supabase.auth.getSession();
-            setSession(newSession);
-            setIsLoading(false);
-            window.localStorage.removeItem('kodax_auth_update');
-          } catch (e) {
-            /* ignore */
-          }
-        })();
-      }
-    } catch (e) {}
-
-    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   // ===== Background Sync - مزامنة التقدم في الخلفية =====
@@ -306,10 +290,12 @@ export default function RootLayout() {
     previousUserIdRef.current = currentUserId;
 
     // تعيين المستخدم في خدمة المزامنة (سيمسح كاش المستخدم السابق تلقائياً)
-    hybridSyncService.setUser(currentUserId);
-
-    // مزامنة عند فتح التطبيق
-    hybridSyncService.backgroundSync();
+    // MUST be awaited before backgroundSync to ensure userId is set internally
+    const initSync = async () => {
+      await hybridSyncService.setUser(currentUserId);
+      hybridSyncService.backgroundSync();
+    };
+    initSync();
 
     // مزامنة عند العودة للتطبيق من الخلفية
     // On web: throttle to prevent cascade re-renders on tab switch
@@ -362,19 +348,7 @@ export default function RootLayout() {
     const hasSegments = segments.length > 0;
 
     // Only redirect if we have segments (router is ready)
-    if (!hasSegments) {
-      // On web, after an OAuth callback we may land on `/` before the
-      // router has populated `segments`. If we already have a session,
-      // proactively navigate to the tabs route to avoid a stuck loading UI.
-      if (Platform.OS === 'web' && session) {
-        setTimeout(() => {
-          try {
-            router.replace('/(tabs)');
-          } catch (e) {}
-        }, 100);
-      }
-      return;
-    }
+    if (!hasSegments) return;
 
     // On web, skip redundant redirects - the auth state change handler takes care of it
     if (Platform.OS === 'web' && hasNavigatedRef.current) return;
@@ -455,7 +429,8 @@ export default function RootLayout() {
     [session, isLoading, signOut, broadcastUserName]
   );
 
-  if (!isReady) {
+  // شاشة التحميل الأولي: فقط على الويب (الموبايل يستخدم SplashScreen الأصلي)
+  if (!isReady && Platform.OS === 'web') {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
         <ActivityIndicator size="large" color="#3b82f6" />

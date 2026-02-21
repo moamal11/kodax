@@ -150,7 +150,6 @@ export default function LoginScreen() {
       const redirectTo = isMobile
         ? `${baseRedirectUrl}?fromApp=1`
         : baseRedirectUrl;
-
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -234,7 +233,7 @@ export default function LoginScreen() {
         >
           {/* Logo & Branding */}
           <Animated.View
-            entering={FadeInDown.delay(100).duration(800).springify()}
+            entering={FadeInDown.delay(500).duration(1000).springify()}
             style={styles.brandingSection}
           >
             <View style={styles.logoContainer}>
@@ -401,7 +400,7 @@ export default function LoginScreen() {
                 activeOpacity={0.85}
               >
                 <LinearGradient
-                  colors={['#6366f1', '#7c3aed']}
+                  colors={['rgb(129, 20, 237)', 'rgb(109, 40, 217)']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.submitInner}
@@ -508,14 +507,13 @@ const styles = StyleSheet.create({
     height: width < 375 ? 100 : 140,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: width < 375 ? 12 : 16,
   },
   logoGlow: {
     position: 'absolute',
     width: width < 375 ? 120 : 160,
     height: width < 375 ? 120 : 160,
     borderRadius: 999,
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    backgroundColor: 'rgba(99, 102, 241, 0)',
   },
   logoImage: {
     width: width < 375 ? 80 : 140,

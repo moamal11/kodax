@@ -399,59 +399,67 @@ export default function CodeFeedScreen() {
     async (pageNum = 0, append = false) => {
       if (pageNum === 0 && !append) setLoading(true);
 
-      const { data, error } = await getPublicSnippets({
-        language: selectedLanguage,
-        sortBy: sortBy,
-        search: searchQuery.trim() || undefined,
-        page: pageNum,
-        limit: 20,
-      });
+      try {
+        const { data, error } = await getPublicSnippets({
+          language: selectedLanguage,
+          sortBy: sortBy,
+          search: searchQuery.trim() || undefined,
+          page: pageNum,
+          limit: 20,
+        });
 
-      if (!error) {
-        if (append) {
-          setSnippets((prev) => {
-            const existingIds = new Set(prev.map((s) => s.id));
-            const newItems = data.filter((s) => !existingIds.has(s.id));
-            return [...prev, ...newItems];
-          });
-        } else {
-          setSnippets(data);
-        }
-        setHasMore(data.length === 20);
-
-        // Check likes for loaded snippets
-        if (user?.id && data.length > 0) {
-          const ids = data.map((s) => s.id);
-          const liked = await checkUserLikes(user.id, ids);
-          setLikedSnippets((prev) => {
-            const next = new Set(prev);
-            liked.forEach((id) => next.add(id));
-            ids.forEach((id) => {
-              if (!liked.has(id)) next.delete(id);
+        if (!error) {
+          if (append) {
+            setSnippets((prev) => {
+              const existingIds = new Set(prev.map((s) => s.id));
+              const newItems = data.filter((s) => !existingIds.has(s.id));
+              return [...prev, ...newItems];
             });
-            return next;
-          });
+          } else {
+            setSnippets(data);
+          }
+          setHasMore(data.length === 20);
 
-          // Check follow status for snippet authors
-          const authorIds = [
-            ...new Set(
-              data.map((s) => s.user_id).filter((id) => id !== user.id)
-            ),
-          ];
-          if (authorIds.length > 0) {
-            const followed = await checkBatchFollowing(user.id, authorIds);
-            setFollowedUsers((prev) => {
-              const next = new Set(prev);
-              followed.forEach((id) => next.add(id));
-              return next;
-            });
+          // Check likes for loaded snippets
+          if (user?.id && data.length > 0) {
+            try {
+              const ids = data.map((s) => s.id);
+              const liked = await checkUserLikes(user.id, ids);
+              setLikedSnippets((prev) => {
+                const next = new Set(prev);
+                liked.forEach((id) => next.add(id));
+                ids.forEach((id) => {
+                  if (!liked.has(id)) next.delete(id);
+                });
+                return next;
+              });
+
+              // Check follow status for snippet authors
+              const authorIds = [
+                ...new Set(
+                  data.map((s) => s.user_id).filter((id) => id !== user.id)
+                ),
+              ];
+              if (authorIds.length > 0) {
+                const followed = await checkBatchFollowing(user.id, authorIds);
+                setFollowedUsers((prev) => {
+                  const next = new Set(prev);
+                  followed.forEach((id) => next.add(id));
+                  return next;
+                });
+              }
+            } catch (_e) {
+              // Likes/follows check failed — snippets still show
+            }
           }
         }
+      } catch (err) {
+        console.warn('[CodeFeed] Error loading snippets:', err);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingMore(false);
       }
-
-      setLoading(false);
-      setRefreshing(false);
-      setLoadingMore(false);
     },
     [selectedLanguage, searchQuery, sortBy, user?.id]
   );

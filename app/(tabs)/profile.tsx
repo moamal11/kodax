@@ -190,6 +190,7 @@ const webStyles = {
   settingsCardWeb: {
     padding: 8,
     borderRadius: 20,
+    marginBottom: 36,
   } as ViewStyle,
   settingItemWeb: {
     flexDirection: 'row',
@@ -332,7 +333,19 @@ export default function ProfileScreen() {
     refresh: refreshStats,
   } = useUserStats(user?.id);
 
-  const isLoading = authLoading || statsLoading;
+  // Safety timeout — don't let profile stay stuck in loading forever
+  // Same pattern as home page (8 second max)
+  const [statsLoadingTimedOut, setStatsLoadingTimedOut] = useState(false);
+  useEffect(() => {
+    if (!statsLoading) {
+      setStatsLoadingTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setStatsLoadingTimedOut(true), 8000);
+    return () => clearTimeout(timer);
+  }, [statsLoading]);
+
+  const isLoading = authLoading || (statsLoading && !statsLoadingTimedOut);
   // استخدام المستوى من قاعدة البيانات مباشرة
   const level = stats.level || 1;
   // Badges - بيانات حقيقية من نظام الشارات

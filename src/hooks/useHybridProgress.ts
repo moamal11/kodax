@@ -368,10 +368,18 @@ export function useUserStats(userId?: string) {
     }
 
     setIsLoading(true);
-    hybridSyncService.setUser(userId);
-    const data = await hybridSyncService.getUserXP();
-    setStats(data);
-    setIsLoading(false);
+    try {
+      // MUST await setUser before calling getUserXP — otherwise internal
+      // userId may not be set yet and we get empty/default data.
+      await hybridSyncService.setUser(userId);
+      const data = await hybridSyncService.getUserXP();
+      setStats(data);
+    } catch (err) {
+      console.warn('[useUserStats] Error fetching stats:', err);
+      // Keep previous stats — don't reset to defaults
+    } finally {
+      setIsLoading(false);
+    }
   }, [userId]);
 
   useEffect(() => {

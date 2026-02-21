@@ -13,9 +13,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 /**
  * Unified OAuth Callback Handler
  *
- * Handles OAuth redirects for both web and mobile:
- * - If fromApp=1: Redirects to kodax://auth/success with tokens (for mobile)
- * - Otherwise: Sets session and redirects to dashboard (for web)
+ * - Mobile (fromApp=1): Redirects to kodax://auth/success deep link with tokens
+ * - Web: Supabase's `detectSessionInUrl: true` handles token parsing automatically.
+ *   We only call setSession() as a safety fallback if detectSessionInUrl didn't fire.
+ *   The _layout.tsx onAuthStateChange listener handles navigation to /(tabs).
  */
 export default function AuthCallbackScreen() {
   const router = useRouter();
@@ -40,102 +41,70 @@ export default function AuthCallbackScreen() {
 
         if (hash) {
           const hashParams = new URLSearchParams(hash.replace('#', ''));
-
           access_token = hashParams.get('access_token');
           refresh_token = hashParams.get('refresh_token');
         }
 
-        // read query params normally
         const url = new URL(window.location.href);
         fromApp = url.searchParams.get('fromApp');
       }
 
-      // ===== Safety check =====
-      if (!access_token || !refresh_token) {
-        throw new Error('لم يتم استلام معلومات التحقق');
-      }
-
-      // ===== MOBILE FLOW =====
-      if (fromApp === '1') {
-        console.log('📱 Mobile flow detected');
-
+      // ===== MOBILE FLOW: redirect to deep link =====
+      if (fromApp === '1' && access_token && refresh_token) {
+        console.log('📱 Mobile flow — redirecting to deep link');
         const deepLinkUrl = `kodax://auth/success${window.location.hash}`;
-
         window.location.href = deepLinkUrl;
         return;
       }
 
       // ===== WEB FLOW =====
-      console.log('🌐 Web flow detected');
+      // detectSessionInUrl may have already parsed the tokens and fired
+      // SIGNED_IN via onAuthStateChange. Check if session already exists:
+      const {
+        data: { session: existingSession },
+      } = await supabase.auth.getSession();
 
-      // Try to set session with retries — some browsers may time out acquiring
-      // the Navigator LockManager lock. Retry a few times with backoff.
-      const setSessionWithRetries = async () => {
-        const maxAttempts = 4;
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          try {
-            const { error } = await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
-
-            if (error) throw error;
-            return;
-          } catch (err: any) {
-            const msg = err?.message || '';
-            const isLockError =
-              msg.includes('Lock') ||
-              msg.includes('lock:') ||
-              msg.includes('timed out') ||
-              msg.includes('Navigator LockManager');
-
-            if (attempt === maxAttempts || !isLockError) {
-              throw err;
-            }
-
-            console.warn(
-              `supabase setSession attempt ${attempt} failed, retrying...`,
-              msg
-            );
-            // exponential-ish backoff
-            await new Promise((res) => setTimeout(res, 300 * attempt));
-          }
-        }
-      };
-
-      await setSessionWithRetries();
-
-      // تنظيف الرابط من التوكن (مهم أمنيًا)
-      window.history.replaceState({}, document.title, '/');
-
-      // On web there are cases where the auth state change listener may not
-      // be delivered immediately (Navigator Lock contention). To ensure the
-      // root layout picks up the new session we write a short-lived flag to
-      // localStorage and then navigate to `/` (the layout will listen for
-      // the flag and re-fetch the session). This helps both single-tab and
-      // multi-tab flows.
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        try {
-          try {
-            window.localStorage.setItem(
-              'kodax_auth_update',
-              Date.now().toString()
-            );
-          } catch (e) {
-            // ignore localStorage errors
-          }
-
-          window.location.replace('/');
-          return;
-        } catch (e) {
-          // ignore and fall through to router navigation
-        }
+      if (existingSession) {
+        // Session already set by detectSessionInUrl — just clean URL and go
+        console.log('🌐 Session already set by detectSessionInUrl');
+        window.history.replaceState({}, document.title, '/');
+        // Navigation will be handled by _layout.tsx onAuthStateChange
+        // But as safety, redirect after a short delay
+        setTimeout(() => router.replace('/(tabs)'), 300);
+        return;
       }
 
-      router.replace('/(tabs)');
+      // Fallback: manually set session if detectSessionInUrl didn't handle it
+      if (!access_token || !refresh_token) {
+        // No tokens at all — wait briefly for detectSessionInUrl
+        await new Promise((r) => setTimeout(r, 1500));
+        const {
+          data: { session: delayedSession },
+        } = await supabase.auth.getSession();
+        if (delayedSession) {
+          window.history.replaceState({}, document.title, '/');
+          router.replace('/(tabs)');
+          return;
+        }
+        throw new Error('لم يتم استلام معلومات التحقق');
+      }
+
+      console.log('🌐 Setting session manually (fallback)');
+      const { error } = await supabase.auth.setSession({
+        access_token,
+        refresh_token,
+      });
+
+      if (error) throw error;
+
+      // Clean URL for security
+      window.history.replaceState({}, document.title, '/');
+
+      // onAuthStateChange in _layout.tsx will handle navigation
+      // Safety fallback redirect
+      setTimeout(() => router.replace('/(tabs)'), 300);
     } catch (error: any) {
       console.error('❌ Callback error:', error);
-
       router.replace({
         pathname: '/(auth)/login',
         params: { error: error.message },

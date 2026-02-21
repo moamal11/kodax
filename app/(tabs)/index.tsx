@@ -166,7 +166,7 @@ interface LeaderboardUser {
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [topUsers, setTopUsers] = useState<LeaderboardUser[]>([]);
-  const { user, isLoading: authLoading, fullName } = useAuth();
+  const { user, fullName } = useAuth();
   const router = useRouter();
   const { contentPaddingTop, contentPaddingBottom, isLargeScreen, isWeb } =
     useResponsiveLayout();
@@ -186,7 +186,20 @@ export default function HomeScreen() {
   // استخدام المستوى من قاعدة البيانات مباشرة
   const level = stats.level || 1;
   const featuredCourses = useMemo(() => courses.slice(0, 4), [courses]);
-  const isLoading = authLoading || statsLoading;
+
+  // ===== إصلاح شاشة التحميل المعلقة =====
+  // نعتمد على statsLoading فقط — بحلول الوصول إلى /(tabs) يكون authLoading=false دائماً.
+  // نضيف timeout احتياطياً (8 ثوانٍ) لضمان عدم تعليق الشاشة للأبد.
+  const [statsLoadingTimedOut, setStatsLoadingTimedOut] = useState(false);
+  useEffect(() => {
+    if (!statsLoading) {
+      setStatsLoadingTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setStatsLoadingTimedOut(true), 8000);
+    return () => clearTimeout(timer);
+  }, [statsLoading]);
+  const isLoading = statsLoading && !statsLoadingTimedOut;
 
   // ===== حساب أيام الأسبوع النشطة بناءً على streak و lastActiveDate =====
   // الأيام: س ج خ أ ث إ ح (السبت=0 إلى الجمعة=6)
@@ -223,6 +236,7 @@ export default function HomeScreen() {
   }, [stats.streak, stats.lastActiveDate]);
 
   // جلب أفضل 3 مستخدمين للتصنيفات
+  // Re-fetch when user changes (e.g. after OAuth login) to ensure data loads
   useEffect(() => {
     const fetchTopUsers = async () => {
       try {
@@ -240,7 +254,7 @@ export default function HomeScreen() {
       }
     };
     fetchTopUsers();
-  }, []);
+  }, [user?.id]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -1087,7 +1101,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 19,
-    color: 'rgb(190, 50, 248)',
+    color: '#ccc',
     marginBottom: 8,
     fontWeight: '700',
   },

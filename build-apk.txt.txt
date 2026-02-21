@@ -9,3 +9,4 @@ npx expo run:android --variant release
 
 
 npx expo export --platform web
+npx serve dist
