@@ -10,7 +10,7 @@ import AsyncStorage from '@/lib/platformStorage';
 const STORAGE_KEY = '@kodax_points_data';
 
 // تكلفة الاشتراك المميز بالنقاط (شهري)
-export const PREMIUM_SUBSCRIPTION_COST = 2500;
+export const PREMIUM_SUBSCRIPTION_COST = 500;
 
 // مدة الاشتراك المميز بالأيام
 export const PREMIUM_DURATION_DAYS = 30;
