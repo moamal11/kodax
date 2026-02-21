@@ -1,4 +1,4 @@
--- ===== Kodax Database Migration - Full Supabase Integration =====
+﻿-- ===== Kodax Database Migration - Full Supabase Integration =====
 -- نقل كامل للاعتماد على Supabase بدون بيانات محلية
 -- تاريخ: 2026-02-04
 
@@ -64,7 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_lessons_v2_order ON lessons_v2(course_id, order_i
 
 -- ===== 3. جدول تقدم المستخدم في الدروس =====
 CREATE TABLE IF NOT EXISTS user_lesson_progress (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   lesson_id TEXT NOT NULL,
   course_id TEXT NOT NULL,
@@ -505,21 +505,21 @@ UPDATE courses SET
 
 -- ===== 15. إدخال تحديات =====
 INSERT INTO challenges (id, title, title_ar, description, field_id, difficulty, xp_reward, type, test_cases, starter_code, solution_code, hints, language, category, active) VALUES
-  (uuid_generate_v4(), 'Hello World', 'مرحباً بالعالم', 'اكتب دالة تُرجع "Hello World"', 'python', 'easy', 50, 'daily',
+  (gen_random_uuid(), 'Hello World', 'مرحباً بالعالم', 'اكتب دالة تُرجع "Hello World"', 'python', 'easy', 50, 'daily',
    '[{"input": "", "expected_output": "Hello World", "description": "يجب أن تُرجع Hello World"}]'::JSONB,
    'def hello():\n    # اكتب كودك هنا\n    pass',
    'def hello():\n    return "Hello World"',
    '["استخدم return", "النص يجب أن يكون بين علامتي تنصيص"]'::JSONB,
    'python', 'basics', true
   ),
-  (uuid_generate_v4(), 'Sum Two Numbers', 'جمع عددين', 'اكتب دالة تجمع عددين', 'python', 'easy', 75, 'daily',
+  (gen_random_uuid(), 'Sum Two Numbers', 'جمع عددين', 'اكتب دالة تجمع عددين', 'python', 'easy', 75, 'daily',
    '[{"input": "2, 3", "expected_output": "5", "description": "2 + 3 = 5"}, {"input": "10, 20", "expected_output": "30", "description": "10 + 20 = 30"}]'::JSONB,
    'def add(a, b):\n    # اكتب كودك هنا\n    pass',
    'def add(a, b):\n    return a + b',
    '["استخدم عامل الجمع +", "أرجع الناتج باستخدام return"]'::JSONB,
    'python', 'basics', true
   ),
-  (uuid_generate_v4(), 'Even or Odd', 'زوجي أم فردي', 'اكتب دالة تُحدد إذا كان العدد زوجياً', 'python', 'easy', 100, 'weekly',
+  (gen_random_uuid(), 'Even or Odd', 'زوجي أم فردي', 'اكتب دالة تُحدد إذا كان العدد زوجياً', 'python', 'easy', 100, 'weekly',
    '[{"input": "4", "expected_output": "even", "description": "4 زوجي"}, {"input": "7", "expected_output": "odd", "description": "7 فردي"}]'::JSONB,
    'def check_even_odd(n):\n    # اكتب كودك هنا\n    pass',
    'def check_even_odd(n):\n    return "even" if n % 2 == 0 else "odd"',

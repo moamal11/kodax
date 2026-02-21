@@ -1,11 +1,11 @@
--- ========================================
+﻿-- ========================================
 -- جدول تتبع استخدام نظام الذكاء الاصطناعي
 -- AI Usage Tracking Table
 -- ========================================
 
 -- إنشاء الجدول
 CREATE TABLE IF NOT EXISTS ai_usage_tracking (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   
   -- معلومات التصنيف

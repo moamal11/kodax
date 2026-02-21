@@ -1,19 +1,20 @@
 /**
  * AppContext - Global Application State
  *
- * مركز البيانات العام: يستمع لتغييرات المصادقة ويحدّث جميع البيانات تلقائياً.
+ * مركز البيانات العام: يعتمد على AuthContext ويحدّث جميع البيانات تلقائياً.
  * بعد تسجيل الدخول، يتم إعادة تحميل:
  * - الملف الشخصي (profile)
- * - الإعجابات (likes)
- * - المتابعات (follows)
- * - الأكواد (snippets)
+ * - الإعجابات (likes) — مع Optimistic Updates ومزامنة بين الصفحات
  * - التصنيفات (leaderboard)
- * - الإحصائيات (stats)
  *
  * يوفر:
  * - refreshAll() — تحديث كل شيء
- * - بيانات مشتركة بين الصفحات
- * - Likes system مع Optimistic Updates
+ * - نظام Like مركزي مع:
+ *   - Optimistic UI Update
+ *   - Rollback عند الفشل
+ *   - منع الضغط المتكرر (debounce)
+ *   - مزامنة بين جميع الصفحات عبر likedSnippets + snippetLikeCounts
+ *   - Toggle Like (إضافة/إزالة)
  */
 
 import React, {
@@ -23,18 +24,15 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
   ReactNode,
 } from 'react';
 import { ProfileData, getProfile } from '@/services/profileService';
-import { getFollowInfo } from '@/services/followService';
 import {
-  getPublicSnippets,
   checkUserLikes,
   toggleLike as toggleLikeService,
-  FeedSnippet,
 } from '@/services/codeFeedService';
 import { supabaseService } from '@/services/supabaseService';
-import { hybridSyncService } from '@/services/hybridSyncService';
 
 // ===== Types =====
 
@@ -57,18 +55,26 @@ interface AppContextType {
   leaderboard: LeaderboardUser[];
   leaderboardLoading: boolean;
 
-  // Likes (global set so all pages stay in sync)
+  // ===== نظام اللايكات المركزي =====
+  /** مجموعة الأكواد التي أعجب بها المستخدم */
   likedSnippets: Set<string>;
+  /** عدد اللايكات لكل كود — يتم تحديثها تلقائياً */
+  snippetLikeCounts: Map<string, number>;
+  /** Toggle Like مع Optimistic Update + Rollback */
   toggleLike: (snippetId: string) => Promise<void>;
+  /** هل عملية اللايك جارية لهذا الكود؟ */
   isLikeInProgress: (snippetId: string) => boolean;
+  /** تحميل حالة اللايكات لقائمة أكواد (تُستدعى عند تحميل الأكواد في أي صفحة) */
+  syncLikes: (snippetIds: string[]) => Promise<void>;
+  /** تحديث عدد اللايكات يدوياً (عند تحميل الأكواد) */
+  updateLikeCounts: (counts: Record<string, number>) => void;
+  /** الحصول على عدد اللايكات لكود معين */
+  getLikeCount: (snippetId: string, fallback?: number) => number;
 
   // Refresh
   refreshAll: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   refreshLeaderboard: () => Promise<void>;
-
-  // Auth version — increments on login, pages can watch this to re-fetch
-  authVersion: number;
 
   // Loading
   isInitialLoad: boolean;
@@ -84,8 +90,6 @@ interface AppProviderProps {
 }
 
 export function AppProvider({ children, userId }: AppProviderProps) {
-  // Auth version — increments on each login, triggers page re-fetches
-  const [authVersion, setAuthVersion] = useState(0);
   const prevUserIdRef = useRef<string | undefined>(undefined);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
@@ -98,9 +102,13 @@ export function AppProvider({ children, userId }: AppProviderProps) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
-  // Likes — global set shared across all pages
+  // ===== نظام اللايكات المركزي =====
   const [likedSnippets, setLikedSnippets] = useState<Set<string>>(new Set());
+  const [snippetLikeCounts, setSnippetLikeCounts] = useState<
+    Map<string, number>
+  >(new Map());
   const likesInProgressRef = useRef<Set<string>>(new Set());
+  const likeCooldownRef = useRef<Set<string>>(new Set());
 
   // ===== Detect user change (login/logout/switch) =====
   useEffect(() => {
@@ -114,13 +122,13 @@ export function AppProvider({ children, userId }: AppProviderProps) {
       setFollowingCount(0);
       setLeaderboard([]);
       setLikedSnippets(new Set());
+      setSnippetLikeCounts(new Map());
       setIsInitialLoad(true);
       return;
     }
 
     if (prevId !== userId) {
-      // New user logged in — bump version and refresh all
-      setAuthVersion((v) => v + 1);
+      // New user logged in — refresh all
       loadAllData(userId);
     }
   }, [userId]);
@@ -135,8 +143,8 @@ export function AppProvider({ children, userId }: AppProviderProps) {
         setFollowersCount(data.followers_count || 0);
         setFollowingCount(data.following_count || 0);
       }
-    } catch (e) {
-      // Profile load failed — keep stale data
+    } catch (_e) {
+      // Keep stale data
     }
   }, []);
 
@@ -153,7 +161,7 @@ export function AppProvider({ children, userId }: AppProviderProps) {
         level: u.level,
       }));
       setLeaderboard(formatted);
-    } catch (e) {
+    } catch (_e) {
       // Keep stale data
     } finally {
       setLeaderboardLoading(false);
@@ -176,7 +184,6 @@ export function AppProvider({ children, userId }: AppProviderProps) {
 
   const refreshAll = useCallback(async () => {
     if (!userId) return;
-    setAuthVersion((v) => v + 1);
     await loadAllData(userId);
   }, [userId, loadAllData]);
 
@@ -189,73 +196,184 @@ export function AppProvider({ children, userId }: AppProviderProps) {
     await loadLeaderboard();
   }, [loadLeaderboard]);
 
-  // ===== Like system with optimistic updates + debounce =====
+  // ===== نظام اللايكات المركزي =====
 
+  /**
+   * syncLikes — تحميل حالة اللايكات لقائمة أكواد
+   * تُستدعى عند تحميل الأكواد في أي صفحة
+   */
+  const syncLikes = useCallback(
+    async (snippetIds: string[]) => {
+      if (!userId || snippetIds.length === 0) return;
+      try {
+        const liked = await checkUserLikes(userId, snippetIds);
+        setLikedSnippets((prev) => {
+          const next = new Set(prev);
+          for (const id of snippetIds) {
+            if (liked.has(id)) {
+              next.add(id);
+            } else {
+              next.delete(id);
+            }
+          }
+          return next;
+        });
+      } catch (_e) {
+        // Silent — لا نريد كسر تحميل الأكواد
+      }
+    },
+    [userId]
+  );
+
+  /**
+   * updateLikeCounts — تحديث عدد اللايكات لأكواد محملة
+   * تُستدعى عند تحميل الأكواد مع counts
+   */
+  const updateLikeCounts = useCallback((counts: Record<string, number>) => {
+    setSnippetLikeCounts((prev) => {
+      const next = new Map(prev);
+      for (const [id, count] of Object.entries(counts)) {
+        next.set(id, count);
+      }
+      return next;
+    });
+  }, []);
+
+  /**
+   * getLikeCount — الحصول على عدد اللايكات مع fallback
+   */
+  const getLikeCount = useCallback(
+    (snippetId: string, fallback = 0): number => {
+      return snippetLikeCounts.get(snippetId) ?? fallback;
+    },
+    [snippetLikeCounts]
+  );
+
+  /**
+   * isLikeInProgress — هل عملية اللايك جارية؟
+   */
   const isLikeInProgress = useCallback((snippetId: string) => {
     return likesInProgressRef.current.has(snippetId);
   }, []);
 
+  /**
+   * toggleLike — Toggle Like مع:
+   * 1. Optimistic UI Update (فوري)
+   * 2. إرسال الطلب إلى Supabase
+   * 3. Rollback إذا فشل
+   * 4. منع الضغط المتكرر (cooldown 400ms + in-progress lock)
+   * 5. تحديث العدد في جميع الصفحات
+   */
   const toggleLike = useCallback(
     async (snippetId: string) => {
       if (!userId) return;
 
-      // Prevent double-tap
+      // ===== منع الضغط المتكرر =====
       if (likesInProgressRef.current.has(snippetId)) return;
+      if (likeCooldownRef.current.has(snippetId)) return;
+
       likesInProgressRef.current.add(snippetId);
+      likeCooldownRef.current.add(snippetId);
+      setTimeout(() => likeCooldownRef.current.delete(snippetId), 400);
 
       const wasLiked = likedSnippets.has(snippetId);
+      const delta = wasLiked ? -1 : 1;
 
-      // Optimistic update
+      // ===== Optimistic Update — فوري =====
       setLikedSnippets((prev) => {
         const next = new Set(prev);
         wasLiked ? next.delete(snippetId) : next.add(snippetId);
         return next;
       });
+      setSnippetLikeCounts((prev) => {
+        const next = new Map(prev);
+        const current = next.get(snippetId) ?? 0;
+        next.set(snippetId, Math.max(0, current + delta));
+        return next;
+      });
 
       try {
-        const { error } = await toggleLikeService(userId, snippetId);
-        if (error) {
-          // Rollback on failure
+        const result = await toggleLikeService(userId, snippetId);
+        if (result.error) {
+          // ===== Rollback =====
           setLikedSnippets((prev) => {
             const next = new Set(prev);
             wasLiked ? next.add(snippetId) : next.delete(snippetId);
             return next;
           });
+          setSnippetLikeCounts((prev) => {
+            const next = new Map(prev);
+            const current = next.get(snippetId) ?? 0;
+            next.set(snippetId, Math.max(0, current - delta));
+            return next;
+          });
+        } else {
+          // تحديث العدد الحقيقي من السيرفر
+          setSnippetLikeCounts((prev) => {
+            const next = new Map(prev);
+            next.set(snippetId, result.newCount);
+            return next;
+          });
         }
       } catch {
-        // Rollback on exception
+        // ===== Rollback on exception =====
         setLikedSnippets((prev) => {
           const next = new Set(prev);
           wasLiked ? next.add(snippetId) : next.delete(snippetId);
+          return next;
+        });
+        setSnippetLikeCounts((prev) => {
+          const next = new Map(prev);
+          const current = next.get(snippetId) ?? 0;
+          next.set(snippetId, Math.max(0, current - delta));
           return next;
         });
       } finally {
         likesInProgressRef.current.delete(snippetId);
       }
     },
-    [userId, likedSnippets]
+    [userId, likedSnippets, snippetLikeCounts]
   );
 
-  // ===== Sync liked snippets when snippets are loaded =====
-  // This is called by code pages when they load snippet IDs
-  // We expose the set + toggleLike, pages merge their own checks
-
   // ===== Context value =====
-  const value: AppContextType = {
-    profile,
-    followersCount,
-    followingCount,
-    leaderboard,
-    leaderboardLoading,
-    likedSnippets,
-    toggleLike,
-    isLikeInProgress,
-    refreshAll,
-    refreshProfile,
-    refreshLeaderboard,
-    authVersion,
-    isInitialLoad,
-  };
+  const value = useMemo<AppContextType>(
+    () => ({
+      profile,
+      followersCount,
+      followingCount,
+      leaderboard,
+      leaderboardLoading,
+      likedSnippets,
+      snippetLikeCounts,
+      toggleLike,
+      isLikeInProgress,
+      syncLikes,
+      updateLikeCounts,
+      getLikeCount,
+      refreshAll,
+      refreshProfile,
+      refreshLeaderboard,
+      isInitialLoad,
+    }),
+    [
+      profile,
+      followersCount,
+      followingCount,
+      leaderboard,
+      leaderboardLoading,
+      likedSnippets,
+      snippetLikeCounts,
+      toggleLike,
+      isLikeInProgress,
+      syncLikes,
+      updateLikeCounts,
+      getLikeCount,
+      refreshAll,
+      refreshProfile,
+      refreshLeaderboard,
+      isInitialLoad,
+    ]
+  );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

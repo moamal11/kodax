@@ -1,4 +1,4 @@
--- Fix Platform Data Sync Issues
+﻿-- Fix Platform Data Sync Issues
 -- يصلح مشاكل عرض البيانات بين الويب والهاتف
 
 -- =====================================
@@ -31,7 +31,7 @@ CREATE INDEX IF NOT EXISTS idx_challenge_attempts_user_challenge
 -- =====================================
 -- لمزامنة الشارات بين الأجهزة
 CREATE TABLE IF NOT EXISTS user_badges (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   badge_id TEXT NOT NULL,
   earned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -57,7 +57,7 @@ CREATE POLICY "Users can earn badges" ON user_badges
 -- =====================================
 -- لمزامنة الإشعارات بين الأجهزة
 CREATE TABLE IF NOT EXISTS app_notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN (
     'badge', 'level_up', 'challenge', 'lesson', 'course', 

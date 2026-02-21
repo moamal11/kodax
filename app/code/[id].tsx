@@ -42,13 +42,12 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { WebView } from 'react-native-webview';
 
-import { useAuth } from '../_layout';
+import { useAuth } from '@/contexts/AuthContext';
 import { useResponsiveLayout } from '@/hooks';
+import { useApp } from '@/contexts/AppContext';
 import { tokenizeCode, TokenType } from '@/utils/syntaxHighlighter';
 import {
   getSnippetById,
-  toggleLike,
-  checkUserLikes,
   getComments,
   addComment,
   incrementViews,
@@ -234,13 +233,18 @@ export default function CodeDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { isLargeScreen } = useResponsiveLayout();
+  const {
+    likedSnippets,
+    toggleLike: globalToggleLike,
+    syncLikes,
+    updateLikeCounts,
+    getLikeCount,
+  } = useApp();
   const commentInputRef = useRef<TextInput>(null);
 
   // State
   const [snippet, setSnippet] = useState<FeedSnippet | null>(null);
   const [loading, setLoading] = useState(true);
-  const [liked, setLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(0);
   const [comments, setComments] = useState<SnippetComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(true);
   const [newComment, setNewComment] = useState('');
@@ -273,13 +277,9 @@ export default function CodeDetailsScreen() {
 
       if (!error && data) {
         setSnippet(data);
-        setLikesCount(data.likes_count || 0);
-
-        // Check if user liked this snippet
-        if (user?.id) {
-          const likedSet = await checkUserLikes(user.id, [id]);
-          setLiked(likedSet.has(id));
-        }
+        // مزامنة اللايكات عبر AppContext المركزي
+        syncLikes([id]);
+        updateLikeCounts({ [id]: data.likes_count || 0 });
 
         // Increment view count (once per user)
         incrementViews(id, user?.id);
@@ -363,17 +363,9 @@ export default function CodeDetailsScreen() {
       } catch {}
     }
 
-    // Optimistic
-    const wasLiked = liked;
-    setLiked(!wasLiked);
-    setLikesCount((c) => c + (wasLiked ? -1 : 1));
-
-    const { error } = await toggleLike(user.id, id);
-    if (error) {
-      setLiked(wasLiked);
-      setLikesCount((c) => c + (wasLiked ? 1 : -1));
-    }
-  }, [user?.id, id, liked]);
+    // AppContext يدير Optimistic Update + Rollback + Debounce
+    await globalToggleLike(id);
+  }, [user?.id, id, globalToggleLike]);
 
   const handleCopy = useCallback(async () => {
     if (!snippet) return;
@@ -1061,22 +1053,33 @@ export default function CodeDetailsScreen() {
                 <TouchableOpacity
                   style={[
                     styles.actionButton,
-                    liked && styles.actionButtonActive,
+                    (id ? likedSnippets.has(id) : false) &&
+                      styles.actionButtonActive,
                   ]}
                   onPress={handleLike}
                 >
                   <MaterialIcons
-                    name={liked ? 'favorite' : 'favorite-border'}
+                    name={
+                      (id ? likedSnippets.has(id) : false)
+                        ? 'favorite'
+                        : 'favorite-border'
+                    }
                     size={22}
-                    color={liked ? '#ef4444' : '#9ca3af'}
+                    color={
+                      (id ? likedSnippets.has(id) : false)
+                        ? '#ef4444'
+                        : '#9ca3af'
+                    }
                   />
                   <Text
                     style={[
                       styles.actionButtonText,
-                      liked && { color: '#ef4444' },
+                      (id ? likedSnippets.has(id) : false) && {
+                        color: '#ef4444',
+                      },
                     ]}
                   >
-                    {likesCount} إعجاب
+                    {id ? getLikeCount(id, snippet?.likes_count || 0) : 0} إعجاب
                   </Text>
                 </TouchableOpacity>
 

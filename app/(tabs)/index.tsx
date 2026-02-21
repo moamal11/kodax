@@ -45,7 +45,7 @@ import {
   ALL_LESSONS,
 } from '@/constants/courseData';
 import { useUserStats } from '@/hooks/useHybridProgress';
-import { useApp } from '@/contexts/AppContext';
+// removed: useApp import (authVersion is now in useAuth)
 
 const { width } = Dimensions.get('window');
 
@@ -171,7 +171,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { contentPaddingTop, contentPaddingBottom, isLargeScreen, isWeb } =
     useResponsiveLayout();
-  const { authVersion } = useApp();
+  const { authVersion } = useAuth();
 
   // ===== نظام Hybrid: إحصائيات من Supabase، كورسات من البيانات المحلية =====
   const {

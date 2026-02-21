@@ -2,7 +2,7 @@
 -- This prevents counting multiple views from the same user
 
 CREATE TABLE IF NOT EXISTS code_views (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   snippet_id UUID REFERENCES code_snippets(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

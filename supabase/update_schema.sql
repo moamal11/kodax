@@ -1,4 +1,4 @@
--- ===== Kodax Database Updates =====
+﻿-- ===== Kodax Database Updates =====
 -- تحديثات قاعدة البيانات لإصلاح مشاكل الحفظ والمزامنة
 
 -- ===== 1. تحديث جدول user_progress =====
@@ -8,7 +8,7 @@
 
 -- إنشاء جدول جديد لتتبع التقدم باستخدام String IDs
 CREATE TABLE IF NOT EXISTS user_lesson_progress (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   lesson_id TEXT NOT NULL,
   course_id TEXT NOT NULL,
@@ -38,7 +38,7 @@ ON user_lesson_progress(user_id, lesson_id);
 
 -- ===== 2. جدول تقدم الكورسات =====
 CREATE TABLE IF NOT EXISTS course_progress (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   course_id TEXT NOT NULL,
   completed_lessons INTEGER DEFAULT 0,
@@ -61,7 +61,7 @@ CREATE POLICY "Users can manage their own course progress" ON course_progress
 
 -- ===== 3. جدول الأقسام المفتوحة (للشراء المجزأ) =====
 CREATE TABLE IF NOT EXISTS user_unlocked_sections (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   course_id TEXT NOT NULL,
   section_id TEXT NOT NULL,

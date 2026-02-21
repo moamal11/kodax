@@ -1,4 +1,4 @@
--- Enable UUID extension
+﻿-- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Users table (extends Supabase auth.users)
@@ -28,7 +28,7 @@ CREATE TABLE programming_fields (
 
 -- User selected fields
 CREATE TABLE user_fields (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   field_id TEXT REFERENCES programming_fields(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -37,7 +37,7 @@ CREATE TABLE user_fields (
 
 -- Lessons
 CREATE TABLE lessons (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   field_id TEXT REFERENCES programming_fields(id),
   title TEXT NOT NULL,
   title_ar TEXT NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE lessons (
 
 -- User progress
 CREATE TABLE user_progress (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   lesson_id UUID REFERENCES lessons(id) ON DELETE CASCADE,
   completed BOOLEAN DEFAULT FALSE,
@@ -64,7 +64,7 @@ CREATE TABLE user_progress (
 
 -- Challenges
 CREATE TABLE challenges (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   title_ar TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -83,7 +83,7 @@ CREATE TABLE challenges (
 
 -- User challenge attempts
 CREATE TABLE challenge_attempts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   challenge_id UUID REFERENCES challenges(id) ON DELETE CASCADE,
   code TEXT NOT NULL,
@@ -96,7 +96,7 @@ CREATE TABLE challenge_attempts (
 
 -- Badges
 CREATE TABLE badges (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   name_ar TEXT NOT NULL,
   description TEXT,
@@ -109,7 +109,7 @@ CREATE TABLE badges (
 
 -- User badges
 CREATE TABLE user_badges (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   badge_id UUID REFERENCES badges(id) ON DELETE CASCADE,
   earned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -118,7 +118,7 @@ CREATE TABLE user_badges (
 
 -- Code snippets (posts)
 CREATE TABLE code_snippets (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
@@ -134,7 +134,7 @@ CREATE TABLE code_snippets (
 
 -- Code snippet likes
 CREATE TABLE code_likes (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   snippet_id UUID REFERENCES code_snippets(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -143,7 +143,7 @@ CREATE TABLE code_likes (
 
 -- Code snippet comments
 CREATE TABLE code_comments (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   snippet_id UUID REFERENCES code_snippets(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
@@ -153,7 +153,7 @@ CREATE TABLE code_comments (
 
 -- AI chat history
 CREATE TABLE ai_chat_history (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   role TEXT CHECK (role IN ('user', 'assistant')),
   content TEXT NOT NULL,
@@ -164,7 +164,7 @@ CREATE TABLE ai_chat_history (
 
 -- Subscriptions
 CREATE TABLE subscriptions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   status TEXT CHECK (status IN ('pending', 'active', 'expired', 'cancelled')),
   plan_type TEXT,
@@ -209,7 +209,7 @@ CREATE INDEX idx_challenges_active ON challenges(active);
 
 -- جدول الدورات المفتوحة للمستخدم
 CREATE TABLE user_unlocked_courses (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   course_id TEXT NOT NULL,
   unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -218,7 +218,7 @@ CREATE TABLE user_unlocked_courses (
 
 -- جدول النقاط المشتراة
 CREATE TABLE user_points (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   total_points INTEGER DEFAULT 0,
   purchased_points INTEGER DEFAULT 0,
@@ -231,7 +231,7 @@ CREATE TABLE user_points (
 
 -- جدول سجل المعاملات
 CREATE TABLE point_transactions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   type TEXT CHECK (type IN ('earned', 'spent', 'purchased')),
   amount INTEGER NOT NULL,

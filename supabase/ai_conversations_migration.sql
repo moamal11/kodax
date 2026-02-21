@@ -1,10 +1,10 @@
--- ========================================
+﻿-- ========================================
 -- Migration: AI Conversations System
 -- ========================================
 
 -- إنشاء جدول المحادثات
 CREATE TABLE IF NOT EXISTS ai_conversations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL, -- عنوان المحادثة (أول رسالة من المستخدم)
   mode TEXT DEFAULT 'general', -- نوع المحادثة
@@ -68,7 +68,7 @@ CREATE TRIGGER update_conversation_stats_trigger
 
 -- جدول إحصائيات استخدام AI
 CREATE TABLE IF NOT EXISTS ai_usage_stats (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   total_tokens_used INTEGER DEFAULT 0,
   total_messages INTEGER DEFAULT 0,

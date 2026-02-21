@@ -50,7 +50,9 @@ export type NotificationType =
   | 'payment_rejected'
   | 'system'
   | 'follow'
-  | 'profile_update';
+  | 'profile_update'
+  | 'like'
+  | 'comment';
 
 export interface AppNotification {
   id: string;
@@ -79,10 +81,14 @@ class NotificationService {
   private initialized = false;
   private onNewNotification: NotificationEventCallback | null = null;
   private userId: string | null = null;
+  private realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 
   // ===== تعيين معرف المستخدم =====
   async setUserId(userId: string | null): Promise<void> {
     if (this.userId !== userId) {
+      // إلغاء الاشتراك Realtime عند تغيير المستخدم
+      this.unsubscribeFromRealtime();
+
       // مسح بيانات المستخدم القديم من AsyncStorage — دائماً عند تغيير المستخدم
       try {
         await AsyncStorage.removeItem(NOTIFICATIONS_KEY);
@@ -549,11 +555,80 @@ class NotificationService {
     } catch {}
   }
 
+  // ===== اشتراك Realtime لاستقبال الإشعارات الجديدة فورياً =====
+  subscribeToRealtime(userId: string): void {
+    // إلغاء أي اشتراك سابق أولاً
+    this.unsubscribeFromRealtime();
+
+    this.realtimeChannel = supabase
+      .channel(`app_notifications:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'app_notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const n = payload.new as Record<string, any>;
+          const notification: AppNotification = {
+            id: n.id,
+            type: n.type as NotificationType,
+            title: n.title,
+            message: n.message,
+            read: n.read ?? false,
+            timestamp: n.created_at,
+            metadata: n.metadata,
+          };
+
+          // تجنب التكرار إذا كانت موجودة مسبقاً
+          if (this.notifications.some((x) => x.id === notification.id)) return;
+
+          // إضافة في البداية (الأحدث أولاً)
+          this.notifications.unshift(notification);
+          if (this.notifications.length > MAX_NOTIFICATIONS) {
+            this.notifications = this.notifications.slice(0, MAX_NOTIFICATIONS);
+          }
+
+          // حفظ محلي
+          AsyncStorage.setItem(
+            NOTIFICATIONS_KEY,
+            JSON.stringify(this.notifications)
+          ).catch(() => {});
+
+          // إطلاق callback لتحديث الـ UI
+          this.onNewNotification?.(notification);
+
+          console.log(
+            '🔔 Realtime notification received:',
+            notification.type,
+            notification.title
+          );
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+        } else if (status === 'CHANNEL_ERROR') {
+          console.warn('⚠️ Realtime notification channel error');
+        }
+      });
+  }
+
+  unsubscribeFromRealtime(): void {
+    if (this.realtimeChannel) {
+      supabase.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
+      console.log('🔕 Unsubscribed from realtime notifications');
+    }
+  }
+
   /**
    * إعادة تعيين الحالة في الذاكرة فقط (بدون AsyncStorage)
    * يُستخدم بعد clearAllKodaxData() لتنظيف الذاكرة
    */
   resetState(): void {
+    this.unsubscribeFromRealtime();
     this.notifications = [];
     this.initialized = false;
     this.userId = null;

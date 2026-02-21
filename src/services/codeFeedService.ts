@@ -5,6 +5,15 @@
 
 import { supabase } from '@/lib/supabase';
 
+// Simple UUID v4 generator (no external dependency needed)
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 // ==================== Types ====================
 
 export interface FeedSnippet {
@@ -249,10 +258,11 @@ export async function toggleLike(
       // Unlike
       await supabase.from('code_likes').delete().eq('id', existing.id);
     } else {
-      // Like
+      // Like - generate UUID client-side to avoid server-side uuid_generate_v4() error
+      const likeId = generateUUID();
       await supabase
         .from('code_likes')
-        .insert({ user_id: userId, snippet_id: snippetId });
+        .insert({ id: likeId, user_id: userId, snippet_id: snippetId });
     }
 
     // Get accurate count
@@ -321,7 +331,10 @@ export async function addComment(
   content: string
 ): Promise<{ success: boolean; error: string | null }> {
   try {
+    // Generate UUID client-side to avoid server-side uuid_generate_v4() error
+    const commentId = generateUUID();
     const { error } = await supabase.from('code_comments').insert({
+      id: commentId,
       user_id: userId,
       snippet_id: snippetId,
       content,
@@ -364,9 +377,12 @@ export async function createSnippet(snippet: {
   isPublic: boolean;
 }): Promise<{ id: string | null; error: string | null }> {
   try {
+    // Generate UUID client-side
+    const snippetId = generateUUID();
     const { data, error } = await supabase
       .from('code_snippets')
       .insert({
+        id: snippetId,
         user_id: snippet.userId,
         title: snippet.title,
         description: snippet.description || null,
@@ -413,10 +429,11 @@ export async function incrementViews(
         return;
       }
 
-      // Record the view
+      // Record the view - generate UUID client-side
+      const viewId = generateUUID();
       await supabase
         .from('code_views')
-        .insert({ user_id: userId, snippet_id: snippetId });
+        .insert({ id: viewId, user_id: userId, snippet_id: snippetId });
 
       // Increment the views_count
       const { data } = await supabase

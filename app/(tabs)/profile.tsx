@@ -338,9 +338,9 @@ export default function ProfileScreen() {
     profile: appProfile,
     followersCount: appFollowers,
     followingCount: appFollowing,
-    authVersion,
     refreshProfile,
   } = useApp();
+  const { authVersion } = useAuth();
 
   // ===== نظام Hybrid: إحصائيات من Supabase =====
   const {
@@ -733,499 +733,736 @@ export default function ProfileScreen() {
 
               {/* Quick Stats - Web (desktop only) */}
               {!isTablet && (
-              <Animated.View entering={FadeInDown.delay(150).springify()}>
-                <View style={webStyles.quickStatsWeb}>
-                  <GlassCard style={webStyles.quickStatCardWeb}>
-                    <View
-                      style={[
-                        webStyles.quickStatIconWeb,
-                        { backgroundColor: 'rgba(167, 139, 250, 0.2)' },
-                      ]}
-                    >
-                      <Ionicons name="diamond" size={22} color="#a78bfa" />
-                    </View>
-                    <Text style={webStyles.quickStatValueWeb}>
-                      {points.toLocaleString()}
-                    </Text>
-                    <Text style={webStyles.quickStatLabelWeb}>نقطة</Text>
-                  </GlassCard>
-                  <GlassCard style={webStyles.quickStatCardWeb}>
-                    <View
-                      style={[
-                        webStyles.quickStatIconWeb,
-                        { backgroundColor: 'rgba(245, 158, 11, 0.2)' },
-                      ]}
-                    >
-                      <MaterialIcons
-                        name="local-fire-department"
-                        size={22}
-                        color="#f59e0b"
-                      />
-                    </View>
-                    <Text style={webStyles.quickStatValueWeb}>
-                      {stats.streak}
-                    </Text>
-                    <Text style={webStyles.quickStatLabelWeb}>سلسلة يومية</Text>
-                  </GlassCard>
-                  <GlassCard style={webStyles.quickStatCardWeb}>
-                    <View
-                      style={[
-                        webStyles.quickStatIconWeb,
-                        { backgroundColor: 'rgba(59, 130, 246, 0.2)' },
-                      ]}
-                    >
-                      <MaterialIcons name="school" size={22} color="#3b82f6" />
-                    </View>
-                    <Text style={webStyles.quickStatValueWeb}>
-                      {completedLessonsCount}
-                    </Text>
-                    <Text style={webStyles.quickStatLabelWeb}>درس مكتمل</Text>
-                  </GlassCard>
-                  <GlassCard style={webStyles.quickStatCardWeb}>
-                    <View
-                      style={[
-                        webStyles.quickStatIconWeb,
-                        { backgroundColor: 'rgba(16, 185, 129, 0.2)' },
-                      ]}
-                    >
-                      <MaterialIcons
-                        name="emoji-events"
-                        size={22}
-                        color="#10b981"
-                      />
-                    </View>
-                    <Text style={webStyles.quickStatValueWeb}>
-                      {completedChallengesCount}
-                    </Text>
-                    <Text style={webStyles.quickStatLabelWeb}>تحدي مكتمل</Text>
-                  </GlassCard>
-                </View>
-              </Animated.View>
+                <Animated.View entering={FadeInDown.delay(150).springify()}>
+                  <View style={webStyles.quickStatsWeb}>
+                    <GlassCard style={webStyles.quickStatCardWeb}>
+                      <View
+                        style={[
+                          webStyles.quickStatIconWeb,
+                          { backgroundColor: 'rgba(167, 139, 250, 0.2)' },
+                        ]}
+                      >
+                        <Ionicons name="diamond" size={22} color="#a78bfa" />
+                      </View>
+                      <Text style={webStyles.quickStatValueWeb}>
+                        {points.toLocaleString()}
+                      </Text>
+                      <Text style={webStyles.quickStatLabelWeb}>نقطة</Text>
+                    </GlassCard>
+                    <GlassCard style={webStyles.quickStatCardWeb}>
+                      <View
+                        style={[
+                          webStyles.quickStatIconWeb,
+                          { backgroundColor: 'rgba(245, 158, 11, 0.2)' },
+                        ]}
+                      >
+                        <MaterialIcons
+                          name="local-fire-department"
+                          size={22}
+                          color="#f59e0b"
+                        />
+                      </View>
+                      <Text style={webStyles.quickStatValueWeb}>
+                        {stats.streak}
+                      </Text>
+                      <Text style={webStyles.quickStatLabelWeb}>
+                        سلسلة يومية
+                      </Text>
+                    </GlassCard>
+                    <GlassCard style={webStyles.quickStatCardWeb}>
+                      <View
+                        style={[
+                          webStyles.quickStatIconWeb,
+                          { backgroundColor: 'rgba(59, 130, 246, 0.2)' },
+                        ]}
+                      >
+                        <MaterialIcons
+                          name="school"
+                          size={22}
+                          color="#3b82f6"
+                        />
+                      </View>
+                      <Text style={webStyles.quickStatValueWeb}>
+                        {completedLessonsCount}
+                      </Text>
+                      <Text style={webStyles.quickStatLabelWeb}>درس مكتمل</Text>
+                    </GlassCard>
+                    <GlassCard style={webStyles.quickStatCardWeb}>
+                      <View
+                        style={[
+                          webStyles.quickStatIconWeb,
+                          { backgroundColor: 'rgba(16, 185, 129, 0.2)' },
+                        ]}
+                      >
+                        <MaterialIcons
+                          name="emoji-events"
+                          size={22}
+                          color="#10b981"
+                        />
+                      </View>
+                      <Text style={webStyles.quickStatValueWeb}>
+                        {completedChallengesCount}
+                      </Text>
+                      <Text style={webStyles.quickStatLabelWeb}>
+                        تحدي مكتمل
+                      </Text>
+                    </GlassCard>
+                  </View>
+                </Animated.View>
               )}
 
               {/* Settings - Web (desktop only) */}
               {!isTablet && (
-              <Animated.View entering={FadeInDown.delay(200).springify()}>
-                <View style={webStyles.sectionHeaderWeb}>
-                  <View style={styles.sectionTitleRow}>
-                    <View
-                      style={[
-                        styles.sectionIconContainer,
-                        { backgroundColor: 'rgba(156, 163, 175, 0.15)' },
-                      ]}
-                    >
-                      <Ionicons name="settings" size={18} color="#9ca3af" />
+                <Animated.View entering={FadeInDown.delay(200).springify()}>
+                  <View style={webStyles.sectionHeaderWeb}>
+                    <View style={styles.sectionTitleRow}>
+                      <View
+                        style={[
+                          styles.sectionIconContainer,
+                          { backgroundColor: 'rgba(156, 163, 175, 0.15)' },
+                        ]}
+                      >
+                        <Ionicons name="settings" size={18} color="#9ca3af" />
+                      </View>
+                      <Text style={styles.sectionTitle}>الإعدادات</Text>
                     </View>
-                    <Text style={styles.sectionTitle}>الإعدادات</Text>
                   </View>
-                </View>
-                <GlassCard style={webStyles.settingsCardWeb}>
-                  <TouchableOpacity
-                    style={webStyles.settingItemWeb}
-                    onPress={() => router.push('/certificate' as any)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.settingLeft}>
-                      <View
-                        style={[
-                          styles.settingIconContainer,
-                          { backgroundColor: 'rgba(234, 179, 8, 0.15)' },
-                        ]}
-                      >
-                        <Ionicons name="ribbon" size={18} color="#eab308" />
+                  <GlassCard style={webStyles.settingsCardWeb}>
+                    <TouchableOpacity
+                      style={webStyles.settingItemWeb}
+                      onPress={() => router.push('/certificate' as any)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.settingLeft}>
+                        <View
+                          style={[
+                            styles.settingIconContainer,
+                            { backgroundColor: 'rgba(234, 179, 8, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons name="ribbon" size={18} color="#eab308" />
+                        </View>
+                        <Text style={styles.settingText}>شهاداتي</Text>
                       </View>
-                      <Text style={styles.settingText}>شهاداتي</Text>
-                    </View>
-                    <Ionicons name="chevron-back" size={18} color="#4b5563" />
-                  </TouchableOpacity>
+                      <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={webStyles.settingItemWeb}
-                    activeOpacity={0.7}
-                    onPress={() => router.push('/support' as any)}
-                  >
-                    <View style={styles.settingLeft}>
-                      <View
-                        style={[
-                          styles.settingIconContainer,
-                          { backgroundColor: 'rgba(59, 130, 246, 0.15)' },
-                        ]}
-                      >
-                        <Ionicons
-                          name="help-circle"
-                          size={18}
-                          color="#3b82f6"
-                        />
+                    <TouchableOpacity
+                      style={webStyles.settingItemWeb}
+                      activeOpacity={0.7}
+                      onPress={() => router.push('/support' as any)}
+                    >
+                      <View style={styles.settingLeft}>
+                        <View
+                          style={[
+                            styles.settingIconContainer,
+                            { backgroundColor: 'rgba(59, 130, 246, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons
+                            name="help-circle"
+                            size={18}
+                            color="#3b82f6"
+                          />
+                        </View>
+                        <Text style={styles.settingText}>المساعدة والدعم</Text>
                       </View>
-                      <Text style={styles.settingText}>المساعدة والدعم</Text>
-                    </View>
-                    <Ionicons name="chevron-back" size={18} color="#4b5563" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={webStyles.settingItemWeb}
-                    activeOpacity={0.7}
-                    onPress={() => router.push('/about' as any)}
-                  >
-                    <View style={styles.settingLeft}>
-                      <View
-                        style={[
-                          styles.settingIconContainer,
-                          { backgroundColor: 'rgba(16, 185, 129, 0.15)' },
-                        ]}
-                      >
-                        <Ionicons
-                          name="information-circle"
-                          size={18}
-                          color="#10b981"
-                        />
+                      <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={webStyles.settingItemWeb}
+                      activeOpacity={0.7}
+                      onPress={() => router.push('/about' as any)}
+                    >
+                      <View style={styles.settingLeft}>
+                        <View
+                          style={[
+                            styles.settingIconContainer,
+                            { backgroundColor: 'rgba(16, 185, 129, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons
+                            name="information-circle"
+                            size={18}
+                            color="#10b981"
+                          />
+                        </View>
+                        <Text style={styles.settingText}>عن التطبيق</Text>
                       </View>
-                      <Text style={styles.settingText}>عن التطبيق</Text>
-                    </View>
-                    <Ionicons name="chevron-back" size={18} color="#4b5563" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[webStyles.settingItemWeb, styles.settingItemDanger]}
-                    onPress={handleSignOut}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.settingLeft}>
-                      <View
-                        style={[
-                          styles.settingIconContainer,
-                          { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
-                        ]}
-                      >
-                        <Ionicons name="log-out" size={18} color="#ef4444" />
+                      <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        webStyles.settingItemWeb,
+                        styles.settingItemDanger,
+                      ]}
+                      onPress={handleSignOut}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.settingLeft}>
+                        <View
+                          style={[
+                            styles.settingIconContainer,
+                            { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons name="log-out" size={18} color="#ef4444" />
+                        </View>
+                        <Text
+                          style={[styles.settingText, { color: '#ef4444' }]}
+                        >
+                          تسجيل الخروج
+                        </Text>
                       </View>
-                      <Text style={[styles.settingText, { color: '#ef4444' }]}>
-                        تسجيل الخروج
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-back" size={18} color="#ef4444" />
-                  </TouchableOpacity>
-                </GlassCard>
-              </Animated.View>
+                      <Ionicons name="chevron-back" size={18} color="#ef4444" />
+                    </TouchableOpacity>
+                  </GlassCard>
+                </Animated.View>
               )}
 
               {/* Tablet: Points + Daily Reward + Badges in profile column (right side) */}
-              {isTablet && (<>
-              <Animated.View entering={FadeInDown.delay(150).springify()}>
-                <View style={webStyles.sectionHeaderWeb}>
-                  <View style={styles.sectionTitleRow}>
-                    <View style={[styles.sectionIconContainer, { backgroundColor: 'rgba(167, 139, 250, 0.15)' }]}>
-                      <Ionicons name="diamond" size={18} color="#a78bfa" />
-                    </View>
-                    <Text style={styles.sectionTitle}>النقاط والاشتراك</Text>
-                  </View>
-                </View>
-                <GlassCard style={webStyles.pointsCardWeb}>
-                  <LinearGradient colors={['rgba(167, 139, 250, 0.15)', 'rgba(139, 92, 246, 0.1)']} style={webStyles.pointsGradientWeb}>
-                    <View style={webStyles.pointsHeaderWeb}>
-                      <View style={styles.pointsInfo}>
-                        <View style={webStyles.pointsIconContainerWeb}>
-                          <Ionicons name="diamond" size={36} color="#a78bfa" />
+              {isTablet && (
+                <>
+                  <Animated.View entering={FadeInDown.delay(150).springify()}>
+                    <View style={webStyles.sectionHeaderWeb}>
+                      <View style={styles.sectionTitleRow}>
+                        <View
+                          style={[
+                            styles.sectionIconContainer,
+                            { backgroundColor: 'rgba(167, 139, 250, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons name="diamond" size={18} color="#a78bfa" />
                         </View>
-                        <View>
-                          <Text style={styles.pointsLabel}>نقاطك الحالية</Text>
-                          <Text style={webStyles.pointsValueWeb}>{points.toLocaleString()}</Text>
-                        </View>
+                        <Text style={styles.sectionTitle}>
+                          النقاط والاشتراك
+                        </Text>
                       </View>
-                      <TouchableOpacity onPress={() => router.push('/payment' as any)} style={webStyles.buyPointsButtonWeb}>
-                        <LinearGradient colors={['#8b5cf6', '#6366f1']} style={webStyles.buyPointsGradientWeb}>
-                          <Ionicons name="add" size={18} color="#fff" />
-                          <Text style={webStyles.buyPointsTextWeb}>شراء نقاط</Text>
+                    </View>
+                    <GlassCard style={webStyles.pointsCardWeb}>
+                      <LinearGradient
+                        colors={[
+                          'rgba(167, 139, 250, 0.15)',
+                          'rgba(139, 92, 246, 0.1)',
+                        ]}
+                        style={webStyles.pointsGradientWeb}
+                      >
+                        <View style={webStyles.pointsHeaderWeb}>
+                          <View style={styles.pointsInfo}>
+                            <View style={webStyles.pointsIconContainerWeb}>
+                              <Ionicons
+                                name="diamond"
+                                size={36}
+                                color="#a78bfa"
+                              />
+                            </View>
+                            <View>
+                              <Text style={styles.pointsLabel}>
+                                نقاطك الحالية
+                              </Text>
+                              <Text style={webStyles.pointsValueWeb}>
+                                {points.toLocaleString()}
+                              </Text>
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => router.push('/payment' as any)}
+                            style={webStyles.buyPointsButtonWeb}
+                          >
+                            <LinearGradient
+                              colors={['#8b5cf6', '#6366f1']}
+                              style={webStyles.buyPointsGradientWeb}
+                            >
+                              <Ionicons name="add" size={18} color="#fff" />
+                              <Text style={webStyles.buyPointsTextWeb}>
+                                شراء نقاط
+                              </Text>
+                            </LinearGradient>
+                          </TouchableOpacity>
+                        </View>
+                      </LinearGradient>
+                    </GlassCard>
+                  </Animated.View>
+                  <Animated.View entering={FadeInDown.delay(200).springify()}>
+                    <View style={webStyles.dailyRewardContainerWeb}>
+                      <DailyReward />
+                    </View>
+                  </Animated.View>
+                  <Animated.View entering={FadeInDown.delay(250).springify()}>
+                    <View style={webStyles.sectionHeaderWeb}>
+                      <View style={styles.sectionTitleRow}>
+                        <View style={styles.sectionIconContainer}>
+                          <Ionicons name="medal" size={18} color="#f59e0b" />
+                        </View>
+                        <Text style={styles.sectionTitle}>الشارات</Text>
+                      </View>
+                      <View style={styles.badgeCountContainer}>
+                        <Text style={styles.badgeCountText}>
+                          {badges.filter((b) => b.earned).length}/
+                          {badges.length}
+                        </Text>
+                      </View>
+                    </View>
+                    <GlassCard style={{ padding: 20, marginBottom: 20 }}>
+                      {groupedBadges.map((category, idx) => (
+                        <View
+                          key={category.id}
+                          style={[
+                            styles.badgeSummaryRow,
+                            idx < groupedBadges.length - 1 &&
+                              styles.badgeSummaryRowBorder,
+                          ]}
+                        >
+                          <View style={styles.badgeSummaryLeft}>
+                            <View
+                              style={[
+                                styles.badgeCategoryIcon,
+                                { backgroundColor: category.color + '20' },
+                              ]}
+                            >
+                              <Ionicons
+                                name={category.icon as any}
+                                size={16}
+                                color={category.color}
+                              />
+                            </View>
+                            <Text style={styles.badgeSummaryLabel}>
+                              {category.nameAr}
+                            </Text>
+                          </View>
+                          <View style={styles.badgeSummaryRight}>
+                            <Text
+                              style={[
+                                styles.badgeSummaryCount,
+                                { color: category.color },
+                              ]}
+                            >
+                              {category.earnedCount}/{category.badges.length}
+                            </Text>
+                            <View style={styles.badgeSummaryProgressBg}>
+                              <View
+                                style={[
+                                  styles.badgeSummaryProgressFill,
+                                  {
+                                    width: `${category.badges.length > 0 ? (category.earnedCount / category.badges.length) * 100 : 0}%`,
+                                    backgroundColor: category.color,
+                                  },
+                                ]}
+                              />
+                            </View>
+                          </View>
+                        </View>
+                      ))}
+                      <TouchableOpacity
+                        style={styles.showAllBadgesButton}
+                        onPress={() => setShowBadgeModal(true)}
+                        activeOpacity={0.7}
+                      >
+                        <LinearGradient
+                          colors={[
+                            'rgba(245, 158, 11, 0.15)',
+                            'rgba(245, 158, 11, 0.08)',
+                          ]}
+                          style={styles.showAllBadgesGradient}
+                        >
+                          <Ionicons name="grid" size={18} color="#f59e0b" />
+                          <Text style={styles.showAllBadgesText}>
+                            عرض جميع الشارات
+                          </Text>
+                          <Ionicons
+                            name="chevron-back"
+                            size={18}
+                            color="#f59e0b"
+                          />
                         </LinearGradient>
                       </TouchableOpacity>
-                    </View>
-                  </LinearGradient>
-                </GlassCard>
-              </Animated.View>
-              <Animated.View entering={FadeInDown.delay(200).springify()}>
-                <View style={webStyles.dailyRewardContainerWeb}>
-                  <DailyReward />
-                </View>
-              </Animated.View>
-              <Animated.View entering={FadeInDown.delay(250).springify()}>
-                <View style={webStyles.sectionHeaderWeb}>
-                  <View style={styles.sectionTitleRow}>
-                    <View style={styles.sectionIconContainer}>
-                      <Ionicons name="medal" size={18} color="#f59e0b" />
-                    </View>
-                    <Text style={styles.sectionTitle}>الشارات</Text>
-                  </View>
-                  <View style={styles.badgeCountContainer}>
-                    <Text style={styles.badgeCountText}>{badges.filter((b) => b.earned).length}/{badges.length}</Text>
-                  </View>
-                </View>
-                <GlassCard style={{ padding: 20, marginBottom: 20 }}>
-                  {groupedBadges.map((category, idx) => (
-                    <View key={category.id} style={[styles.badgeSummaryRow, idx < groupedBadges.length - 1 && styles.badgeSummaryRowBorder]}>
-                      <View style={styles.badgeSummaryLeft}>
-                        <View style={[styles.badgeCategoryIcon, { backgroundColor: category.color + '20' }]}>
-                          <Ionicons name={category.icon as any} size={16} color={category.color} />
-                        </View>
-                        <Text style={styles.badgeSummaryLabel}>{category.nameAr}</Text>
-                      </View>
-                      <View style={styles.badgeSummaryRight}>
-                        <Text style={[styles.badgeSummaryCount, { color: category.color }]}>{category.earnedCount}/{category.badges.length}</Text>
-                        <View style={styles.badgeSummaryProgressBg}>
-                          <View style={[styles.badgeSummaryProgressFill, { width: `${category.badges.length > 0 ? (category.earnedCount / category.badges.length) * 100 : 0}%`, backgroundColor: category.color }]} />
-                        </View>
-                      </View>
-                    </View>
-                  ))}
-                  <TouchableOpacity style={styles.showAllBadgesButton} onPress={() => setShowBadgeModal(true)} activeOpacity={0.7}>
-                    <LinearGradient colors={['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.08)']} style={styles.showAllBadgesGradient}>
-                      <Ionicons name="grid" size={18} color="#f59e0b" />
-                      <Text style={styles.showAllBadgesText}>عرض جميع الشارات</Text>
-                      <Ionicons name="chevron-back" size={18} color="#f59e0b" />
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </GlassCard>
-              </Animated.View>
-              </>)}
+                    </GlassCard>
+                  </Animated.View>
+                </>
+              )}
             </View>
 
             {/* Right Column - Points+Badges on desktop / Quick Stats+Settings on tablet */}
             <View style={[webStyles.webRightColumn, isTablet && { flex: 1 }]}>
-              {!isTablet && (<>
-              {/* Points Card - Web */}
-              <Animated.View entering={FadeInDown.delay(150).springify()}>
-                <View style={webStyles.sectionHeaderWeb}>
-                  <View style={styles.sectionTitleRow}>
-                    <View
-                      style={[
-                        styles.sectionIconContainer,
-                        { backgroundColor: 'rgba(167, 139, 250, 0.15)' },
-                      ]}
-                    >
-                      <Ionicons name="diamond" size={18} color="#a78bfa" />
-                    </View>
-                    <Text style={styles.sectionTitle}>النقاط والاشتراك</Text>
-                  </View>
-                </View>
-                <GlassCard style={webStyles.pointsCardWeb}>
-                  <LinearGradient
-                    colors={[
-                      'rgba(167, 139, 250, 0.15)',
-                      'rgba(139, 92, 246, 0.1)',
-                    ]}
-                    style={webStyles.pointsGradientWeb}
-                  >
-                    <View style={webStyles.pointsHeaderWeb}>
-                      <View style={styles.pointsInfo}>
-                        <View style={webStyles.pointsIconContainerWeb}>
-                          <Ionicons name="diamond" size={36} color="#a78bfa" />
-                        </View>
-                        <View>
-                          <Text style={styles.pointsLabel}>نقاطك الحالية</Text>
-                          <Text style={webStyles.pointsValueWeb}>
-                            {points.toLocaleString()}
-                          </Text>
-                        </View>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => router.push('/payment' as any)}
-                        style={webStyles.buyPointsButtonWeb}
-                      >
-                        <LinearGradient
-                          colors={['#8b5cf6', '#6366f1']}
-                          style={webStyles.buyPointsGradientWeb}
-                        >
-                          <Ionicons name="add" size={18} color="#fff" />
-                          <Text style={webStyles.buyPointsTextWeb}>
-                            شراء نقاط
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
-                  </LinearGradient>
-                </GlassCard>
-              </Animated.View>
-
-              {/* Daily Reward - Web */}
-              <Animated.View entering={FadeInDown.delay(200).springify()}>
-                <View style={webStyles.dailyRewardContainerWeb}>
-                  <DailyReward />
-                </View>
-              </Animated.View>
-
-              {/* Badges - Web Summary with Modal */}
-              <Animated.View entering={FadeInDown.delay(250).springify()}>
-                <View style={webStyles.sectionHeaderWeb}>
-                  <View style={styles.sectionTitleRow}>
-                    <View style={styles.sectionIconContainer}>
-                      <Ionicons name="medal" size={18} color="#f59e0b" />
-                    </View>
-                    <Text style={styles.sectionTitle}>الشارات</Text>
-                  </View>
-                  <View style={styles.badgeCountContainer}>
-                    <Text style={styles.badgeCountText}>
-                      {badges.filter((b) => b.earned).length}/{badges.length}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Badge Category Summary Cards - Web */}
-                <GlassCard style={{ padding: 20, marginBottom: 20 }}>
-                  {groupedBadges.map((category, idx) => (
-                    <View
-                      key={category.id}
-                      style={[
-                        styles.badgeSummaryRow,
-                        idx < groupedBadges.length - 1 &&
-                          styles.badgeSummaryRowBorder,
-                      ]}
-                    >
-                      <View style={styles.badgeSummaryLeft}>
+              {!isTablet && (
+                <>
+                  {/* Points Card - Web */}
+                  <Animated.View entering={FadeInDown.delay(150).springify()}>
+                    <View style={webStyles.sectionHeaderWeb}>
+                      <View style={styles.sectionTitleRow}>
                         <View
                           style={[
-                            styles.badgeCategoryIcon,
-                            { backgroundColor: category.color + '20' },
+                            styles.sectionIconContainer,
+                            { backgroundColor: 'rgba(167, 139, 250, 0.15)' },
                           ]}
                         >
-                          <Ionicons
-                            name={category.icon as any}
-                            size={16}
-                            color={category.color}
-                          />
+                          <Ionicons name="diamond" size={18} color="#a78bfa" />
                         </View>
-                        <Text style={styles.badgeSummaryLabel}>
-                          {category.nameAr}
+                        <Text style={styles.sectionTitle}>
+                          النقاط والاشتراك
                         </Text>
-                      </View>
-                      <View style={styles.badgeSummaryRight}>
-                        <Text
-                          style={[
-                            styles.badgeSummaryCount,
-                            { color: category.color },
-                          ]}
-                        >
-                          {category.earnedCount}/{category.badges.length}
-                        </Text>
-                        {/* Mini progress bar */}
-                        <View style={styles.badgeSummaryProgressBg}>
-                          <View
-                            style={[
-                              styles.badgeSummaryProgressFill,
-                              {
-                                width: `${category.badges.length > 0 ? (category.earnedCount / category.badges.length) * 100 : 0}%`,
-                                backgroundColor: category.color,
-                              },
-                            ]}
-                          />
-                        </View>
                       </View>
                     </View>
-                  ))}
+                    <GlassCard style={webStyles.pointsCardWeb}>
+                      <LinearGradient
+                        colors={[
+                          'rgba(167, 139, 250, 0.15)',
+                          'rgba(139, 92, 246, 0.1)',
+                        ]}
+                        style={webStyles.pointsGradientWeb}
+                      >
+                        <View style={webStyles.pointsHeaderWeb}>
+                          <View style={styles.pointsInfo}>
+                            <View style={webStyles.pointsIconContainerWeb}>
+                              <Ionicons
+                                name="diamond"
+                                size={36}
+                                color="#a78bfa"
+                              />
+                            </View>
+                            <View>
+                              <Text style={styles.pointsLabel}>
+                                نقاطك الحالية
+                              </Text>
+                              <Text style={webStyles.pointsValueWeb}>
+                                {points.toLocaleString()}
+                              </Text>
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => router.push('/payment' as any)}
+                            style={webStyles.buyPointsButtonWeb}
+                          >
+                            <LinearGradient
+                              colors={['#8b5cf6', '#6366f1']}
+                              style={webStyles.buyPointsGradientWeb}
+                            >
+                              <Ionicons name="add" size={18} color="#fff" />
+                              <Text style={webStyles.buyPointsTextWeb}>
+                                شراء نقاط
+                              </Text>
+                            </LinearGradient>
+                          </TouchableOpacity>
+                        </View>
+                      </LinearGradient>
+                    </GlassCard>
+                  </Animated.View>
 
-                  {/* Show All Badges Button - Web */}
-                  <TouchableOpacity
-                    style={styles.showAllBadgesButton}
-                    onPress={() => setShowBadgeModal(true)}
-                    activeOpacity={0.7}
-                  >
-                    <LinearGradient
-                      colors={[
-                        'rgba(245, 158, 11, 0.15)',
-                        'rgba(245, 158, 11, 0.08)',
-                      ]}
-                      style={styles.showAllBadgesGradient}
-                    >
-                      <Ionicons name="grid" size={18} color="#f59e0b" />
-                      <Text style={styles.showAllBadgesText}>
-                        عرض جميع الشارات
-                      </Text>
-                      <Ionicons name="chevron-back" size={18} color="#f59e0b" />
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </GlassCard>
-              </Animated.View>
-              </>)}
+                  {/* Daily Reward - Web */}
+                  <Animated.View entering={FadeInDown.delay(200).springify()}>
+                    <View style={webStyles.dailyRewardContainerWeb}>
+                      <DailyReward />
+                    </View>
+                  </Animated.View>
+
+                  {/* Badges - Web Summary with Modal */}
+                  <Animated.View entering={FadeInDown.delay(250).springify()}>
+                    <View style={webStyles.sectionHeaderWeb}>
+                      <View style={styles.sectionTitleRow}>
+                        <View style={styles.sectionIconContainer}>
+                          <Ionicons name="medal" size={18} color="#f59e0b" />
+                        </View>
+                        <Text style={styles.sectionTitle}>الشارات</Text>
+                      </View>
+                      <View style={styles.badgeCountContainer}>
+                        <Text style={styles.badgeCountText}>
+                          {badges.filter((b) => b.earned).length}/
+                          {badges.length}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Badge Category Summary Cards - Web */}
+                    <GlassCard style={{ padding: 20, marginBottom: 20 }}>
+                      {groupedBadges.map((category, idx) => (
+                        <View
+                          key={category.id}
+                          style={[
+                            styles.badgeSummaryRow,
+                            idx < groupedBadges.length - 1 &&
+                              styles.badgeSummaryRowBorder,
+                          ]}
+                        >
+                          <View style={styles.badgeSummaryLeft}>
+                            <View
+                              style={[
+                                styles.badgeCategoryIcon,
+                                { backgroundColor: category.color + '20' },
+                              ]}
+                            >
+                              <Ionicons
+                                name={category.icon as any}
+                                size={16}
+                                color={category.color}
+                              />
+                            </View>
+                            <Text style={styles.badgeSummaryLabel}>
+                              {category.nameAr}
+                            </Text>
+                          </View>
+                          <View style={styles.badgeSummaryRight}>
+                            <Text
+                              style={[
+                                styles.badgeSummaryCount,
+                                { color: category.color },
+                              ]}
+                            >
+                              {category.earnedCount}/{category.badges.length}
+                            </Text>
+                            {/* Mini progress bar */}
+                            <View style={styles.badgeSummaryProgressBg}>
+                              <View
+                                style={[
+                                  styles.badgeSummaryProgressFill,
+                                  {
+                                    width: `${category.badges.length > 0 ? (category.earnedCount / category.badges.length) * 100 : 0}%`,
+                                    backgroundColor: category.color,
+                                  },
+                                ]}
+                              />
+                            </View>
+                          </View>
+                        </View>
+                      ))}
+
+                      {/* Show All Badges Button - Web */}
+                      <TouchableOpacity
+                        style={styles.showAllBadgesButton}
+                        onPress={() => setShowBadgeModal(true)}
+                        activeOpacity={0.7}
+                      >
+                        <LinearGradient
+                          colors={[
+                            'rgba(245, 158, 11, 0.15)',
+                            'rgba(245, 158, 11, 0.08)',
+                          ]}
+                          style={styles.showAllBadgesGradient}
+                        >
+                          <Ionicons name="grid" size={18} color="#f59e0b" />
+                          <Text style={styles.showAllBadgesText}>
+                            عرض جميع الشارات
+                          </Text>
+                          <Ionicons
+                            name="chevron-back"
+                            size={18}
+                            color="#f59e0b"
+                          />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </GlassCard>
+                  </Animated.View>
+                </>
+              )}
 
               {/* Tablet: Quick Stats + Settings in content column (left side) */}
-              {isTablet && (<>
-              <Animated.View entering={FadeInDown.delay(150).springify()}>
-                <View style={webStyles.quickStatsWeb}>
-                  <GlassCard style={webStyles.quickStatCardWeb}>
-                    <View style={[webStyles.quickStatIconWeb, { backgroundColor: 'rgba(167, 139, 250, 0.2)' }]}>
-                      <Ionicons name="diamond" size={22} color="#a78bfa" />
+              {isTablet && (
+                <>
+                  <Animated.View entering={FadeInDown.delay(150).springify()}>
+                    <View style={webStyles.quickStatsWeb}>
+                      <GlassCard style={webStyles.quickStatCardWeb}>
+                        <View
+                          style={[
+                            webStyles.quickStatIconWeb,
+                            { backgroundColor: 'rgba(167, 139, 250, 0.2)' },
+                          ]}
+                        >
+                          <Ionicons name="diamond" size={22} color="#a78bfa" />
+                        </View>
+                        <Text style={webStyles.quickStatValueWeb}>
+                          {points.toLocaleString()}
+                        </Text>
+                        <Text style={webStyles.quickStatLabelWeb}>نقطة</Text>
+                      </GlassCard>
+                      <GlassCard style={webStyles.quickStatCardWeb}>
+                        <View
+                          style={[
+                            webStyles.quickStatIconWeb,
+                            { backgroundColor: 'rgba(245, 158, 11, 0.2)' },
+                          ]}
+                        >
+                          <MaterialIcons
+                            name="local-fire-department"
+                            size={22}
+                            color="#f59e0b"
+                          />
+                        </View>
+                        <Text style={webStyles.quickStatValueWeb}>
+                          {stats.streak}
+                        </Text>
+                        <Text style={webStyles.quickStatLabelWeb}>
+                          سلسلة يومية
+                        </Text>
+                      </GlassCard>
+                      <GlassCard style={webStyles.quickStatCardWeb}>
+                        <View
+                          style={[
+                            webStyles.quickStatIconWeb,
+                            { backgroundColor: 'rgba(59, 130, 246, 0.2)' },
+                          ]}
+                        >
+                          <MaterialIcons
+                            name="school"
+                            size={22}
+                            color="#3b82f6"
+                          />
+                        </View>
+                        <Text style={webStyles.quickStatValueWeb}>
+                          {completedLessonsCount}
+                        </Text>
+                        <Text style={webStyles.quickStatLabelWeb}>
+                          درس مكتمل
+                        </Text>
+                      </GlassCard>
+                      <GlassCard style={webStyles.quickStatCardWeb}>
+                        <View
+                          style={[
+                            webStyles.quickStatIconWeb,
+                            { backgroundColor: 'rgba(16, 185, 129, 0.2)' },
+                          ]}
+                        >
+                          <MaterialIcons
+                            name="emoji-events"
+                            size={22}
+                            color="#10b981"
+                          />
+                        </View>
+                        <Text style={webStyles.quickStatValueWeb}>
+                          {completedChallengesCount}
+                        </Text>
+                        <Text style={webStyles.quickStatLabelWeb}>
+                          تحدي مكتمل
+                        </Text>
+                      </GlassCard>
                     </View>
-                    <Text style={webStyles.quickStatValueWeb}>{points.toLocaleString()}</Text>
-                    <Text style={webStyles.quickStatLabelWeb}>نقطة</Text>
-                  </GlassCard>
-                  <GlassCard style={webStyles.quickStatCardWeb}>
-                    <View style={[webStyles.quickStatIconWeb, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
-                      <MaterialIcons name="local-fire-department" size={22} color="#f59e0b" />
-                    </View>
-                    <Text style={webStyles.quickStatValueWeb}>{stats.streak}</Text>
-                    <Text style={webStyles.quickStatLabelWeb}>سلسلة يومية</Text>
-                  </GlassCard>
-                  <GlassCard style={webStyles.quickStatCardWeb}>
-                    <View style={[webStyles.quickStatIconWeb, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}>
-                      <MaterialIcons name="school" size={22} color="#3b82f6" />
-                    </View>
-                    <Text style={webStyles.quickStatValueWeb}>{completedLessonsCount}</Text>
-                    <Text style={webStyles.quickStatLabelWeb}>درس مكتمل</Text>
-                  </GlassCard>
-                  <GlassCard style={webStyles.quickStatCardWeb}>
-                    <View style={[webStyles.quickStatIconWeb, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
-                      <MaterialIcons name="emoji-events" size={22} color="#10b981" />
-                    </View>
-                    <Text style={webStyles.quickStatValueWeb}>{completedChallengesCount}</Text>
-                    <Text style={webStyles.quickStatLabelWeb}>تحدي مكتمل</Text>
-                  </GlassCard>
-                </View>
-              </Animated.View>
-              <Animated.View entering={FadeInDown.delay(200).springify()}>
-                <View style={webStyles.sectionHeaderWeb}>
-                  <View style={styles.sectionTitleRow}>
-                    <View style={[styles.sectionIconContainer, { backgroundColor: 'rgba(156, 163, 175, 0.15)' }]}>
-                      <Ionicons name="settings" size={18} color="#9ca3af" />
-                    </View>
-                    <Text style={styles.sectionTitle}>الإعدادات</Text>
-                  </View>
-                </View>
-                <GlassCard style={webStyles.settingsCardWeb}>
-                  <TouchableOpacity style={webStyles.settingItemWeb} onPress={() => router.push('/certificate' as any)} activeOpacity={0.7}>
-                    <View style={styles.settingLeft}>
-                      <View style={[styles.settingIconContainer, { backgroundColor: 'rgba(234, 179, 8, 0.15)' }]}>
-                        <Ionicons name="ribbon" size={18} color="#eab308" />
+                  </Animated.View>
+                  <Animated.View entering={FadeInDown.delay(200).springify()}>
+                    <View style={webStyles.sectionHeaderWeb}>
+                      <View style={styles.sectionTitleRow}>
+                        <View
+                          style={[
+                            styles.sectionIconContainer,
+                            { backgroundColor: 'rgba(156, 163, 175, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons name="settings" size={18} color="#9ca3af" />
+                        </View>
+                        <Text style={styles.sectionTitle}>الإعدادات</Text>
                       </View>
-                      <Text style={styles.settingText}>شهاداتي</Text>
                     </View>
-                    <Ionicons name="chevron-back" size={18} color="#4b5563" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={webStyles.settingItemWeb} activeOpacity={0.7} onPress={() => router.push('/support' as any)}>
-                    <View style={styles.settingLeft}>
-                      <View style={[styles.settingIconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                        <Ionicons name="help-circle" size={18} color="#3b82f6" />
-                      </View>
-                      <Text style={styles.settingText}>المساعدة والدعم</Text>
-                    </View>
-                    <Ionicons name="chevron-back" size={18} color="#4b5563" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={webStyles.settingItemWeb} activeOpacity={0.7} onPress={() => router.push('/about' as any)}>
-                    <View style={styles.settingLeft}>
-                      <View style={[styles.settingIconContainer, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-                        <Ionicons name="information-circle" size={18} color="#10b981" />
-                      </View>
-                      <Text style={styles.settingText}>عن التطبيق</Text>
-                    </View>
-                    <Ionicons name="chevron-back" size={18} color="#4b5563" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[webStyles.settingItemWeb, styles.settingItemDanger]} onPress={handleSignOut} activeOpacity={0.7}>
-                    <View style={styles.settingLeft}>
-                      <View style={[styles.settingIconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
-                        <Ionicons name="log-out" size={18} color="#ef4444" />
-                      </View>
-                      <Text style={[styles.settingText, { color: '#ef4444' }]}>تسجيل الخروج</Text>
-                    </View>
-                    <Ionicons name="chevron-back" size={18} color="#ef4444" />
-                  </TouchableOpacity>
-                </GlassCard>
-              </Animated.View>
-              </>)}
+                    <GlassCard style={webStyles.settingsCardWeb}>
+                      <TouchableOpacity
+                        style={webStyles.settingItemWeb}
+                        onPress={() => router.push('/certificate' as any)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.settingLeft}>
+                          <View
+                            style={[
+                              styles.settingIconContainer,
+                              { backgroundColor: 'rgba(234, 179, 8, 0.15)' },
+                            ]}
+                          >
+                            <Ionicons name="ribbon" size={18} color="#eab308" />
+                          </View>
+                          <Text style={styles.settingText}>شهاداتي</Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color="#4b5563"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={webStyles.settingItemWeb}
+                        activeOpacity={0.7}
+                        onPress={() => router.push('/support' as any)}
+                      >
+                        <View style={styles.settingLeft}>
+                          <View
+                            style={[
+                              styles.settingIconContainer,
+                              { backgroundColor: 'rgba(59, 130, 246, 0.15)' },
+                            ]}
+                          >
+                            <Ionicons
+                              name="help-circle"
+                              size={18}
+                              color="#3b82f6"
+                            />
+                          </View>
+                          <Text style={styles.settingText}>
+                            المساعدة والدعم
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color="#4b5563"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={webStyles.settingItemWeb}
+                        activeOpacity={0.7}
+                        onPress={() => router.push('/about' as any)}
+                      >
+                        <View style={styles.settingLeft}>
+                          <View
+                            style={[
+                              styles.settingIconContainer,
+                              { backgroundColor: 'rgba(16, 185, 129, 0.15)' },
+                            ]}
+                          >
+                            <Ionicons
+                              name="information-circle"
+                              size={18}
+                              color="#10b981"
+                            />
+                          </View>
+                          <Text style={styles.settingText}>عن التطبيق</Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color="#4b5563"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          webStyles.settingItemWeb,
+                          styles.settingItemDanger,
+                        ]}
+                        onPress={handleSignOut}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.settingLeft}>
+                          <View
+                            style={[
+                              styles.settingIconContainer,
+                              { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
+                            ]}
+                          >
+                            <Ionicons
+                              name="log-out"
+                              size={18}
+                              color="#ef4444"
+                            />
+                          </View>
+                          <Text
+                            style={[styles.settingText, { color: '#ef4444' }]}
+                          >
+                            تسجيل الخروج
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color="#ef4444"
+                        />
+                      </TouchableOpacity>
+                    </GlassCard>
+                  </Animated.View>
+                </>
+              )}
             </View>
           </View>
         ) : (

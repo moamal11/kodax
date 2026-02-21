@@ -106,6 +106,12 @@ export function BadgeProvider({
       await badgeService.initialize();
       await notificationService.initialize();
 
+      // الاشتراك في Realtime لاستقبال الإشعارات الجديدة فورياً
+      // (مثل: إعجاب شخص بكودك، أو تعليق على كود نشرته)
+      if (userId) {
+        notificationService.subscribeToRealtime(userId);
+      }
+
       const ids = await badgeService.getEarnedBadgeIds();
       setEarnedBadgeIds(ids);
 
@@ -152,6 +158,7 @@ export function BadgeProvider({
     return () => {
       badgeService.setOnBadgeEarned(null);
       notificationService.setOnNewNotification(null);
+      notificationService.unsubscribeFromRealtime();
     };
   }, [userId]); // إعادة التهيئة عند تغيير userId
 

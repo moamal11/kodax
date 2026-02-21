@@ -35,15 +35,10 @@ import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 
-import { useAuth } from '../_layout';
+import { useAuth } from '@/contexts/AuthContext';
 import { useResponsiveLayout } from '@/hooks';
 import { useApp } from '@/contexts/AppContext';
-import {
-  getPublicSnippets,
-  checkUserLikes,
-  toggleLike,
-  FeedSnippet,
-} from '@/services/codeFeedService';
+import { getPublicSnippets, FeedSnippet } from '@/services/codeFeedService';
 import { checkBatchFollowing, toggleFollow } from '@/services/followService';
 import FollowButton from '@/components/ui/FollowButton';
 import UserAvatar from '@/components/ui/UserAvatar';
@@ -374,10 +369,13 @@ export default function CodeFeedScreen() {
   const { isLargeScreen, isWeb } = useResponsiveLayout();
   const {
     likedSnippets,
+    snippetLikeCounts,
     toggleLike: globalToggleLike,
-    isLikeInProgress,
-    authVersion,
+    syncLikes,
+    updateLikeCounts,
+    getLikeCount,
   } = useApp();
+  const { authVersion } = useAuth();
 
   // State
   const [snippets, setSnippets] = useState<FeedSnippet[]>([]);
@@ -392,9 +390,6 @@ export default function CodeFeedScreen() {
   const [sortBy, setSortBy] = useState<
     'recent' | 'popular' | 'most_liked' | 'most_viewed' | 'most_commented'
   >('recent');
-  const [localLikedSnippets, setLocalLikedSnippets] = useState<Set<string>>(
-    new Set()
-  );
   const [followedUsers, setFollowedUsers] = useState<Set<string>>(new Set());
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [langSearchQuery, setLangSearchQuery] = useState('');
@@ -429,19 +424,18 @@ export default function CodeFeedScreen() {
           }
           setHasMore(data.length === 20);
 
-          // Check likes for loaded snippets
+          // Sync likes + follow status via AppContext
           if (user?.id && data.length > 0) {
             try {
               const ids = data.map((s) => s.id);
-              const liked = await checkUserLikes(user.id, ids);
-              setLocalLikedSnippets((prev) => {
-                const next = new Set(prev);
-                liked.forEach((id) => next.add(id));
-                ids.forEach((id) => {
-                  if (!liked.has(id)) next.delete(id);
-                });
-                return next;
+              // مزامنة اللايكات عبر AppContext المركزي
+              syncLikes(ids);
+              // تحديث عداد اللايكات
+              const counts: Record<string, number> = {};
+              data.forEach((s) => {
+                counts[s.id] = s.likes_count;
               });
+              updateLikeCounts(counts);
 
               // Check follow status for snippet authors
               const authorIds = [
@@ -515,16 +509,10 @@ export default function CodeFeedScreen() {
     loadSnippets(nextPage, true);
   }, [page, loadingMore, hasMore, loading, loadSnippets]);
 
-  // Like handler with optimistic update + debounce protection
-  const likeCooldownRef = useRef<Set<string>>(new Set());
+  // Like handler — يستخدم النظام المركزي من AppContext
   const handleLike = useCallback(
     async (snippetId: string) => {
       if (!user?.id) return;
-
-      // Prevent double-tap (cooldown per snippet)
-      if (likeCooldownRef.current.has(snippetId)) return;
-      likeCooldownRef.current.add(snippetId);
-      setTimeout(() => likeCooldownRef.current.delete(snippetId), 500);
 
       if (Platform.OS !== 'web') {
         try {
@@ -532,68 +520,10 @@ export default function CodeFeedScreen() {
         } catch {}
       }
 
-      const wasLiked = localLikedSnippets.has(snippetId);
-
-      // Optimistic update — local liked set + snippet count
-      setLocalLikedSnippets((prev) => {
-        const next = new Set(prev);
-        wasLiked ? next.delete(snippetId) : next.add(snippetId);
-        return next;
-      });
-      setSnippets((prev) =>
-        prev.map((s) =>
-          s.id === snippetId
-            ? {
-                ...s,
-                likes_count: Math.max(0, s.likes_count + (wasLiked ? -1 : 1)),
-              }
-            : s
-        )
-      );
-
-      try {
-        const { error } = await toggleLike(user.id, snippetId);
-        if (error) {
-          // Rollback on failure
-          setLocalLikedSnippets((prev) => {
-            const next = new Set(prev);
-            wasLiked ? next.add(snippetId) : next.delete(snippetId);
-            return next;
-          });
-          setSnippets((prev) =>
-            prev.map((s) =>
-              s.id === snippetId
-                ? {
-                    ...s,
-                    likes_count: Math.max(
-                      0,
-                      s.likes_count + (wasLiked ? 1 : -1)
-                    ),
-                  }
-                : s
-            )
-          );
-        }
-      } catch {
-        // Rollback on exception
-        setLocalLikedSnippets((prev) => {
-          const next = new Set(prev);
-          wasLiked ? next.add(snippetId) : next.delete(snippetId);
-          return next;
-        });
-        setSnippets((prev) =>
-          prev.map((s) =>
-            s.id === snippetId
-              ? {
-                  ...s,
-                  likes_count: Math.max(0, s.likes_count + (wasLiked ? 1 : -1)),
-                }
-              : s
-          )
-        );
-      }
+      // AppContext يدير Optimistic Update + Rollback + Debounce
+      await globalToggleLike(snippetId);
     },
-    [user?.id, localLikedSnippets]
+    [user?.id, globalToggleLike]
   );
 
   // Copy code
@@ -645,8 +575,11 @@ export default function CodeFeedScreen() {
   const renderItem = useCallback(
     ({ item, index }: { item: FeedSnippet; index: number }) => (
       <SnippetCard
-        snippet={item}
-        liked={localLikedSnippets.has(item.id)}
+        snippet={{
+          ...item,
+          likes_count: getLikeCount(item.id, item.likes_count),
+        }}
+        liked={likedSnippets.has(item.id)}
         onPress={() => handleSnippetPress(item.id)}
         onLike={() => handleLike(item.id)}
         onCopy={() => handleCopy(item.code)}
@@ -660,13 +593,15 @@ export default function CodeFeedScreen() {
       />
     ),
     [
-      localLikedSnippets,
+      likedSnippets,
+      snippetLikeCounts,
       followedUsers,
       handleSnippetPress,
       handleLike,
       handleCopy,
       handleFollowToggle,
       user?.id,
+      getLikeCount,
     ]
   );
 

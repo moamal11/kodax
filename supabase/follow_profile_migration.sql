@@ -1,4 +1,4 @@
--- =====================================================
+﻿-- =====================================================
 -- Migration: Follow System + Profile Enhancement + Gender
 -- =====================================================
 
@@ -10,7 +10,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_username_change TIMESTAMP WIT
 
 -- 3. Create follows table
 CREATE TABLE IF NOT EXISTS follows (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   follower_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   following_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
