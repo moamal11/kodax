@@ -70,9 +70,21 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* Apple Touch Icons — required for iOS Add to Home Screen */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon.png" />
-        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon.png" />
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href="/apple-touch-icon.png"
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="152x152"
+          href="/apple-touch-icon.png"
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="120x120"
+          href="/apple-touch-icon.png"
+        />
 
         {/* Standard favicon */}
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico" />
