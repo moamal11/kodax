@@ -54,6 +54,7 @@ import {
   deleteSnippet,
   updateSnippet,
   createSnippet,
+  getSnippetCounts,
   FeedSnippet,
   SnippetComment,
 } from '@/services/codeFeedService';
@@ -239,6 +240,10 @@ export default function CodeDetailsScreen() {
     syncLikes,
     updateLikeCounts,
     getLikeCount,
+    updateViewCounts,
+    getViewCount,
+    updateCommentCounts,
+    getCommentCount,
   } = useApp();
   const commentInputRef = useRef<TextInput>(null);
 
@@ -279,10 +284,27 @@ export default function CodeDetailsScreen() {
         setSnippet(data);
         // مزامنة اللايكات عبر AppContext المركزي
         syncLikes([id]);
-        updateLikeCounts({ [id]: data.likes_count || 0 });
 
-        // Increment view count (once per user)
-        incrementViews(id, user?.id);
+        // Fetch accurate counts for this snippet
+        try {
+          const { likeCounts, viewCounts, commentCounts } =
+            await getSnippetCounts([id]);
+          updateLikeCounts(likeCounts);
+          updateViewCounts(viewCounts);
+          updateCommentCounts(commentCounts);
+        } catch (_e) {
+          // Fallback: use data from snippet
+          updateLikeCounts({ [id]: data.likes_count || 0 });
+          updateViewCounts({ [id]: data.views_count || 0 });
+          updateCommentCounts({ [id]: data.comments_count || 0 });
+        }
+
+        // Increment view count (once per user) and update AppContext
+        incrementViews(id, user?.id).then(() => {
+          // After view increment, update the view count in AppContext
+          const currentViews = getViewCount(id, data.views_count || 0);
+          updateViewCounts({ [id]: currentViews + 1 });
+        });
 
         // Check follow status
         if (user?.id && data.user_id !== user.id) {
@@ -391,6 +413,9 @@ export default function CodeDetailsScreen() {
       // Reload comments
       const { data } = await getComments(id);
       setComments(data);
+
+      // Update comment count in AppContext (syncs back to code feed)
+      updateCommentCounts({ [id]: data.length });
 
       if (snippet) {
         setSnippet({ ...snippet, comments_count: data.length });
@@ -1044,7 +1069,7 @@ export default function CodeDetailsScreen() {
                 <View style={styles.statItem}>
                   <MaterialIcons name="visibility" size={16} color="#6b7280" />
                   <Text style={styles.statItemText}>
-                    {snippet.views_count || 0} مشاهدة
+                    {id ? getViewCount(id, snippet.views_count || 0) : 0} مشاهدة
                   </Text>
                 </View>
               </View>

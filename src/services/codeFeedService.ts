@@ -216,6 +216,124 @@ export async function getUserSnippets(
 // ==================== Like Operations ====================
 
 /**
+ * Get accurate like counts for multiple snippets at once
+ * Fetches directly from code_snippets table to ensure we have the latest counts
+ * (not relying on potentially stale likes_count from initial fetch)
+ */
+export async function getSnippetLikeCounts(
+  snippetIds: string[]
+): Promise<Record<string, number>> {
+  try {
+    if (!snippetIds.length) return {};
+
+    const { data, error } = await supabase
+      .from('code_snippets')
+      .select('id, likes_count')
+      .in('id', snippetIds);
+
+    if (error) throw error;
+
+    const counts: Record<string, number> = {};
+    (data || []).forEach((s: any) => {
+      counts[s.id] = s.likes_count || 0;
+    });
+    return counts;
+  } catch (error) {
+    console.error('getSnippetLikeCounts error:', error);
+    return {};
+  }
+}
+
+/**
+ * Get accurate likes, views, and comments counts for multiple snippets
+ * Fetches all three in a single query for efficiency
+ */
+export async function getSnippetCounts(snippetIds: string[]): Promise<{
+  likeCounts: Record<string, number>;
+  viewCounts: Record<string, number>;
+  commentCounts: Record<string, number>;
+}> {
+  try {
+    if (!snippetIds.length) {
+      return {
+        likeCounts: {},
+        viewCounts: {},
+        commentCounts: {},
+      };
+    }
+
+    const { data, error } = await supabase
+      .from('code_snippets')
+      .select('id, likes_count, views_count, comments_count')
+      .in('id', snippetIds);
+
+    if (error) throw error;
+
+    const likeCounts: Record<string, number> = {};
+    const viewCounts: Record<string, number> = {};
+    const commentCounts: Record<string, number> = {};
+
+    // Base fallback from code_snippets (fast + safe)
+    (data || []).forEach((s: any) => {
+      likeCounts[s.id] = s.likes_count || 0;
+      viewCounts[s.id] = s.views_count || 0;
+      commentCounts[s.id] = s.comments_count || 0;
+    });
+
+    // For views/comments we prefer source-of-truth tables because
+    // denormalized fields can be stale in some flows.
+    try {
+      const { data: viewsData, error: viewsError } = await supabase
+        .from('code_views')
+        .select('snippet_id')
+        .in('snippet_id', snippetIds);
+
+      if (!viewsError) {
+        for (const id of snippetIds) {
+          viewCounts[id] = 0;
+        }
+
+        (viewsData || []).forEach((row: any) => {
+          const snippetId = row.snippet_id as string;
+          viewCounts[snippetId] = (viewCounts[snippetId] || 0) + 1;
+        });
+      }
+    } catch (_e) {
+      // Keep fallback from code_snippets
+    }
+
+    try {
+      const { data: commentsData, error: commentsError } = await supabase
+        .from('code_comments')
+        .select('snippet_id')
+        .in('snippet_id', snippetIds);
+
+      if (!commentsError) {
+        for (const id of snippetIds) {
+          commentCounts[id] = 0;
+        }
+
+        (commentsData || []).forEach((row: any) => {
+          const snippetId = row.snippet_id as string;
+          commentCounts[snippetId] = (commentCounts[snippetId] || 0) + 1;
+        });
+      }
+    } catch (_e) {
+      // Keep fallback from code_snippets
+    }
+
+    return { likeCounts, viewCounts, commentCounts };
+  } catch (error) {
+    console.error('getSnippetCounts error:', error);
+    return {
+      likeCounts: {},
+      viewCounts: {},
+      commentCounts: {},
+    };
+  }
+}
+
+/**
  * Check which snippets the user has liked (batch)
  */
 export async function checkUserLikes(

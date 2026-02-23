@@ -73,6 +73,9 @@ function NavigationGuard() {
     // لا تنقل أثناء التهيئة
     if (isInitializing) return;
 
+    // إذا كانت الجلسة موجودة لكن التحقق النهائي لم يكتمل بعد، انتظر
+    if (session?.user && !isAuthenticated) return;
+
     const inAuthGroup = segments[0] === '(auth)';
     const inDownload = segments[0] === 'download';
     const hasSegments = segments.length > 0;
@@ -102,7 +105,7 @@ function NavigationGuard() {
         }
       }
     }
-  }, [isAuthenticated, segments, isInitializing]);
+  }, [isAuthenticated, segments, isInitializing, session?.user]);
 
   // إعادة تعيين العلم عند تسجيل الخروج
   useEffect(() => {
@@ -115,12 +118,17 @@ function NavigationGuard() {
 }
 
 /**
- * InnerLayout — المحتوى الداخلي الذي يستخدم AuthContext
+ * HydratedInnerLayout — التخطيط الداخلي
+ *
+ * يستخدم userId من AuthContext مباشرة.
+ * userId يكون undefined حتى يتم التحقق من الجلسة + وجود الملف الشخصي.
+ * هذا يضمن أن جميع الاستعلامات تعمل بشكل صحيح (RLS).
  */
-function InnerLayout() {
-  const { session, user, isInitializing, fullName } = useAuth();
+function HydratedInnerLayout() {
+  const { userId, isInitializing, fullName } = useAuth();
   const [showMandatoryData, setShowMandatoryData] = useState(false);
   const [broadcastUserName, setBroadcastUserName] = useState('');
+  const deepLinkListenerInitializedRef = useRef(false);
 
   // حالة التحديث الذكي (موبايل فقط)
   const [showUpdate, setShowUpdate] = useState(false);
@@ -137,6 +145,9 @@ function InnerLayout() {
 
   // تهيئة Deep Link Listener للموبايل
   useEffect(() => {
+    if (deepLinkListenerInitializedRef.current) return;
+    deepLinkListenerInitializedRef.current = true;
+
     const cleanup = initializeDeepLinkAuthListener(
       () => {
         // onAuthStateChange يدير كل شيء
@@ -145,14 +156,19 @@ function InnerLayout() {
         showAlert('خطأ', error);
       }
     );
-    return cleanup;
+
+    return () => {
+      deepLinkListenerInitializedRef.current = false;
+      cleanup();
+    };
   }, []);
 
   // التحقق من البيانات الإجبارية + جلب اسم المستخدم
+  // userId من AuthContext — مضمون أن الجلسة + الملف الشخصي جاهزان
   useEffect(() => {
-    if (!session?.user?.id || showMandatoryData) return;
+    if (!userId || showMandatoryData) return;
 
-    checkMandatoryData(session.user.id).then(({ isComplete }) => {
+    checkMandatoryData(userId).then(({ isComplete }) => {
       if (!isComplete) {
         setShowMandatoryData(true);
       }
@@ -160,7 +176,7 @@ function InnerLayout() {
 
     // تحديث اسم المستخدم من AuthContext
     setBroadcastUserName(fullName);
-  }, [session?.user?.id, fullName, showMandatoryData]);
+  }, [userId, fullName, showMandatoryData]);
 
   // تحديث اسم المستخدم عند تغيره
   useEffect(() => {
@@ -204,10 +220,11 @@ function InnerLayout() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <AppProvider userId={user?.id}>
-        <PointsProvider userId={user?.id}>
-          <SubscriptionProvider userId={user?.id || ''}>
-            <BadgeProviderConnected userId={user?.id}>
+      {/* userId من AuthContext — آمن لاستعلامات RLS */}
+      <AppProvider userId={userId}>
+        <PointsProvider userId={userId}>
+          <SubscriptionProvider userId={userId || ''}>
+            <BadgeProviderConnected userId={userId}>
               <StatusBar style="light" backgroundColor="#0f0f1e" />
 
               {/* Navigation Guard */}
@@ -235,18 +252,18 @@ function InnerLayout() {
               <ToastContainer />
 
               {/* مدير الرسائل العامة */}
-              {user?.id && (
+              {userId && (
                 <BroadcastManager
-                  userId={user.id}
+                  userId={userId}
                   userName={broadcastUserName}
                 />
               )}
 
               {/* مربع حوار البيانات الإجبارية */}
-              {user?.id && (
+              {userId && (
                 <MandatoryDataModal
                   visible={showMandatoryData}
-                  userId={user.id}
+                  userId={userId}
                   onComplete={() => setShowMandatoryData(false)}
                 />
               )}
@@ -270,7 +287,7 @@ function InnerLayout() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <InnerLayout />
+      <HydratedInnerLayout />
     </AuthProvider>
   );
 }

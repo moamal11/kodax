@@ -55,21 +55,26 @@ interface AppContextType {
   leaderboard: LeaderboardUser[];
   leaderboardLoading: boolean;
 
-  // ===== نظام اللايكات المركزي =====
-  /** مجموعة الأكواد التي أعجب بها المستخدم */
+  // Liked snippets (tracking which snippets user has liked)
   likedSnippets: Set<string>;
-  /** عدد اللايكات لكل كود — يتم تحديثها تلقائياً */
+
+  // Like counts
   snippetLikeCounts: Map<string, number>;
-  /** Toggle Like مع Optimistic Update + Rollback */
   toggleLike: (snippetId: string) => Promise<void>;
-  /** هل عملية اللايك جارية لهذا الكود؟ */
   isLikeInProgress: (snippetId: string) => boolean;
-  /** تحميل حالة اللايكات لقائمة أكواد (تُستدعى عند تحميل الأكواد في أي صفحة) */
   syncLikes: (snippetIds: string[]) => Promise<void>;
-  /** تحديث عدد اللايكات يدوياً (عند تحميل الأكواد) */
   updateLikeCounts: (counts: Record<string, number>) => void;
-  /** الحصول على عدد اللايكات لكود معين */
   getLikeCount: (snippetId: string, fallback?: number) => number;
+
+  // View counts
+  snippetViewCounts: Map<string, number>;
+  updateViewCounts: (counts: Record<string, number>) => void;
+  getViewCount: (snippetId: string, fallback?: number) => number;
+
+  // Comment counts
+  snippetCommentCounts: Map<string, number>;
+  updateCommentCounts: (counts: Record<string, number>) => void;
+  getCommentCount: (snippetId: string, fallback?: number) => number;
 
   // Refresh
   refreshAll: () => Promise<void>;
@@ -102,13 +107,22 @@ export function AppProvider({ children, userId }: AppProviderProps) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
-  // ===== نظام اللايكات المركزي =====
   const [likedSnippets, setLikedSnippets] = useState<Set<string>>(new Set());
   const [snippetLikeCounts, setSnippetLikeCounts] = useState<
     Map<string, number>
   >(new Map());
+  const [snippetViewCounts, setSnippetViewCounts] = useState<
+    Map<string, number>
+  >(new Map());
+  const [snippetCommentCounts, setSnippetCommentCounts] = useState<
+    Map<string, number>
+  >(new Map());
   const likesInProgressRef = useRef<Set<string>>(new Set());
   const likeCooldownRef = useRef<Set<string>>(new Set());
+
+  console.log(
+    `[AppProvider] Initializing with userId=${userId}, previousUserId=${prevUserIdRef.current}`
+  );
 
   // ===== Detect user change (login/logout/switch) =====
   useEffect(() => {
@@ -123,6 +137,8 @@ export function AppProvider({ children, userId }: AppProviderProps) {
       setLeaderboard([]);
       setLikedSnippets(new Set());
       setSnippetLikeCounts(new Map());
+      setSnippetViewCounts(new Map());
+      setSnippetCommentCounts(new Map());
       setIsInitialLoad(true);
       return;
     }
@@ -135,20 +151,58 @@ export function AppProvider({ children, userId }: AppProviderProps) {
 
   // ===== Data loaders =====
 
-  const loadProfile = useCallback(async (uid: string) => {
+  /**
+   * loadProfile with retry logic
+   *
+   * === المشكلة ===
+   * قد لا يكون profile جاهز على Supabase حتى بعد OAuth
+   * - Google OAuth ينشئ user في auth
+   * - لكن profile قد لا يُنشأ فوراً (trigger delay)
+   * - أو session قد لا تكون مخزنة بعد في AsyncStorage
+   *
+   * === الحل ===
+   * Retry مع exponential backoff:
+   * - الحادثة الأولى: الآن
+   * - الحادثة الثانية: 300ms
+   * - الحادثة الثالثة: 600ms
+   * - الحادثة الرابعة: 1s
+   */
+  const loadProfile = useCallback(async (uid: string, retries: number = 4) => {
     try {
-      const { data } = await getProfile(uid);
+      const { data, error } = await getProfile(uid);
+
       if (data) {
+        // ✅ نجح
         setProfile(data);
         setFollowersCount(data.followers_count || 0);
         setFollowingCount(data.following_count || 0);
+        return; // No need to retry
       }
-    } catch (_e) {
-      // Keep stale data
+
+      // ❌ لا توجد بيانات
+      if (retries > 0 && !error) {
+        // Maybe profile isn't created yet — wait and retry
+        const delay = (4 - retries + 1) * 300; // 300, 600, 900, 1200ms
+        console.log(`[AppProvider] Profile not found, retrying in ${delay}ms`);
+        await new Promise((r) => setTimeout(r, delay));
+        return loadProfile(uid, retries - 1);
+      }
+
+      console.warn('[AppProvider] Profile load failed after retries:', error);
+    } catch (error) {
+      console.error('[AppProvider] loadProfile error:', error);
+
+      // Retry on network errors
+      if (retries > 0) {
+        const delay = (4 - retries + 1) * 300;
+        console.log(`[AppProvider] Retrying profile load in ${delay}ms`);
+        await new Promise((r) => setTimeout(r, delay));
+        return loadProfile(uid, retries - 1);
+      }
     }
   }, []);
 
-  const loadLeaderboard = useCallback(async () => {
+  const loadLeaderboard = useCallback(async (retries: number = 3) => {
     setLeaderboardLoading(true);
     try {
       const data = await supabaseService.getLeaderboard(50);
@@ -161,8 +215,16 @@ export function AppProvider({ children, userId }: AppProviderProps) {
         level: u.level,
       }));
       setLeaderboard(formatted);
-    } catch (_e) {
-      // Keep stale data
+    } catch (error) {
+      console.error('[AppProvider] Leaderboard load error:', error);
+
+      // Retry on network errors
+      if (retries > 0) {
+        const delay = (3 - retries + 1) * 300;
+        console.log(`[AppProvider] Retrying leaderboard in ${delay}ms`);
+        await new Promise((r) => setTimeout(r, delay));
+        return loadLeaderboard(retries - 1);
+      }
     } finally {
       setLeaderboardLoading(false);
     }
@@ -247,6 +309,52 @@ export function AppProvider({ children, userId }: AppProviderProps) {
       return snippetLikeCounts.get(snippetId) ?? fallback;
     },
     [snippetLikeCounts]
+  );
+
+  /**
+   * updateViewCounts — تحديث عدد المشاهدات
+   */
+  const updateViewCounts = useCallback((counts: Record<string, number>) => {
+    setSnippetViewCounts((prev) => {
+      const next = new Map(prev);
+      for (const [id, count] of Object.entries(counts)) {
+        next.set(id, count);
+      }
+      return next;
+    });
+  }, []);
+
+  /**
+   * getViewCount — الحصول على عدد المشاهدات
+   */
+  const getViewCount = useCallback(
+    (snippetId: string, fallback = 0): number => {
+      return snippetViewCounts.get(snippetId) ?? fallback;
+    },
+    [snippetViewCounts]
+  );
+
+  /**
+   * updateCommentCounts — تحديث عدد التعليقات
+   */
+  const updateCommentCounts = useCallback((counts: Record<string, number>) => {
+    setSnippetCommentCounts((prev) => {
+      const next = new Map(prev);
+      for (const [id, count] of Object.entries(counts)) {
+        next.set(id, count);
+      }
+      return next;
+    });
+  }, []);
+
+  /**
+   * getCommentCount — الحصول على عدد التعليقات
+   */
+  const getCommentCount = useCallback(
+    (snippetId: string, fallback = 0): number => {
+      return snippetCommentCounts.get(snippetId) ?? fallback;
+    },
+    [snippetCommentCounts]
   );
 
   /**
@@ -350,6 +458,12 @@ export function AppProvider({ children, userId }: AppProviderProps) {
       syncLikes,
       updateLikeCounts,
       getLikeCount,
+      snippetViewCounts,
+      updateViewCounts,
+      getViewCount,
+      snippetCommentCounts,
+      updateCommentCounts,
+      getCommentCount,
       refreshAll,
       refreshProfile,
       refreshLeaderboard,
@@ -368,6 +482,12 @@ export function AppProvider({ children, userId }: AppProviderProps) {
       syncLikes,
       updateLikeCounts,
       getLikeCount,
+      snippetViewCounts,
+      updateViewCounts,
+      getViewCount,
+      snippetCommentCounts,
+      updateCommentCounts,
+      getCommentCount,
       refreshAll,
       refreshProfile,
       refreshLeaderboard,

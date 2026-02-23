@@ -14,10 +14,12 @@ export interface DeepLinkAuthResult {
   error?: string;
 }
 
-/**
- * Parse URL hash to extract OAuth tokens
- * Supports both # and ? query formats
- */
+// ===== Deduplication: prevent processing the same URL twice =====
+// (can happen when both WebBrowser result AND Linking.addEventListener fire)
+let _lastProcessedUrl: string | null = null;
+let _lastProcessedAt: number = 0;
+const DEDUP_WINDOW_MS = 5000; // 5 ثوانٍ نافذة التكرار
+
 function parseUrlHash(url: string): Record<string, string> {
   const params: Record<string, string> = {};
 
@@ -29,9 +31,13 @@ function parseUrlHash(url: string): Record<string, string> {
       const pairs = hashString.split('&');
 
       for (const pair of pairs) {
-        const [key, value] = pair.split('=');
-        if (key && value) {
-          params[key] = decodeURIComponent(value);
+        // Use indexOf to find the FIRST '=' only — value may contain '='
+        const eqIndex = pair.indexOf('=');
+        if (eqIndex === -1) continue;
+        const key = pair.substring(0, eqIndex);
+        const rawValue = pair.substring(eqIndex + 1);
+        if (key) {
+          params[key] = decodeURIComponent(rawValue);
         }
       }
     }
@@ -43,9 +49,12 @@ function parseUrlHash(url: string): Record<string, string> {
       const pairs = queryString.split('&');
 
       for (const pair of pairs) {
-        const [key, value] = pair.split('=');
-        if (key && value) {
-          params[key] = decodeURIComponent(value);
+        const eqIndex = pair.indexOf('=');
+        if (eqIndex === -1) continue;
+        const key = pair.substring(0, eqIndex);
+        const rawValue = pair.substring(eqIndex + 1);
+        if (key) {
+          params[key] = decodeURIComponent(rawValue);
         }
       }
     }
@@ -65,6 +74,15 @@ export async function processAuthDeepLink(
 ): Promise<DeepLinkAuthResult> {
   try {
     console.log('🔗 Processing auth deep link:', url);
+
+    // ===== Deduplication: prevent double-processing =====
+    const now = Date.now();
+    if (_lastProcessedUrl === url && now - _lastProcessedAt < DEDUP_WINDOW_MS) {
+      console.log('⏭️ Skipping duplicate deep link (already processed)');
+      return { success: true };
+    }
+    _lastProcessedUrl = url;
+    _lastProcessedAt = now;
 
     // Parse URL to extract tokens
     const params = parseUrlHash(url);
@@ -102,6 +120,55 @@ export async function processAuthDeepLink(
     }
 
     console.log('✅ Session established from deep link:', data.user?.email);
+
+    // ✅ إنشاء ملف المستخدم فوراً قبل أي restart
+    // هذا ضروري لأن triggerAppRestart يقتل ensureProfile في AuthContext
+    const user = data.user;
+    if (user) {
+      try {
+        const { data: existing } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!existing) {
+          const meta = user.user_metadata || {};
+          const name =
+            meta.full_name || meta.name || meta.display_name || '';
+          const avatarUrl = meta.avatar_url || meta.picture || null;
+          const emailBase = (user.email || '')
+            .split('@')[0]
+            .replace(/[^a-zA-Z0-9_]/g, '_')
+            .substring(0, 14);
+          const idSuffix = user.id.replace(/-/g, '').substring(0, 6);
+          const username = `${emailBase}_${idSuffix}`.toLowerCase();
+
+          await supabase.from('profiles').insert({
+            id: user.id,
+            username,
+            full_name: name || username,
+            avatar_url: avatarUrl,
+            xp: 0,
+            level: 1,
+            streak_days: 0,
+          });
+          console.log('✅ Profile created in processAuthDeepLink');
+        } else {
+          console.log('✅ Profile already exists');
+        }
+      } catch (profileError: any) {
+        if (
+          !profileError?.message?.includes('duplicate') &&
+          !profileError?.code?.includes('23505')
+        ) {
+          console.warn(
+            '[DeepLinkAuth] Profile creation warning:',
+            profileError?.message
+          );
+        }
+      }
+    }
 
     return { success: true };
   } catch (error: any) {

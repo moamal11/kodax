@@ -374,6 +374,24 @@ export function useUserStats(userId?: string) {
       await hybridSyncService.setUser(userId);
       const data = await hybridSyncService.getUserXP();
       setStats(data);
+
+      // إذا عادت البيانات فارغة (XP=0, level=1, streak=0) احتمال ملف المستخدم لم يُنشأ بعد
+      // نحاول مرة أخرى بعد ثانية ونصف (تأخير الـ trigger في قاعدة البيانات)
+      if (!data || (data.xp === 0 && data.level === 1 && data.streak === 0)) {
+        setTimeout(async () => {
+          try {
+            const retryData = await hybridSyncService.getUserXP();
+            if (
+              retryData &&
+              (retryData.xp > 0 || retryData.level > 1 || retryData.streak > 0)
+            ) {
+              setStats(retryData);
+            }
+          } catch (_e) {
+            /* Silent */
+          }
+        }, 1500);
+      }
     } catch (err) {
       console.warn('[useUserStats] Error fetching stats:', err);
       // Keep previous stats — don't reset to defaults

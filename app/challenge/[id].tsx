@@ -58,9 +58,22 @@ import { badgeService } from '@/services/badgeService';
 import { notificationService } from '@/services/notificationService';
 import { progressService } from '@/services/progressService';
 import { useBadges } from '@/contexts/BadgeContext';
-import MobileWebEditor, {
-  type MobileWebEditorRef,
-} from '@/components/editor/MobileWebEditor';
+
+// Conditional import: MobileWebEditor uses react-native-webview (not available on web)
+// On web, CodeMirrorEditor or TextInput is used instead
+interface MobileWebEditorRef {
+  setCodeExternal: (code: string) => void;
+  replaceWord: (word: string) => void;
+  focus: () => void;
+}
+let MobileWebEditor: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    MobileWebEditor = require('@/components/editor/MobileWebEditor').default;
+  } catch (_e) {
+    MobileWebEditor = null;
+  }
+}
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -1131,14 +1144,42 @@ export default function ChallengeScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* محرر الكود الموحّد - MobileWebEditor */}
+                {/* محرر الكود — MobileWebEditor على الموبايل، CodeMirror/TextInput على الويب */}
                 <View style={{ height: 300 }}>
-                  <MobileWebEditor
-                    ref={mobileEditorRef}
-                    initialCode={challenge.starterCode || ''}
-                    language={getCMLanguage(challenge.language)}
-                    onChange={setCode}
-                  />
+                  {Platform.OS !== 'web' && MobileWebEditor ? (
+                    <MobileWebEditor
+                      ref={mobileEditorRef}
+                      initialCode={challenge.starterCode || ''}
+                      language={getCMLanguage(challenge.language)}
+                      onChange={setCode}
+                    />
+                  ) : CodeMirrorEditor ? (
+                    <CodeMirrorEditor
+                      code={code}
+                      language={getCMLanguage(challenge.language)}
+                      onChange={setCode}
+                      height={300}
+                    />
+                  ) : (
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        color: '#e5e7eb',
+                        fontFamily: MONO,
+                        fontSize: 14,
+                        padding: 16,
+                        backgroundColor: '#111827',
+                        textAlignVertical: 'top',
+                      }}
+                      value={code}
+                      onChangeText={setCode}
+                      multiline
+                      placeholder="اكتب الكود هنا..."
+                      placeholderTextColor="#4b5563"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  )}
                 </View>
               </View>
             </Animated.View>

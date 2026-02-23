@@ -38,7 +38,11 @@ import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/contexts/AuthContext';
 import { useResponsiveLayout } from '@/hooks';
 import { useApp } from '@/contexts/AppContext';
-import { getPublicSnippets, FeedSnippet } from '@/services/codeFeedService';
+import {
+  getPublicSnippets,
+  FeedSnippet,
+  getSnippetCounts,
+} from '@/services/codeFeedService';
 import { checkBatchFollowing, toggleFollow } from '@/services/followService';
 import FollowButton from '@/components/ui/FollowButton';
 import UserAvatar from '@/components/ui/UserAvatar';
@@ -185,6 +189,9 @@ const SnippetCard = React.memo(
     isFollowing,
     onFollowToggle,
     onAuthorPress,
+    likeCount,
+    viewCount,
+    commentCount,
   }: {
     snippet: FeedSnippet;
     liked: boolean;
@@ -196,6 +203,9 @@ const SnippetCard = React.memo(
     isFollowing?: boolean;
     onFollowToggle?: (isNowFollowing: boolean) => void;
     onAuthorPress?: () => void;
+    likeCount: number;
+    viewCount: number;
+    commentCount: number;
   }) => {
     const authorName =
       snippet.profiles?.full_name || snippet.profiles?.username || 'مجهول';
@@ -295,7 +305,7 @@ const SnippetCard = React.memo(
                 <Text
                   style={[styles.actionText, liked && { color: '#ef4444' }]}
                 >
-                  {snippet.likes_count || 0}
+                  {likeCount}
                 </Text>
               </TouchableOpacity>
 
@@ -309,16 +319,12 @@ const SnippetCard = React.memo(
                   size={18}
                   color="#6b7280"
                 />
-                <Text style={styles.actionText}>
-                  {snippet.comments_count || 0}
-                </Text>
+                <Text style={styles.actionText}>{commentCount}</Text>
               </TouchableOpacity>
 
               <View style={styles.actionBtn}>
                 <MaterialIcons name="visibility" size={18} color="#6b7280" />
-                <Text style={styles.actionText}>
-                  {snippet.views_count || 0}
-                </Text>
+                <Text style={styles.actionText}>{viewCount}</Text>
               </View>
 
               <TouchableOpacity
@@ -370,10 +376,16 @@ export default function CodeFeedScreen() {
   const {
     likedSnippets,
     snippetLikeCounts,
+    snippetViewCounts,
+    snippetCommentCounts,
     toggleLike: globalToggleLike,
     syncLikes,
     updateLikeCounts,
     getLikeCount,
+    updateViewCounts,
+    getViewCount,
+    updateCommentCounts,
+    getCommentCount,
   } = useApp();
   const { authVersion } = useAuth();
 
@@ -424,35 +436,47 @@ export default function CodeFeedScreen() {
           }
           setHasMore(data.length === 20);
 
-          // Sync likes + follow status via AppContext
-          if (user?.id && data.length > 0) {
-            try {
-              const ids = data.map((s) => s.id);
-              // مزامنة اللايكات عبر AppContext المركزي
-              syncLikes(ids);
-              // تحديث عداد اللايكات
-              const counts: Record<string, number> = {};
-              data.forEach((s) => {
-                counts[s.id] = s.likes_count;
-              });
-              updateLikeCounts(counts);
+          if (data.length > 0) {
+            const ids = data.map((s) => s.id);
 
-              // Check follow status for snippet authors
-              const authorIds = [
-                ...new Set(
-                  data.map((s) => s.user_id).filter((id) => id !== user.id)
-                ),
-              ];
-              if (authorIds.length > 0) {
-                const followed = await checkBatchFollowing(user.id, authorIds);
-                setFollowedUsers((prev) => {
-                  const next = new Set(prev);
-                  followed.forEach((id) => next.add(id));
-                  return next;
-                });
-              }
+            // Always fetch accurate counts (public data — no auth needed)
+            try {
+              const { likeCounts, viewCounts, commentCounts } =
+                await getSnippetCounts(ids);
+              updateLikeCounts(likeCounts);
+              updateViewCounts(viewCounts);
+              updateCommentCounts(commentCounts);
             } catch (_e) {
-              // Likes/follows check failed — snippets still show
+              // Counts fetch failed — snippets still show with initial values
+            }
+
+            // Sync likes + follow status (only if logged in)
+            if (user?.id) {
+              syncLikes(ids);
+
+              // Fetch initial follow status for all snippet authors
+              try {
+                const authorIds = [
+                  ...new Set(
+                    data.map((s) => s.user_id).filter((uid) => uid !== user?.id)
+                  ),
+                ];
+                if (authorIds.length > 0) {
+                  const followedSet = await checkBatchFollowing(
+                    user.id,
+                    authorIds
+                  );
+                  setFollowedUsers((prev) => {
+                    const next = new Set(prev);
+                    for (const uid of authorIds) {
+                      followedSet.has(uid) ? next.add(uid) : next.delete(uid);
+                    }
+                    return next;
+                  });
+                }
+              } catch (_e) {
+                // Follow check failed — not critical
+              }
             }
           }
         }
@@ -464,14 +488,23 @@ export default function CodeFeedScreen() {
         setLoadingMore(false);
       }
     },
-    [selectedLanguage, searchQuery, sortBy, user?.id]
+    [
+      selectedLanguage,
+      searchQuery,
+      sortBy,
+      user?.id,
+      updateLikeCounts,
+      updateViewCounts,
+      updateCommentCounts,
+      syncLikes,
+    ]
   );
 
   // Reload on filter change
   useEffect(() => {
     setPage(0);
     loadSnippets(0);
-  }, [selectedLanguage, sortBy]);
+  }, [selectedLanguage, sortBy, loadSnippets]);
 
   // Debounced search
   useEffect(() => {
@@ -483,7 +516,7 @@ export default function CodeFeedScreen() {
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
     };
-  }, [searchQuery]);
+  }, [searchQuery, loadSnippets]);
 
   // Reload data when auth changes (after login)
   useEffect(() => {
@@ -491,7 +524,7 @@ export default function CodeFeedScreen() {
       setPage(0);
       loadSnippets(0);
     }
-  }, [authVersion]);
+  }, [authVersion, loadSnippets, user?.id]);
 
   // Pull to refresh
   const handleRefresh = useCallback(() => {
@@ -575,10 +608,7 @@ export default function CodeFeedScreen() {
   const renderItem = useCallback(
     ({ item, index }: { item: FeedSnippet; index: number }) => (
       <SnippetCard
-        snippet={{
-          ...item,
-          likes_count: getLikeCount(item.id, item.likes_count),
-        }}
+        snippet={item}
         liked={likedSnippets.has(item.id)}
         onPress={() => handleSnippetPress(item.id)}
         onLike={() => handleLike(item.id)}
@@ -590,11 +620,16 @@ export default function CodeFeedScreen() {
           handleFollowToggle(item.user_id, isNowFollowing)
         }
         onAuthorPress={() => router.push(`/user/${item.user_id}` as any)}
+        likeCount={getLikeCount(item.id, item.likes_count)}
+        viewCount={getViewCount(item.id, item.views_count)}
+        commentCount={getCommentCount(item.id, item.comments_count)}
       />
     ),
     [
       likedSnippets,
       snippetLikeCounts,
+      snippetViewCounts,
+      snippetCommentCounts,
       followedUsers,
       handleSnippetPress,
       handleLike,
@@ -602,6 +637,8 @@ export default function CodeFeedScreen() {
       handleFollowToggle,
       user?.id,
       getLikeCount,
+      getViewCount,
+      getCommentCount,
     ]
   );
 
@@ -710,6 +747,13 @@ export default function CodeFeedScreen() {
             data={snippets}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
+            extraData={{
+              liked: likedSnippets,
+              likes: snippetLikeCounts,
+              views: snippetViewCounts,
+              comments: snippetCommentCounts,
+              followed: followedUsers,
+            }}
             contentContainerStyle={[
               styles.feedList,
               isLargeScreen && webStyles.feedWeb,

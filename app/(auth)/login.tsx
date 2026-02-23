@@ -31,7 +31,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useResponsiveLayout } from '@/hooks';
 import * as WebBrowser from 'expo-web-browser';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { processAuthDeepLink } from '@/services/deepLinkAuthService';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -39,6 +40,7 @@ const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const params = useLocalSearchParams();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -139,17 +141,20 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      // Determine the base redirect URL based on environment
-      const isDev = __DEV__;
-      const baseRedirectUrl = isDev
-        ? 'http://localhost:8081/auth/callback'
-        : 'https://kodax.app/auth/callback';
-
-      // For mobile, add fromApp=1 query parameter
+      // Stable callback URL strategy:
+      // - Mobile must NEVER use localhost callback (not reachable on physical device)
+      // - Web can use current origin in dev
+      // - Mobile always uses hosted callback that forwards to kodax:// deep link
       const isMobile = Platform.OS !== 'web';
-      const redirectTo = isMobile
-        ? `${baseRedirectUrl}?fromApp=1`
-        : baseRedirectUrl;
+      const hostedCallback =
+        process.env.EXPO_PUBLIC_OAUTH_WEB_CALLBACK ||
+        'https://kodax.app/auth/callback';
+      const webCallback =
+        Platform.OS === 'web' && __DEV__ && typeof window !== 'undefined'
+          ? `${window.location.origin}/auth/callback`
+          : hostedCallback;
+      const redirectTo = isMobile ? `${hostedCallback}?fromApp=1` : webCallback;
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -168,9 +173,48 @@ export default function LoginScreen() {
         );
 
         if (result.type === 'success') {
-          // Deep link handler will process the tokens
+          // Prefer global deep-link listener in _layout to process tokens.
+          // Here we only wait for session; if it doesn't appear, process URL once as fallback.
+          let activeSession = null;
+
+          for (let attempt = 0; attempt < 20; attempt++) {
+            const {
+              data: { session: currentSession },
+            } = await supabase.auth.getSession();
+
+            if (currentSession) {
+              activeSession = currentSession;
+              break;
+            }
+
+            await new Promise((r) => setTimeout(r, 200));
+          }
+
+          if (!activeSession && result.url) {
+            const deepLinkResult = await processAuthDeepLink(result.url);
+            if (!deepLinkResult.success) {
+              throw new Error(deepLinkResult.error || 'فشل معالجة تسجيل الدخول');
+            }
+
+            const {
+              data: { session: fallbackSession },
+            } = await supabase.auth.getSession();
+
+            activeSession = fallbackSession;
+          }
+
+          if (!activeSession) {
+            throw new Error('تعذر تثبيت جلسة تسجيل الدخول');
+          }
+
+          // Don't navigate immediately here.
+          // NavigationGuard in app/_layout.tsx will redirect only after
+          // AuthContext finishes full verification (session + profile).
+          return;
         } else if (result.type === 'cancel') {
           throw new Error('تم إلغاء عملية تسجيل الدخول');
+        } else {
+          throw new Error('تعذر إكمال جلسة تسجيل الدخول');
         }
       }
       // On web, the redirect will happen automatically
