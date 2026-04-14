@@ -1,0 +1,27 @@
+{
+  "name": "Kodax - منصة تعليم البرمجة",
+  "short_name": "Kodax",
+  "description": "KODAX منصة تعليم برمجة عراقية - تعلّم البرمجة بالعربية",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "lang": "ar",
+  "dir": "ltr",
+  "categories": ["education", "developer-tools"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

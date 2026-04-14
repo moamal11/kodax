@@ -1,0 +1,72 @@
+{
+  "framework": null,
+  "buildCommand": "npx expo export --platform web && node scripts/copy-web-fonts.js",
+  "outputDirectory": "dist",
+
+  "redirects": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://raw.githubusercontent.com/m2iq/kodax-seo/refs/heads/main/sitemap.xml",
+      "permanent": true
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "https://raw.githubusercontent.com/m2iq/kodax-seo/refs/heads/main/robots.txt",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/sitemap.xml",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/xml"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/_expo/static/fonts/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Content-Type",
+          "value": "font/ttf"
+        }
+      ]
+    },
+    {
+      "source": "/_expo/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    }
+  ]
+}

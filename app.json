@@ -1,0 +1,78 @@
+{
+  "expo": {
+    "name": "Kodax",
+    "slug": "kodax",
+    "owner": "mo_nz",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "scheme": "kodax",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0f"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kodax.app"
+    },
+    "android": {
+      "package": "com.kodax.app",
+      "versionCode": 1,
+      "permissions": ["REQUEST_INSTALL_PACKAGES"],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/kodax-light-trans.png",
+        "backgroundColor": "#0a0a0f"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static",
+      "description": "Kodax AI App",
+      "config": {
+        "pwa": {
+          "name": "Kodax",
+          "shortName": "Kodax",
+          "themeColor": "#0a0a0f",
+          "backgroundColor": "#0a0a0f",
+          "display": "standalone",
+          "orientation": "portrait",
+          "icon": "./assets/splash.png"
+        }
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-font",
+      "expo-updates"
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/0f11f7e3-6a89-4669-9d31-96cc6881129e"
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0f11f7e3-6a89-4669-9d31-96cc6881129e"
+      }
+    }
+  }
+}

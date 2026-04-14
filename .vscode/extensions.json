@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-next",
+    "bradlc.vscode-tailwindcss",
+    "expo.vscode-expo-tools",
+    "streetsidesoftware.code-spell-checker",
+    "usernamehw.errorlens",
+    "PKief.material-icon-theme",
+    "GitHub.copilot"
+  ]
+}
