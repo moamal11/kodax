@@ -29,8 +29,17 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "blockedPermissions": [
-        "android.permission.REQUEST_INSTALL_PACKAGES"
-      ]
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.REQUEST_INSTALL_PACKAGES",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "allowBackup": false
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -55,7 +64,7 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": false
           }
         }
       ],
@@ -67,6 +76,14 @@
           "androidAppId": "ca-app-pub-7553202956815424~1089790112",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511",
           "userTrackingUsageDescription": "نستخدم هذا فقط لعرض إعلانات مكافأة اختيارية أكثر ملاءمة لك."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "نستخدم معرض الصور فقط عندما تختار صورة لملفك الشخصي.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ]
     ],

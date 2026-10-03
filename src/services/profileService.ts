@@ -288,11 +288,13 @@ export async function pickImage(): Promise<{
   error: string | null;
 }> {
   try {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permissionResult.granted) {
-      return { uri: null, error: 'يرجى السماح بالوصول إلى المعرض' };
+    // Android: منتقي الصور في النظام (Photo Picker) لا يحتاج أي صلاحية تخزين — الصلاحيات محجوبة في app.json
+    if (Platform.OS === 'ios') {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        return { uri: null, error: 'يرجى السماح بالوصول إلى المعرض' };
+      }
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
