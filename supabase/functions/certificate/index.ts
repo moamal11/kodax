@@ -8,6 +8,7 @@
 import { corsHeaders } from '../_shared/cors.ts';
 // @ts-ignore: Deno runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { CERTIFICATE_FIELDS } from './fields.generated.ts';
 
 // ========================================
 // Types
@@ -115,183 +116,88 @@ async function getRequirements(
 // ========================================
 // Calculate user progress for a course
 // ========================================
+// Calculate progress (server-side, verified data only)
+// ========================================
+// المجال وحدوده من fields.generated.ts (نفس منهج التطبيق). لا يُقبل أي رقم من العميل:
+//  - الدروس: user_lesson_progress الموثّقة (verified) في دورات المجال
+//  - التحديات: صفوف course_id='challenges' (يكتبها السيرفر فقط) + challenge_submissions الناجحة
 async function calculateProgress(
   supabaseAdmin: any,
   userId: string,
-  courseId: string
+  fieldId: string
 ) {
-  // 1. Get lesson progress from user_lesson_progress using course_id
-  console.log('[Progress Check] Fetching progress for:', { userId, courseId });
+  const field = CERTIFICATE_FIELDS[fieldId];
+  if (!field) {
+    return {
+      known: false,
+      totalLessons: 0,
+      totalChallenges: 0,
+      completedLessons: 0,
+      passedChallenges: 0,
+      criticalErrors: 0,
+      examScore: null,
+      examPassed: false,
+      completionDays: null as number | null,
+    };
+  }
+  const lessonSet = new Set(field.lessons);
+  const challengeSet = new Set(field.challenges);
 
-  // IMPORTANT: Only select columns that definitely exist in the table
-  // 'score' column may not exist depending on which migration was run
-  const { data: lessonProgress, error: lpError } = await supabaseAdmin
+  const { data: lessonRows, error: lpError } = await supabaseAdmin
     .from('user_lesson_progress')
-    .select('lesson_id, completed')
+    .select('lesson_id, completed_at')
     .eq('user_id', userId)
-    .eq('course_id', courseId);
-
-  if (lpError) {
-    console.error(
-      '[Progress Check] ERROR fetching lesson progress:',
-      JSON.stringify(lpError)
-    );
-  }
-
-  console.log('[Progress Check] Lesson progress result:', {
-    count: lessonProgress?.length || 0,
-    isNull: lessonProgress === null,
-    courseId,
-    data: lessonProgress?.slice(0, 3),
-  });
-
-  // 2. Count completed lessons for this course
-  const completedLessons = (lessonProgress || []).filter(
-    (lp: any) => lp.completed
-  );
-
-  console.log('[Progress Check] Completed lessons:', completedLessons.length);
-
-  // 3. Get challenge progress for this course
-  // IMPORTANT: Challenges are saved in user_lesson_progress with course_id = 'challenges'
-  // NOT in challenge_attempts table!
-  const challengePrefixMap: { [key: string]: string[] } = {
-    'web-html-basics': ['html-ch-'],
-    'web-css-styling': ['css-ch-'],
-    'web-css-advanced': ['css-ch-'],
-    'web-js-basics': ['js-ch-', 'json-ch-'],
-    'web-js-advanced': ['js-ch-'],
-    'web-react-intro': ['react-ch-'],
-    'py-basics': ['py-ch-', 'ch-'],
-    'py-advanced': ['py-ch-'],
-    'cpp-basics': ['cpp-ch-'],
-    'cpp-advanced': ['cpp-ch-'],
-    'cyber-basics': ['cyber-ch-'],
-    'cyber-advanced': ['cyber-ch-'],
-    'ai-basics': ['ai-ch-'],
-    'rn-basics': ['rn-ch-'],
-    'flutter-basics': ['flutter-ch-'],
-    'backend-nodejs': ['backend-ch-'],
-    'backend-rest-api': ['backend-ch-'],
-    'backend-auth': ['backend-ch-'],
-    'backend-sql': ['sql-ch-'],
-    'web-deployment': ['deploy-ch-'],
-  };
-
-  // Fetch ALL completed challenges from user_lesson_progress (where app actually saves them)
-  const { data: challengeProgress, error: cpError } = await supabaseAdmin
-    .from('user_lesson_progress')
-    .select('lesson_id, completed')
-    .eq('user_id', userId)
-    .eq('course_id', 'challenges')
-    .eq('completed', true);
-
-  if (cpError) {
-    console.error(
-      '[Progress Check] ERROR fetching challenge progress:',
-      JSON.stringify(cpError)
-    );
-  }
-
-  console.log(
-    '[Progress Check] Challenge progress from user_lesson_progress:',
-    {
-      count: challengeProgress?.length || 0,
-      isNull: challengeProgress === null,
-    }
-  );
-
-  // Filter challenges by course using prefix matching
-  const prefixes = challengePrefixMap[courseId] || [];
-  const courseCompletedChallenges = (challengeProgress || []).filter(
-    (cp: any) => {
-      const lessonId = cp.lesson_id?.toLowerCase() || '';
-      return prefixes.some((prefix: string) => lessonId.startsWith(prefix));
-    }
-  );
-
-  console.log('[Progress Check] Course challenges:', {
-    courseId,
-    prefixes,
-    matchedCount: courseCompletedChallenges.length,
-  });
-
-  // Also check challenge_attempts as fallback
-  const { data: challengeAttempts, error: caError } = await supabaseAdmin
-    .from('challenge_attempts')
-    .select('challenge_id, passed')
-    .eq('user_id', userId);
-
-  if (caError) {
-    console.error(
-      '[Progress Check] ERROR fetching challenge_attempts:',
-      JSON.stringify(caError)
-    );
-  }
-
-  const attemptPrefixes = challengePrefixMap[courseId] || [];
-  const passedFromAttempts = (challengeAttempts || []).filter((ca: any) => {
-    if (!ca.passed) return false;
-    const challengeId = ca.challenge_id?.toLowerCase() || '';
-    return attemptPrefixes.some((prefix: string) =>
-      challengeId.startsWith(prefix)
-    );
-  });
-
-  // Use whichever source found more completed challenges
-  const passedChallengesCount = Math.max(
-    courseCompletedChallenges.length,
-    passedFromAttempts.length
-  );
-  const criticalErrors = 0; // Simplified
-
-  // 4. Get best exam score
-  const { data: examResults, error: exError } = await supabaseAdmin
-    .from('course_final_exams')
-    .select('score, passed')
-    .eq('user_id', userId)
-    .eq('course_id', courseId)
-    .order('score', { ascending: false })
-    .limit(1);
-
-  if (exError) {
-    console.error('Error fetching exam results:', exError);
-  }
-
-  const bestExam = examResults?.[0] || null;
-
-  // 5. Calculate completion days
-  const { data: firstProgress } = await supabaseAdmin
-    .from('user_lesson_progress')
-    .select('completed_at')
-    .eq('user_id', userId)
-    .eq('course_id', courseId)
     .eq('completed', true)
-    .order('completed_at', { ascending: true })
-    .limit(1);
+    .eq('verified', true)
+    .in('course_id', field.courses);
+  if (lpError) console.error('[Progress] lessons error:', lpError.message);
+  const doneLessons = new Set(
+    (lessonRows || []).map((r: any) => r.lesson_id).filter((id: string) => lessonSet.has(id))
+  );
+
+  const passed = new Set<string>();
+  if (field.challenges.length > 0) {
+    const { data: chRows, error: chError } = await supabaseAdmin
+      .from('user_lesson_progress')
+      .select('lesson_id')
+      .eq('user_id', userId)
+      .eq('course_id', 'challenges')
+      .eq('completed', true)
+      .in('lesson_id', field.challenges);
+    if (chError) console.error('[Progress] challenges error:', chError.message);
+    (chRows || []).forEach((r: any) => passed.add(r.lesson_id));
+
+    const { data: subRows, error: subError } = await supabaseAdmin
+      .from('challenge_submissions')
+      .select('challenge_id')
+      .eq('user_id', userId)
+      .eq('all_passed', true)
+      .in('challenge_id', field.challenges);
+    if (subError) console.error('[Progress] submissions error:', subError.message);
+    (subRows || []).forEach((r: any) => passed.add(r.challenge_id));
+  }
+  for (const id of [...passed]) if (!challengeSet.has(id)) passed.delete(id);
 
   let completionDays: number | null = null;
-  if (firstProgress?.[0]?.completed_at) {
-    const startDate = new Date(firstProgress[0].completed_at);
-    const now = new Date();
-    completionDays = Math.ceil(
-      (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
+  const firstAt = (lessonRows || [])
+    .map((r: any) => r.completed_at)
+    .filter(Boolean)
+    .sort()[0];
+  if (firstAt) {
+    completionDays = Math.ceil((Date.now() - new Date(firstAt).getTime()) / 86400000);
   }
 
-  const result = {
-    completedLessons: completedLessons.length,
-    lessonProgress: lessonProgress || [],
-    passedChallenges: passedChallengesCount,
-    totalChallengeAttempts: passedChallengesCount,
-    criticalErrors: criticalErrors,
-    examScore: bestExam?.score || null,
-    examPassed: bestExam?.passed || false,
+  return {
+    known: true,
+    totalLessons: field.lessons.length,
+    totalChallenges: field.challenges.length,
+    completedLessons: doneLessons.size,
+    passedChallenges: passed.size,
+    criticalErrors: 0,
+    examScore: null,
+    examPassed: false,
     completionDays,
   };
-
-  console.log('[Progress Check] Final result:', result);
-  return result;
 }
 
 // ========================================
@@ -301,41 +207,13 @@ async function checkEligibility(
   supabaseAdmin: any,
   userId: string,
   courseId: string,
-  level: string,
-  totalLessons: number,
-  totalChallenges: number,
-  completedLessonsOverride?: number,
-  completedChallengesOverride?: number,
-  minLessonsPercentOverride?: number,
-  minChallengesPercentOverride?: number
+  level: string
 ): Promise<EligibilityResult> {
+  // العتبات من certificate_requirements والتقدم والمجموع من السيرفر فقط
   const requirements = await getRequirements(supabaseAdmin, courseId, level);
-
-  // Allow client to override thresholds so server validates against the same
-  // values as the client-side LEVEL_REQUIREMENTS constant.
-  if (minLessonsPercentOverride !== undefined) {
-    requirements.min_lessons_percent = minLessonsPercentOverride;
-  }
-  if (minChallengesPercentOverride !== undefined) {
-    requirements.min_challenges_percent = minChallengesPercentOverride;
-  }
-
-  // If the client already computed the field-level aggregated progress, use it
-  // directly to avoid the server querying by field ID (which yields 0 rows
-  // because DB rows are stored per individual course ID).
-  const progress =
-    completedLessonsOverride !== undefined
-      ? {
-          completedLessons: completedLessonsOverride,
-          passedChallenges: completedChallengesOverride ?? 0,
-          criticalErrors: 0,
-          examScore: null,
-          examPassed: false,
-          completionDays: null,
-          lessonProgress: [],
-          totalChallengeAttempts: completedChallengesOverride ?? 0,
-        }
-      : await calculateProgress(supabaseAdmin, userId, courseId);
+  const progress = await calculateProgress(supabaseAdmin, userId, courseId);
+  const totalLessons = progress.totalLessons;
+  const totalChallenges = progress.totalChallenges;
 
   console.log('[Eligibility Check]', {
     courseId,
@@ -365,6 +243,10 @@ async function checkEligibility(
 
   const reasons: string[] = [];
   let eligible = true;
+  if (!progress.known) {
+    eligible = false;
+    reasons.push('مجال غير معروف');
+  }
 
   // Check lessons
   if (lessonsPercent < requirements.min_lessons_percent) {
@@ -473,29 +355,15 @@ async function issueCertificate(
   supabaseAdmin: any,
   userId: string,
   courseId: string,
-  level: string,
-  totalLessons: number,
-  totalChallenges: number,
-  courseTitle: string,
-  courseTitleAr: string,
-  completedLessonsOverride?: number,
-  completedChallengesOverride?: number,
-  minLessonsPercentOverride?: number,
-  minChallengesPercentOverride?: number
+  level: string
 ) {
+  // اسم المجال من المنهج نفسه (لا يُكتب على الشهادة نص يرسله العميل)
+  const field = CERTIFICATE_FIELDS[courseId];
+  const courseTitle = field?.name || courseId;
+  const courseTitleAr = field?.nameAr || courseTitle;
+
   // 1. Check eligibility first (server-side validation)
-  const eligibility = await checkEligibility(
-    supabaseAdmin,
-    userId,
-    courseId,
-    level,
-    totalLessons,
-    totalChallenges,
-    completedLessonsOverride,
-    completedChallengesOverride,
-    minLessonsPercentOverride,
-    minChallengesPercentOverride
-  );
+  const eligibility = await checkEligibility(supabaseAdmin, userId, courseId, level);
 
   if (!eligibility.eligible) {
     return {
@@ -682,38 +550,6 @@ async function issueCertificate(
 }
 
 // ========================================
-// Utility: Decode JWT token
-// ========================================
-function decodeJWT(token: string): { sub: string; aud: string } | null {
-  try {
-    // JWT format: header.payload.signature
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      console.error(
-        '[JWT] Invalid token format - expected 3 parts, got:',
-        parts.length
-      );
-      return null;
-    }
-
-    // Decode base64url payload
-    const payload = parts[1];
-    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    const json = JSON.parse(decoded);
-
-    if (!json.sub) {
-      console.error('[JWT] Token missing sub claim');
-      return null;
-    }
-
-    return { sub: json.sub, aud: json.aud };
-  } catch (error) {
-    console.error('[JWT] Decode error:', error);
-    return null;
-  }
-}
-
-// ========================================
 // Main Handler
 // ========================================
 // @ts-ignore: Deno serve
@@ -742,30 +578,10 @@ Deno.serve(async (req: Request) => {
       ? authHeader.slice(7)
       : authHeader;
 
-    console.log('[Auth] Token received, length:', token.length);
-
-    // Decode JWT to get user ID
-    const decoded = decodeJWT(token);
-    if (!decoded || !decoded.sub) {
-      console.error('[Auth] JWT decode failed or missing sub claim');
-      return new Response(
-        JSON.stringify({ error: 'Invalid token format or missing claims' }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    const userId = decoded.sub;
-    console.log('[Auth] User ID from token:', userId);
-
-    // Create Supabase clients
     // @ts-ignore: Deno env
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     // @ts-ignore: Deno env
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('[Config] Missing Supabase environment variables');
       return new Response(
@@ -781,6 +597,19 @@ Deno.serve(async (req: Request) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false },
     });
+
+    // التحقق من التوقيع عبر Supabase Auth (الدالة منشورة بدون verify_jwt؛ فك الترميز وحده لا يكفي)
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !authData?.user?.id) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    const userId = authData.user.id;
 
     // Verify user exists in profiles
     const { data: userProfile, error: profileError } = await supabaseAdmin
@@ -829,34 +658,8 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // Get course metadata from request (since courses are local in the app)
-        const totalLessons = (body as any).total_lessons || 0;
-        const totalChallenges = (body as any).total_challenges || 0;
-        const completedLessons = (body as any).completed_lessons as
-          | number
-          | undefined;
-        const completedChallenges = (body as any).completed_challenges as
-          | number
-          | undefined;
-        const minLessonsPercent = (body as any).min_lessons_percent as
-          | number
-          | undefined;
-        const minChallengesPercent = (body as any).min_challenges_percent as
-          | number
-          | undefined;
-
-        result = await checkEligibility(
-          supabaseAdmin,
-          userId,
-          body.course_id,
-          body.level,
-          totalLessons,
-          totalChallenges,
-          completedLessons,
-          completedChallenges,
-          minLessonsPercent,
-          minChallengesPercent
-        );
+        // كل الأرقام تُحسب على السيرفر؛ أي حقول إضافية من العميل تُتجاهل
+        result = await checkEligibility(supabaseAdmin, userId, body.course_id, body.level);
         break;
       }
 
@@ -871,37 +674,7 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        const totalLessons = (body as any).total_lessons || 0;
-        const totalChallenges = (body as any).total_challenges || 0;
-        const courseTitle = (body as any).course_title || body.course_id;
-        const courseTitleAr = (body as any).course_title_ar || courseTitle;
-        const completedLessons = (body as any).completed_lessons as
-          | number
-          | undefined;
-        const completedChallenges = (body as any).completed_challenges as
-          | number
-          | undefined;
-        const minLessonsPercent = (body as any).min_lessons_percent as
-          | number
-          | undefined;
-        const minChallengesPercent = (body as any).min_challenges_percent as
-          | number
-          | undefined;
-
-        result = await issueCertificate(
-          supabaseAdmin,
-          userId,
-          body.course_id,
-          body.level,
-          totalLessons,
-          totalChallenges,
-          courseTitle,
-          courseTitleAr,
-          completedLessons,
-          completedChallenges,
-          minLessonsPercent,
-          minChallengesPercent
-        );
+        result = await issueCertificate(supabaseAdmin, userId, body.course_id, body.level);
         break;
       }
 
