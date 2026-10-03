@@ -47,6 +47,7 @@ import { AppState, Platform } from 'react-native';
 import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { clearAllKodaxData } from '@/utils/clearUserData';
+import { unregisterPush } from '@/services/pushService';
 import { badgeService } from '@/services/badgeService';
 import { notificationService } from '@/services/notificationService';
 import { progressService } from '@/services/progressService';
@@ -130,6 +131,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = useCallback(async () => {
     // Increment version to cancel any ongoing session processing
     processingVersionRef.current++;
+    // إزالة الجهاز من الحساب قبل إنهاء الجلسة (حتى لا تصل إشعارات الحساب لهذا الجهاز)
+    await unregisterPush();
     await clearLocalData();
     try {
       await supabase.auth.signOut();

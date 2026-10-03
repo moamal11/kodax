@@ -88,3 +88,6 @@ kodax-admin/.next/*
 # local environment (never commit)
 .env
 .claude/launch.json
+
+# Firebase (FCM) config — via EAS file env GOOGLE_SERVICES_JSON
+google-services.json

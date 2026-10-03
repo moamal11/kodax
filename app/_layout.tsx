@@ -21,6 +21,7 @@ import { ToastContainer } from '@/components/ui/Toast';
 import MandatoryDataModal from '@/components/ui/MandatoryDataModal';
 import UpdateModal from '@/components/ui/UpdateModal';
 import BroadcastManager from '@/components/ui/BroadcastManager';
+import PushManager from '@/components/ui/PushManager';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -254,6 +255,11 @@ function HydratedInnerLayout() {
             {/* مدير الرسائل العامة */}
             {userId && (
               <BroadcastManager userId={userId} userName={broadcastUserName} />
+            )}
+
+            {/* الإشعارات الفورية: تسجيل الجهاز + فتح الإشعار */}
+            {userId && (
+              <PushManager userId={userId} />
             )}
 
             {/* مربع حوار البيانات الإجبارية */}

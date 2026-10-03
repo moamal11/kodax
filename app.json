@@ -85,6 +85,13 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/kodax-light-trans.png",
+          "color": "#8b5cf6"
+        }
       ]
     ],
     "runtimeVersion": {

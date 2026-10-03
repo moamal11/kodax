@@ -838,6 +838,28 @@ export default function ProfileScreen() {
                     <TouchableOpacity
                       style={webStyles.settingItemWeb}
                       activeOpacity={0.7}
+                      onPress={() => router.push('/notification-settings' as any)}
+                    >
+                      <View style={styles.settingLeft}>
+                        <View
+                          style={[
+                            styles.settingIconContainer,
+                            { backgroundColor: 'rgba(167, 139, 250, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons
+                            name="notifications"
+                            size={18}
+                            color="#a78bfa"
+                          />
+                        </View>
+                        <Text style={styles.settingText}>الإشعارات</Text>
+                      </View>
+                      <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={webStyles.settingItemWeb}
+                      activeOpacity={0.7}
                       onPress={() => router.push('/blocked-users' as any)}
                     >
                       <View style={styles.settingLeft}>
@@ -1429,6 +1451,34 @@ export default function ProfileScreen() {
                             <Ionicons name="ribbon" size={18} color="#eab308" />
                           </View>
                           <Text style={styles.settingText}>شهاداتي</Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color="#4b5563"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={webStyles.settingItemWeb}
+                        activeOpacity={0.7}
+                        onPress={() => router.push('/notification-settings' as any)}
+                      >
+                        <View style={styles.settingLeft}>
+                          <View
+                            style={[
+                              styles.settingIconContainer,
+                              { backgroundColor: 'rgba(167, 139, 250, 0.15)' },
+                            ]}
+                          >
+                            <Ionicons
+                              name="notifications"
+                              size={18}
+                              color="#a78bfa"
+                            />
+                          </View>
+                          <Text style={styles.settingText}>
+                            الإشعارات
+                          </Text>
                         </View>
                         <Ionicons
                           name="chevron-back"
@@ -2128,6 +2178,24 @@ export default function ProfileScreen() {
                   <Ionicons name="chevron-back" size={18} color="#4b5563" />
                 </TouchableOpacity>
 
+                <TouchableOpacity
+                  style={styles.settingItem}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/notification-settings' as any)}
+                >
+                  <View style={styles.settingLeft}>
+                    <View
+                      style={[
+                        styles.settingIconContainer,
+                        { backgroundColor: 'rgba(167, 139, 250, 0.15)' },
+                      ]}
+                    >
+                      <Ionicons name="notifications" size={18} color="#a78bfa" />
+                    </View>
+                    <Text style={styles.settingText}>الإشعارات</Text>
+                  </View>
+                  <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.settingItem}
                   activeOpacity={0.7}
