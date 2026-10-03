@@ -4,7 +4,7 @@
  * Responsive Tab Bar - Bottom on mobile, Top on web/large screens
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -12,6 +12,7 @@ import {
   Platform,
   Dimensions,
   useWindowDimensions,
+  Keyboard,
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,6 +23,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { setTabBarMetrics } from './tabBarMetrics';
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -34,11 +36,36 @@ export function ResponsiveTabBar({
   const { width } = useWindowDimensions();
   const isLargeScreen = width >= MOBILE_BREAKPOINT;
   const isWeb = Platform.OS === 'web';
+  const isTopBar = isLargeScreen && isWeb;
+
+  // على الهاتف: إخفاء الشريط أثناء ظهور الكيبورد حتى لا يغطي حقول الكتابة
+  // (على Android ترتفع النافذة مع الكيبورد فيرتفع الشريط فوق الحقل)
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    if (isWeb) return;
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardOpen(true));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardOpen(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [isWeb]);
+
+  useEffect(() => {
+    if (isTopBar) setTabBarMetrics({ bottom: 0 });
+    else setTabBarMetrics({ top: 0 });
+    if (keyboardOpen) setTabBarMetrics({ bottom: 0 });
+  }, [isTopBar, keyboardOpen]);
+
+  if (keyboardOpen && !isTopBar) return null;
 
   // On large screens (web), show as top bar
-  if (isLargeScreen && isWeb) {
+  if (isTopBar) {
     return (
-      <View style={[styles.topBarContainer, { paddingTop: insets.top || 0 }]}>
+      <View
+        style={[styles.topBarContainer, { paddingTop: insets.top || 0 }]}
+        onLayout={(e) => setTabBarMetrics({ top: e.nativeEvent.layout.height })}
+      >
         <LinearGradient
           colors={
             ['rgba(15, 15, 30, 0.95)', 'rgba(30, 30, 50, 0.9)'] as [
@@ -99,6 +126,7 @@ export function ResponsiveTabBar({
   // Mobile: Bottom bar
   return (
     <View
+      onLayout={(e) => setTabBarMetrics({ bottom: e.nativeEvent.layout.height })}
       style={[
         styles.bottomContainer,
         {

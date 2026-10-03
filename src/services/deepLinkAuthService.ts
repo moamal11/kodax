@@ -19,6 +19,16 @@ export interface DeepLinkAuthResult {
 let _lastProcessedUrl: string | null = null;
 let _lastProcessedAt: number = 0;
 const DEDUP_WINDOW_MS = 5000; // 5 ثوانٍ نافذة التكرار
+let _isProcessing = false;
+let _listenerRefCount = 0;
+let _listenerSubscription: { remove: () => void } | null = null;
+let _initialUrlHandled = false;
+let _lastIncomingUrl: string | null = null;
+let _oauthExchangeInProgress = false;
+
+export function isOAuthExchangeInProgress() {
+  return _oauthExchangeInProgress;
+}
 
 function parseUrlHash(url: string): Record<string, string> {
   const params: Record<string, string> = {};
@@ -73,7 +83,15 @@ export async function processAuthDeepLink(
   url: string
 ): Promise<DeepLinkAuthResult> {
   try {
+    _oauthExchangeInProgress = true;
     console.log('🔗 Processing auth deep link:', url);
+
+    if (_isProcessing) {
+      console.log(
+        '⏭️ Skipping deep link while another auth process is running'
+      );
+      return { success: true };
+    }
 
     // ===== Deduplication: prevent double-processing =====
     const now = Date.now();
@@ -81,6 +99,8 @@ export async function processAuthDeepLink(
       console.log('⏭️ Skipping duplicate deep link (already processed)');
       return { success: true };
     }
+
+    _isProcessing = true;
     _lastProcessedUrl = url;
     _lastProcessedAt = now;
 
@@ -134,8 +154,7 @@ export async function processAuthDeepLink(
 
         if (!existing) {
           const meta = user.user_metadata || {};
-          const name =
-            meta.full_name || meta.name || meta.display_name || '';
+          const name = meta.full_name || meta.name || meta.display_name || '';
           const avatarUrl = meta.avatar_url || meta.picture || null;
           const emailBase = (user.email || '')
             .split('@')[0]
@@ -177,6 +196,9 @@ export async function processAuthDeepLink(
       success: false,
       error: error.message || 'فشل تسجيل الدخول',
     };
+  } finally {
+    _isProcessing = false;
+    _oauthExchangeInProgress = false;
   }
 }
 
@@ -194,23 +216,35 @@ export function initializeDeepLinkAuthListener(
     return () => {};
   }
 
-  console.log('📡 Initializing deep link auth listener...');
+  if (!_listenerSubscription) {
+    console.log('📡 Initializing deep link auth listener...');
 
-  // Handle initial URL (app opened via deep link)
-  Linking.getInitialURL().then((url) => {
-    if (url && url.includes('kodax://auth/success')) {
-      console.log('🔗 Initial URL contains auth deep link:', url);
-      handleAuthUrl(url);
-    }
-  });
-
-  // Handle incoming deep links (app already open)
-  const subscription = Linking.addEventListener('url', ({ url }) => {
-    if (url.includes('kodax://auth/success')) {
+    const handleIncomingUrl = (url: string) => {
+      if (!url.includes('kodax://auth/success')) return;
+      if (_lastIncomingUrl === url) {
+        console.log('⏭️ Skipping duplicate incoming auth URL');
+        return;
+      }
+      _lastIncomingUrl = url;
       console.log('🔗 Received auth deep link:', url);
       handleAuthUrl(url);
+    };
+
+    // Handle initial URL (app opened via deep link)
+    if (!_initialUrlHandled) {
+      _initialUrlHandled = true;
+      Linking.getInitialURL().then((url) => {
+        if (url) handleIncomingUrl(url);
+      });
     }
-  });
+
+    // Handle incoming deep links (app already open)
+    _listenerSubscription = Linking.addEventListener('url', ({ url }) => {
+      handleIncomingUrl(url);
+    });
+  }
+
+  _listenerRefCount++;
 
   async function handleAuthUrl(url: string) {
     const result = await processAuthDeepLink(url);
@@ -224,7 +258,11 @@ export function initializeDeepLinkAuthListener(
 
   // Return cleanup function
   return () => {
-    subscription.remove();
+    _listenerRefCount = Math.max(0, _listenerRefCount - 1);
+    if (_listenerRefCount === 0 && _listenerSubscription) {
+      _listenerSubscription.remove();
+      _listenerSubscription = null;
+    }
   };
 }
 

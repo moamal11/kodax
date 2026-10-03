@@ -9,8 +9,7 @@ import {
   Text,
   Platform,
 } from 'react-native';
-import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
-import { PointsProvider, usePoints } from '@/contexts/PointsContext';
+import { CoinsProvider, useCoins } from '@/contexts/CoinsContext';
 import { BadgeProvider } from '@/contexts/BadgeContext';
 import { AppProvider } from '@/contexts/AppContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -30,7 +29,7 @@ SplashScreen.preventAutoHideAsync();
 export { useAuth } from '@/contexts/AuthContext';
 
 /**
- * مكون وسيط يربط بيانات النقاط الفعلية بمزود الشارات
+ * مكون وسيط يربط بيانات الكوينات الفعلية بمزود الشارات
  */
 function BadgeProviderConnected({
   userId,
@@ -39,15 +38,14 @@ function BadgeProviderConnected({
   userId?: string;
   children: React.ReactNode;
 }) {
-  const { isPremium, unlockedCourses } = usePoints();
-  const hasPurchased = isPremium || (unlockedCourses?.length || 0) > 0;
+  const { state, unlockedCourses } = useCoins();
 
   return (
     <BadgeProvider
       userId={userId}
-      isPremium={isPremium}
-      unlockedCoursesCount={unlockedCourses?.length || 0}
-      hasPurchased={hasPurchased}
+      lifetimeCoins={state?.lifetimeEarned ?? 0}
+      unlockedCoursesCount={unlockedCourses.length}
+      hasUnlockedWithCoins={unlockedCourses.length > 0}
     >
       {children}
     </BadgeProvider>
@@ -83,6 +81,10 @@ function NavigationGuard() {
     // انتظر حتى يكون الراوتر جاهز
     if (!hasSegments) return;
 
+    // عند الخروج نعيد ضبط العلم هنا (وليس في effect منفصل) لأن ذلك الـeffect
+    // كان يعمل بعد هذا الـeffect، فيبقى المستخدم داخل التطبيق على الويب.
+    if (!isAuthenticated) hasNavigatedRef.current = false;
+
     // على الويب، تجنب إعادة التوجيه المتكررة
     if (Platform.OS === 'web' && hasNavigatedRef.current) return;
 
@@ -90,12 +92,13 @@ function NavigationGuard() {
       // مسجل دخول — إذا كان في auth أو download، انقل للتطبيق
       if (inAuthGroup || inDownload) {
         hasNavigatedRef.current = true;
+        console.log('[AUTH] navigating to app');
         router.replace('/(tabs)');
       }
     } else {
       // غير مسجل دخول
       if (!inAuthGroup && !inDownload) {
-        hasNavigatedRef.current = false;
+        console.log('[AUTH] navigating to login');
         if (Platform.OS === 'web') {
           // الويب: صفحة التحميل أولاً
           router.replace('/download');
@@ -106,13 +109,6 @@ function NavigationGuard() {
       }
     }
   }, [isAuthenticated, segments, isInitializing, session?.user]);
-
-  // إعادة تعيين العلم عند تسجيل الخروج
-  useEffect(() => {
-    if (!isAuthenticated) {
-      hasNavigatedRef.current = false;
-    }
-  }, [isAuthenticated]);
 
   return null;
 }
@@ -222,63 +218,59 @@ function HydratedInnerLayout() {
     <GestureHandlerRootView style={styles.container}>
       {/* userId من AuthContext — آمن لاستعلامات RLS */}
       <AppProvider userId={userId}>
-        <PointsProvider userId={userId}>
-          <SubscriptionProvider userId={userId || ''}>
-            <BadgeProviderConnected userId={userId}>
-              <StatusBar style="light" backgroundColor="#0f0f1e" />
+        <CoinsProvider userId={userId}>
+          <BadgeProviderConnected userId={userId}>
+            <StatusBar style="light" backgroundColor="#0f0f1e" />
 
-              {/* Navigation Guard */}
-              <NavigationGuard />
+            {/* Navigation Guard */}
+            <NavigationGuard />
 
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: '#0f0f1e' },
-                  animation: 'fade',
-                }}
-              >
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="download" />
-                <Stack.Screen name="course/[id]" />
-                <Stack.Screen name="lesson/[id]" />
-                <Stack.Screen name="challenge/[id]" />
-                <Stack.Screen name="certificate/index" />
-                <Stack.Screen name="certificate/[id]" />
-                <Stack.Screen name="certificate/verify" />
-                <Stack.Screen name="certificate/download" />
-              </Stack>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: '#0f0f1e' },
+                animation: 'fade',
+              }}
+            >
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="download" />
+              <Stack.Screen name="course/[id]" />
+              <Stack.Screen name="lesson/[id]" />
+              <Stack.Screen name="challenge/[id]" />
+              <Stack.Screen name="rewards" />
+              <Stack.Screen name="certificate/index" />
+              <Stack.Screen name="certificate/[id]" />
+              <Stack.Screen name="certificate/verify" />
+              <Stack.Screen name="certificate/download" />
+            </Stack>
 
-              <ToastContainer />
+            <ToastContainer />
 
-              {/* مدير الرسائل العامة */}
-              {userId && (
-                <BroadcastManager
-                  userId={userId}
-                  userName={broadcastUserName}
-                />
-              )}
+            {/* مدير الرسائل العامة */}
+            {userId && (
+              <BroadcastManager userId={userId} userName={broadcastUserName} />
+            )}
 
-              {/* مربع حوار البيانات الإجبارية */}
-              {userId && (
-                <MandatoryDataModal
-                  visible={showMandatoryData}
-                  userId={userId}
-                  onComplete={() => setShowMandatoryData(false)}
-                />
-              )}
-
-              {/* مربع حوار التحديث الذكي */}
-              <UpdateModal
-                visible={showUpdate}
-                update={pendingUpdate}
-                currentVersion={currentAppVersion}
-                isForced={updateForced}
-                onDismiss={() => setShowUpdate(false)}
+            {/* مربع حوار البيانات الإجبارية */}
+            {userId && (
+              <MandatoryDataModal
+                visible={showMandatoryData}
+                userId={userId}
+                onComplete={() => setShowMandatoryData(false)}
               />
-            </BadgeProviderConnected>
-          </SubscriptionProvider>
-        </PointsProvider>
+            )}
+
+            {/* مربع حوار التحديث الذكي */}
+            <UpdateModal
+              visible={showUpdate}
+              update={pendingUpdate}
+              currentVersion={currentAppVersion}
+              isForced={updateForced}
+              onDismiss={() => setShowUpdate(false)}
+            />
+          </BadgeProviderConnected>
+        </CoinsProvider>
       </AppProvider>
     </GestureHandlerRootView>
   );

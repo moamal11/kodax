@@ -4233,7 +4233,8 @@ int main() {
     },
   },
   {
-    id: 'cpp-adv-4',
+    // كان المعرّف 'cpp-adv-4' مكرراً مع درس Polymorphism في cpp-oop (إكمال أحدهما كان يُحسب للآخر)
+    id: 'cpp-advanced-stl-containers',
     courseId: 'cpp-advanced',
     title: 'STL Containers',
     description: 'مكتبة القوالب القياسية',
@@ -5139,7 +5140,7 @@ struct is_string<const char*> : true_type {};
 template <typename T>
 void printValue(const T& value) {
     if constexpr (is_string<T>::value) {
-        cout << "نص: \"" << value << "\"" << endl;
+        cout << "نص: \\"" << value << "\\"" << endl;
     } else if constexpr (is_arithmetic_v<T>) {
         cout << "رقم: " << value << endl;
     } else {

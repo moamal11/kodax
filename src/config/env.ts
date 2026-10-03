@@ -45,17 +45,16 @@ export const SUPABASE_CONFIG = {
 };
 
 /**
- * إعدادات OpenAI API
+ * إعدادات مساعد الذكاء الاصطناعي (Google Gemini عبر Supabase Edge Function ai-chat)
  */
 export const AI_CONFIG = {
   endpoint: getEnvVar(
     'EXPO_PUBLIC_AI_API_ENDPOINT',
     'https://krtulodnhmfuoxjqajwl.supabase.co/functions/v1/ai-chat'
   ),
-  apiKey: getEnvVar(
-    'EXPO_PUBLIC_AI_API_KEY',
-    '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'
-  ),
+  // لا تضع مفتاح Gemini في التطبيق أبداً — المفتاح يعيش فقط في
+  // Supabase Edge Function secrets (GEMINI_API_KEY).
+  apiKey: '',
   isConfigured: function (): boolean {
     const endpoint = this.endpoint;
     const key = this.apiKey;
@@ -68,7 +67,7 @@ export const AI_CONFIG = {
       !!key &&
       key.length > 20 &&
       key !==
-        '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';
+        '';
 
     return hasEndpoint && hasKey;
   },

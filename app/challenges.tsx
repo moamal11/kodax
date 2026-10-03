@@ -43,7 +43,7 @@ import { useAuth } from './_layout';
 import { useResponsiveLayout } from '@/hooks';
 // ===== نظام Hybrid: التقدم من Supabase =====
 import { hybridSyncService } from '@/services/hybridSyncService';
-import { usePoints } from '@/contexts/PointsContext';
+import { useCoins } from '@/contexts/CoinsContext';
 import { THEME_COLORS, SHADOWS, BORDER_RADIUS } from '@/styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -314,13 +314,11 @@ const ChallengeCard = memo(
   ({
     challenge,
     index,
-    isPremium,
     isCompleted,
     unlockedCourses,
   }: {
     challenge: Challenge;
     index: number;
-    isPremium: boolean;
     isCompleted: boolean;
     unlockedCourses: string[];
   }) => {
@@ -338,7 +336,7 @@ const ChallengeCard = memo(
 
     const color = difficultyColors[challenge.difficulty];
 
-    // ===== نظام الوصول: 30% مجاني، 50% يتطلب دورة، 20% بريميوم =====
+    // ===== نظام الوصول: جزء مجاني، والباقي يُفتح مع الدورة (بالكوينات) =====
     const accessType = getChallengeAccessType(challenge);
     const requiredCourseId = getChallengeRequiredCourseId(challenge);
 
@@ -347,9 +345,6 @@ const ChallengeCard = memo(
 
     if (accessType === 'free') {
       isLocked = false;
-    } else if (accessType === 'premium') {
-      isLocked = !isPremium;
-      lockMessage = 'يتطلب الاشتراك المدفوع';
     } else {
       // course-required
       if (requiredCourseId) {
@@ -358,7 +353,7 @@ const ChallengeCard = memo(
           unlockedCourses
         );
         isLocked = !courseOpen;
-        lockMessage = `يتطلب فتح دورة ${getCourseTitleById(requiredCourseId)}`;
+        lockMessage = `يُفتح بالتقدم إلى دورة ${getCourseTitleById(requiredCourseId)}`;
       } else {
         isLocked = false;
       }
@@ -487,7 +482,6 @@ const ChallengeCard = memo(
     // مقارنة لتحسين الأداء
     return (
       prevProps.challenge.id === nextProps.challenge.id &&
-      prevProps.isPremium === nextProps.isPremium &&
       prevProps.isCompleted === nextProps.isCompleted &&
       prevProps.unlockedCourses === nextProps.unlockedCourses
     );
@@ -496,7 +490,7 @@ const ChallengeCard = memo(
 
 export default function ChallengesScreen() {
   const { user } = useAuth();
-  const { isPremium, unlockedCourses } = usePoints();
+  const { unlockedCourses } = useCoins();
   const { isLargeScreen, isWeb, contentPaddingTop, contentPaddingBottom } =
     useResponsiveLayout();
   const [selectedDifficulty, setSelectedDifficulty] = useState<
@@ -553,15 +547,14 @@ export default function ChallengesScreen() {
       filtered = filtered.filter((ch) => ch.difficulty === selectedDifficulty);
     }
 
-    // ترتيب: المفتوحة أولاً ثم المقفولة (دورة) ثم بريميوم
+    // ترتيب: المفتوحة أولاً ثم المقفولة
     filtered = [...filtered].sort((a, b) => {
       const aAccess = getChallengeAccessType(a);
       const bAccess = getChallengeAccessType(b);
 
-      // تحديد مستوى القفل: 0 = مفتوح، 1 = مقفول (دورة)، 2 = مقفول (بريميوم)
+      // تحديد مستوى القفل: 0 = مفتوح، 1 = مقفول (يتطلب فتح الدورة)
       const getLockLevel = (access: string, challenge: any) => {
         if (access === 'free') return 0;
-        if (access === 'premium') return isPremium ? 0 : 2;
         // course-required
         const courseId = getChallengeRequiredCourseId(challenge);
         const isOpen = courseId
@@ -577,7 +570,7 @@ export default function ChallengesScreen() {
     });
 
     return filtered;
-  }, [selectedCategory, selectedDifficulty, unlockedCourses, isPremium]);
+  }, [selectedCategory, selectedDifficulty, unlockedCourses]);
 
   // حساب عدد التحديات حسب الصعوبة والفئة - مع memoization
   const challengeCounts = useMemo(() => {
@@ -1044,7 +1037,6 @@ export default function ChallengesScreen() {
                             key={challenge.id}
                             challenge={challenge}
                             index={index}
-                            isPremium={isPremium}
                             isCompleted={completedChallenges.includes(
                               challenge.id
                             )}
@@ -1060,7 +1052,6 @@ export default function ChallengesScreen() {
                                 key={challenge.id}
                                 challenge={challenge}
                                 index={index + 20}
-                                isPremium={isPremium}
                                 isCompleted={completedChallenges.includes(
                                   challenge.id
                                 )}
@@ -1144,7 +1135,6 @@ export default function ChallengesScreen() {
                         key={challenge.id}
                         challenge={challenge}
                         index={index}
-                        isPremium={isPremium}
                         isCompleted={completedChallenges.includes(challenge.id)}
                         unlockedCourses={unlockedCourses}
                       />

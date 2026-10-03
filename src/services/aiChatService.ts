@@ -11,6 +11,39 @@
 
 import { supabase } from '@/lib/supabase';
 
+/** حصة طلبات Gemini كما يعيدها السيرفر (نفس شكل coinService.AIQuota) */
+export type { AIQuota } from './coinService';
+import type { AIQuota } from './coinService';
+
+/** مصدر الرد: smart = رد فوري محلي، cache = إجابة محفوظة، gemini = نموذج الذكاء (يُحسب من الحصة) */
+export type AIReplySource = 'smart' | 'cache' | 'gemini';
+
+/** خطأ مفهوم للمستخدم من خدمة الذكاء الاصطناعي */
+export class AIServiceError extends Error {
+  code: 'quota_exceeded' | 'auth' | 'unavailable' | 'busy' | 'solution_locked';
+  remaining?: number;
+  quota?: AIQuota | null;
+  constructor(
+    message: string,
+    code: 'quota_exceeded' | 'auth' | 'unavailable' | 'busy' | 'solution_locked',
+    remaining?: number,
+    quota?: AIQuota | null
+  ) {
+    super(message);
+    this.name = 'AIServiceError';
+    this.code = code;
+    this.remaining = remaining;
+    this.quota = quota;
+  }
+}
+
+/** آخر رسائل المحادثة التي تُرسل للسيرفر (حتى يكمل المساعد بدون ترحيب ومقدمات متكررة) */
+const HISTORY_MESSAGES = 10;
+const HISTORY_ITEM_CHARS = 2000;
+
+export const AI_UNAVAILABLE_MESSAGE =
+  'خدمة الذكاء الاصطناعي غير متاحة حالياً. تحقق من الإنترنت وحاول بعد قليل.';
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -36,23 +69,23 @@ export enum QuestionComplexity {
   ADVANCED = 'advanced', // نموذج متقدم
 }
 
-// نماذج الذكاء الاصطناعي حسب المستوى
-// محسّنة لبيئة serverless - إجابات مختصرة وفعالة
+// نماذج الذكاء الاصطناعي حسب المستوى (Google Gemini عبر Edge Function ai-chat)
+// للعرض والتتبع فقط — السيرفر هو من يختار النموذج ويعيد اسمه في الرد
 export const AI_MODELS = {
   [QuestionComplexity.SIMPLE]: {
-    name: 'gpt-3.5-turbo',
+    name: 'gemini-3.5-flash-lite',
     maxTokens: 300, // مختصر جداً للأسئلة البسيطة
     temperature: 0.7,
     cost: 'منخفضة',
   },
   [QuestionComplexity.MODERATE]: {
-    name: 'gpt-4o-mini',
+    name: 'gemini-3.8-flash',
     maxTokens: 800, // منظم ومختصر
     temperature: 0.7,
     cost: 'متوسطة',
   },
   [QuestionComplexity.ADVANCED]: {
-    name: 'gpt-4o',
+    name: 'gemini-3.8-flash',
     maxTokens: 1500, // عميق لكن بدون حشو
     temperature: 0.8,
     cost: 'عالية',
@@ -200,92 +233,85 @@ class AIChatService {
   async sendMessage(
     userMessage: string,
     mode: string = 'general',
-    conversationHistory: ChatMessage[] = []
+    conversationHistory: ChatMessage[] = [],
+    options: { challengeId?: string } = {}
   ): Promise<{
     response: string;
     tokensUsed: number;
     complexity?: QuestionComplexity;
+    source: AIReplySource;
+    quota: AIQuota | null;
   }> {
-    console.log('🚀 Sending message to AI Edge Function...');
-
     try {
-      // بناء context من المحادثة السابقة
-      let context = '';
+      // آخر رسائل المحادثة الفعلية (بدون رسائل التحميل أو الأخطاء)
+      const history = conversationHistory
+        .filter((m) => !m.isLoading && m.content && (m.role === 'user' || m.role === 'assistant'))
+        .slice(-HISTORY_MESSAGES)
+        .map((m) => ({ role: m.role, content: m.content.slice(0, HISTORY_ITEM_CHARS) }));
 
-      // إضافة معلومات الـ mode كـ context
-      const chatMode = CHAT_MODES.find((m) => m.id === mode);
-      if (chatMode) {
-        context = `Mode: ${chatMode.name}\n`;
-      }
-
-      // إضافة آخر رسالتين من المحادثة كـ context
-      if (conversationHistory.length > 0) {
-        const recentMessages = conversationHistory.slice(-2);
-        context += recentMessages
-          .map((msg) => `${msg.role}: ${msg.content.substring(0, 100)}`)
-          .join('\n');
-      }
-
-      // الحصول على userId الصحيح من session (إن وجد)
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const actualUserId = session?.user?.id || this.userId || 'anonymous';
-
-      // استدعاء Edge Function
-      // Supabase client سير سل anon key تلقائياً إذا لم يكن هناك session
       const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: {
-          message: userMessage,
-          userId: actualUserId,
-          context: context || undefined,
-          mode: mode, // ✨ إرسال mode parameter
-        },
+        body: { message: userMessage, mode, history, ...(options.challengeId ? { challengeId: options.challengeId } : {}) },
       });
 
       if (error) {
-        console.error('❌ Edge Function Error:', error);
-        throw new Error(
-          error.message || 'فشل في الاتصال بخدمة الذكاء الاصطناعي'
-        );
-      }
-
-      if (!data || !data.reply) {
-        console.error('❌ Invalid response from Edge Function:', data);
-        // عرض debug message إذا كان موجوداً
-        if (data?.debug) {
-          console.error('🔍 Debug Info:', data.debug);
+        // قراءة سبب الرفض من الخادم (حد الاستخدام اليومي، تسجيل الدخول...)
+        let body: any = null;
+        try {
+          body = await (error as any).context?.json?.();
+        } catch {
+          body = null;
         }
-        throw new Error(data?.debug || 'استجابة غير صالحة من الخادم');
+        if (body?.error === 'quota_exceeded') {
+          throw new AIServiceError(
+            body.message || 'خلصت طلبات الذكاء لليوم. تتجدد غداً.',
+            'quota_exceeded',
+            0,
+            body.quota ?? null
+          );
+        }
+        if (body?.error === 'ai_busy') {
+          throw new AIServiceError(body.message, 'busy', undefined, body.quota ?? null);
+        }
+        if (
+          (body?.error === 'ai_unavailable' || body?.error === 'message_too_long') &&
+          typeof body.message === 'string'
+        ) {
+          // رسالة واضحة من السيرفر (تعطل مزود الـAI، مهلة، طلب طويل) — لا تُعرض كإجابة
+          throw new AIServiceError(body.message, 'unavailable', undefined, body.quota ?? null);
+        }
+        if (body?.error === 'solution_locked' && typeof body.message === 'string') {
+          // الحل الكامل = زر «إظهار الحل» (إعلان) — لا يُستهلك أي طلب من الحصة
+          throw new AIServiceError(body.message, 'solution_locked');
+        }
+        if (body?.error === 'unauthorized') {
+          throw new AIServiceError('سجّل الدخول لاستخدام مساعد الذكاء الاصطناعي.', 'auth');
+        }
+        throw new AIServiceError(AI_UNAVAILABLE_MESSAGE, 'unavailable');
       }
 
-      const aiResponse = data.reply;
+      if (!data || typeof data.reply !== 'string' || !data.reply) {
+        throw new AIServiceError(AI_UNAVAILABLE_MESSAGE, 'unavailable');
+      }
+
+      const source: AIReplySource = data.source === 'smart' || data.source === 'cache' ? data.source : 'gemini';
       const tokensUsed = data.tokensUsed || 0;
-
-      console.log('✅ Received response from Edge Function');
-      console.log('📊 Response length:', aiResponse.length);
-
-      // حفظ معلومات الاستخدام (تقدير تقريبي للـ complexity)
-      // Edge Function يتعامل مع التصنيف الحقيقي
       const estimatedComplexity = this.estimateComplexity(userMessage, mode);
-      await this.trackUsage(estimatedComplexity, tokensUsed);
+      if (source === 'gemini') {
+        await this.trackUsage(estimatedComplexity, tokensUsed, typeof data.model === 'string' ? data.model : undefined);
+      }
 
       return {
-        response: aiResponse,
+        response: data.reply,
         tokensUsed,
         complexity: estimatedComplexity,
+        source,
+        quota: data.quota && typeof data.quota.limit === 'number' ? (data.quota as AIQuota) : null,
       };
     } catch (error: any) {
-      console.error('❌ AI Service Error:', {
-        message: error.message || 'Unknown error',
-        type: error.name,
-      });
-
-      // في حال فشل Edge Function، استخدم fallback
-      console.warn('⚠️ Falling back to simulated response');
-      const complexity = this.estimateComplexity(userMessage, mode);
-      return this.simulateResponse(userMessage, mode, complexity);
+      if (error instanceof AIServiceError) throw error;
+      console.error('AI Service Error:', error?.message || error);
+      // لا نعرض ردوداً وهمية — نعرض رسالة واضحة بدلاً منها
+      throw new AIServiceError(AI_UNAVAILABLE_MESSAGE, 'unavailable');
     }
   }
 
@@ -338,7 +364,8 @@ class AIChatService {
    */
   private async trackUsage(
     complexity: QuestionComplexity,
-    tokens: number
+    tokens: number,
+    model?: string
   ): Promise<void> {
     // تخطي التسجيل إذا لم يكن هناك userId أو كانت التوكنات 0
     if (!this.userId || tokens <= 0) return;
@@ -348,7 +375,7 @@ class AIChatService {
         user_id: this.userId,
         complexity,
         tokens_used: tokens,
-        model: AI_MODELS[complexity].name,
+        model: model ?? AI_MODELS[complexity].name,
         timestamp: new Date().toISOString(),
       });
 
@@ -359,145 +386,6 @@ class AIChatService {
     } catch (error) {
       console.warn('Usage tracking skipped:', error);
     }
-  }
-
-  /**
-   * محاكاة رد الـ AI للتطوير
-   * تستجيب بناءً على مستوى صعوبة السؤال
-   */
-  private async simulateResponse(
-    userMessage: string,
-    mode: string,
-    complexity: QuestionComplexity = QuestionComplexity.SIMPLE
-  ): Promise<{
-    response: string;
-    tokensUsed: number;
-    complexity: QuestionComplexity;
-  }> {
-    // Simulate API delay based on complexity
-    const delay =
-      complexity === QuestionComplexity.ADVANCED
-        ? 2500
-        : complexity === QuestionComplexity.MODERATE
-          ? 1800
-          : 1200;
-    await new Promise((resolve) => setTimeout(resolve, delay));
-
-    const responses: Record<string, Record<QuestionComplexity, string[]>> = {
-      general: {
-        [QuestionComplexity.SIMPLE]: [
-          'مرحباً! أنا هنا لمساعدتك. ما سؤالك؟',
-          'سؤال جيد! الإجابة المختصرة: ...',
-        ],
-        [QuestionComplexity.MODERATE]: [
-          'دعني أشرح لك هذا بالتفصيل:\n\n1. أولاً...\n2. ثانياً...\n3. أخيراً...\n\nهل تريد أمثلة إضافية؟',
-          'سؤال ممتاز! إليك شرح مفصل...',
-        ],
-        [QuestionComplexity.ADVANCED]: [
-          'هذا سؤال متقدم يتطلب تحليلاً عميقاً:\n\n📊 **التحليل:**\n- من الناحية المعمارية...\n- الأداء والتوسع...\n- أفضل الممارسات...\n\n💡 **التوصيات:**\n1. ...\n2. ...\n\n🔗 **موارد إضافية:**\n- ...',
-          '🎯 **تحليل شامل:**\n\nهذا موضوع معقد يحتاج فهماً عميقاً. دعني أقسمه لك:\n\n**القسم الأول: المفاهيم الأساسية**\n...\n\n**القسم الثاني: التطبيق العملي**\n...\n\n**القسم الثالث: السيناريوهات المتقدمة**\n...',
-        ],
-      },
-      explain: {
-        [QuestionComplexity.SIMPLE]: [
-          '```\n// هذا الكود يقوم بـ...\nconst example = "...";\n```\n\nبشكل مختصر: ...',
-        ],
-        [QuestionComplexity.MODERATE]: [
-          '📖 **شرح الكود:**\n\n```javascript\n// الكود المعطى\n```\n\n**التفاصيل:**\n1. السطر الأول: ...\n2. السطر الثاني: ...\n\n**مثال عملي:**\n```javascript\n// مثال\n```',
-        ],
-        [QuestionComplexity.ADVANCED]: [
-          '🔍 **تحليل معماري للكود:**\n\n**1. البنية الأساسية:**\n```typescript\n// الكود مع التعليقات التفصيلية\n```\n\n**2. Design Patterns المستخدمة:**\n- Pattern 1: ...\n- Pattern 2: ...\n\n**3. الأداء والتحسينات:**\n- Time Complexity: O(...)\n- Space Complexity: O(...)\n\n**4. السيناريوهات المتقدمة:**\n...',
-        ],
-      },
-      fix: {
-        [QuestionComplexity.SIMPLE]: [
-          '🔍 **وجدت الخطأ!**\n\n❌ المشكلة: ...\n✅ الحل:\n```\n// الكود الصحيح\n```',
-        ],
-        [QuestionComplexity.MODERATE]: [
-          '🐛 **تحليل الأخطاء:**\n\n**الخطأ الرئيسي:**\n❌ السطر X: ...\n\n**السبب:**\n...\n\n**الحل:**\n```javascript\n// الكود المُصلح\n```\n\n**نصائح إضافية:**\n- ...\n- ...',
-        ],
-        [QuestionComplexity.ADVANCED]: [
-          '🔧 **مراجعة شاملة للأخطاء:**\n\n**1. الأخطاء المنطقية:**\n❌ Edge case 1: ...\n✅ الحل: ...\n\n**2. مشاكل الأداء:**\n⚠️ Bottleneck: ...\n✅ التحسين: ...\n\n**3. الأمان:**\n🔒 ثغرة محتملة: ...\n✅ الحماية: ...\n\n**4. الكود المُحسّن:**\n```typescript\n// كود كامل ومُحسّن\n```\n\n**5. Tests:**\n```typescript\n// unit tests\n```',
-        ],
-      },
-      optimize: {
-        [QuestionComplexity.SIMPLE]: [
-          '⚡ **تحسين سريع:**\n\nاستخدم ... بدلاً من ...\n\nالفرق: أسرع بـ 2x!',
-        ],
-        [QuestionComplexity.MODERATE]: [
-          '🚀 **تحسينات مقترحة:**\n\n**1. الأداء:**\n- استخدم caching\n- تجنب الحلقات المتداخلة\n\n**2. القراءة:**\n- تقسيم الدوال الكبيرة\n- تسميات واضحة\n\n**3. المثال المُحسّن:**\n```javascript\n// الكود بعد التحسين\n```',
-        ],
-        [QuestionComplexity.ADVANCED]: [
-          '⚡ **تحليل أداء شامل:**\n\n**📊 القياسات الحالية:**\n- Response time: Xms\n- Memory usage: YMB\n- CPU load: Z%\n\n**🎯 استراتيجية التحسين:**\n\n**1. Database Optimization:**\n- Indexes: ...\n- Query optimization: ...\n- Connection pooling: ...\n\n**2. Caching Strategy:**\n- Redis implementation\n- Cache invalidation\n\n**3. Code Refactoring:**\n```typescript\n// Optimized architecture\n```\n\n**4. Monitoring:**\n- APM setup\n- Alerts\n\n**📈 النتائج المتوقعة:**\n- 10x faster\n- 50% less memory\n- Better scalability',
-        ],
-      },
-      challenge: {
-        [QuestionComplexity.SIMPLE]: [
-          '🎮 **تحدي المبتدئين:**\n\nاكتب دالة تقوم بـ...\n\n**مثال:**\n```\nInput: ...\nOutput: ...\n```\n\nهل تريد تلميحاً؟',
-        ],
-        [QuestionComplexity.MODERATE]: [
-          '🏆 **تحدي متوسط:**\n\n**المشكلة:**\n...\n\n**المتطلبات:**\n1. ...\n2. ...\n\n**Test cases:**\n```javascript\ntest1: ...\ntest2: ...\n```\n\n**تلميح:** استخدم ...',
-        ],
-        [QuestionComplexity.ADVANCED]: [
-          '💎 **تحدي الخبراء:**\n\n**السيناريو:**\nتطبيق يخدم 1M+ مستخدم يواجه مشكلة...\n\n**مهمتك:**\n1. تحليل المشكلة\n2. تصميم الحل\n3. تنفيذ Architecture\n4. كتابة Tests\n\n**المتطلبات:**\n- Scalability ✓\n- Security ✓\n- Performance < 100ms ✓\n- High Availability ✓\n\n**الموارد المتاحة:**\n- AWS/GCP\n- Kubernetes\n- Redis\n- PostgreSQL\n\n**المعايير:**\n⭐⭐⭐⭐⭐ صعوبة عالية\n🎯 100 نقطة\n⏱️ وقت مقترح: ساعتين\n\nهل أنت جاهز؟',
-        ],
-      },
-      'challenge-explain': {
-        [QuestionComplexity.SIMPLE]: [
-          '💡 **شرح التحدي:**\n\n**🎯 هدف التحدي:**\nهذا التحدي يطلب منك...\n\n**📝 خطوات الحل:**\n1. أولاً، احتاج تفهم المدخلات\n2. بعدين، نفذ المنطق الأساسي\n3. أخيراً، أرجع النتيجة\n\n**💡 تلميح:**\nفكر بالموضوع كأنك...\n\n**مثال بسيط:**\n```javascript\n// مثال على البداية\nfunction solve() {\n  // ابدأ هنا\n}\n```\n\n✨ **جرب بنفسك!** استخدم التلميحات إذا احتجت مساعدة إضافية.',
-        ],
-        [QuestionComplexity.MODERATE]: [
-          '🎓 **شرح مفصل للتحدي:**\n\n**🎯 المطلوب:**\nالتحدي يطلب منك حل مشكلة...\n\n**📋 تحليل المشكلة:**\n1. **المدخلات:** افهم شنو تاخذ\n2. **المخرجات:** شنو المطلوب ترجع\n3. **القيود:** انتبه للحدود والشروط\n\n**💭 طريقة التفكير:**\nخطوة بخطوة:\n- أولاً: ...\n- ثانياً: ...\n- ثالثاً: ...\n\n**📝 هيكل الحل:**\n```javascript\nfunction solve(input) {\n  // 1. تحضير البيانات\n  \n  // 2. المعالجة الرئيسية\n  \n  // 3. إرجاع النتيجة\n  return result;\n}\n```\n\n**⚠️ نقاط مهمة:**\n- احذر من حالة ...\n- لا تنسى ...\n- افحص ...\n\n**🎯 نصيحة:** ابدأ بحل بسيط، وبعدين حسّنه!',
-        ],
-        [QuestionComplexity.ADVANCED]: [
-          '🚀 **شرح شامل للتحدي المتقدم:**\n\n**🎯 فهم المشكلة:**\nهذا تحدي متقدم يتطلب فهم عميق لـ...\n\n**📊 تحليل المتطلبات:**\n1. **المدخلات والمخرجات:**\n   - Input: ...\n   - Output: ...\n   - Constraints: ...\n\n2. **التعقيد المطلوب:**\n   - Time: O(...)\n   - Space: O(...)\n\n**💡 استراتيجية الحل:**\n\n**المرحلة 1: التخطيط**\n- حدد البنية الأساسية\n- اختر الـ data structures المناسبة\n- خطط للـ edge cases\n\n**المرحلة 2: التنفيذ**\n```javascript\n// الهيكل الرئيسي\nclass Solution {\n  solve(input) {\n    // خطوة 1: التحضير\n    \n    // خطوة 2: المعالجة\n    \n    // خطوة 3: التحسين\n    \n    return result;\n  }\n}\n```\n\n**⚡ تحسينات مقترحة:**\n- استخدم ... للأداء الأفضل\n- طبق ... pattern\n- احذر من ...\n\n**🧪 حالات اختبار:**\n```\nTest 1: Edge case\nTest 2: Normal case  \nTest 3: Large input\n```\n\n**🎯 خطوات عملية:**\n1. نفذ الحل الأساسي أولاً\n2. اختبره على الأمثلة\n3. حسّن الأداء\n4. تعامل مع الـ edge cases\n\n💪 **أنت قادر على حلها!** خذ وقتك وفكر بالمنطق خطوة بخطوة.',
-        ],
-      },
-      'lesson-explain': {
-        [QuestionComplexity.SIMPLE]: [
-          '📚 **شرح الدرس:**\n\n**✨ المفهوم الأساسي:**\nهذا الدرس يشرح لك...\n\n**💡 شنو الفائدة:**\nتستخدم هذا المفهوم عشان...\n\n**📝 مثال عملي:**\n```javascript\n// مثال بسيط\nconst example = "تطبيق بسيط";\nconsole.log(example);\n```\n\n**🎯 نصائح:**\n- جرب تطبق الأمثلة بنفسك\n- اقرأ الدرس أكثر من مرة\n- اسأل إذا ماكو شيء واضح\n\n✅ **الآن فهمت المفهوم!** جرب تطبقه بكود خاص بيك.',
-        ],
-        [QuestionComplexity.MODERATE]: [
-          '🎓 **شرح مفصل للدرس:**\n\n**📖 المحتوى:**\nهذا الدرس يغطي موضوع مهم وهو...\n\n**🔍 التفاصيل:**\n\n**1. المفهوم الأساسي:**\n...\n\n**2. كيفية الاستخدام:**\nمثال عملي:\n```javascript\n// كود توضيحي\nfunction example() {\n  // الشرح هنا\n}\n```\n\n**3. الفوائد:**\n- ✓ ...\n- ✓ ...\n- ✓ ...\n\n**⚡ نصائح للفهم الأفضل:**\n- ركز على الأساسيات أولاً\n- جرب كل مثال بيدك\n- اكتب أمثلة إضافية\n\n**📌 خلاصة:**\nاستخدم هذا المفهوم عندما تحتاج...',
-        ],
-        [QuestionComplexity.ADVANCED]: [
-          '🚀 **شرح شامل ومتقدم للدرس:**\n\n**📚 نظرة عامة:**\nهذا درس متقدم يشرح...\n\n**🎯 الأهداف التعليمية:**\n1. فهم المفهوم بعمق\n2. تطبيق عملي\n3. التعامل مع حالات معقدة\n\n**📖 المحتوى التفصيلي:**\n\n**الجزء 1: المبادئ الأساسية**\n...\n\n**الجزء 2: التطبيق العملي**\n```javascript\n// مثال شامل\nclass AdvancedExample {\n  constructor() {\n    // التهيئة\n  }\n  \n  method() {\n    // المنطق الرئيسي\n  }\n}\n```\n\n**الجزء 3: الاستخدامات المتقدمة**\n- Pattern 1: ...\n- Pattern 2: ...\n- Best practices: ...\n\n**💡 أمثلة إضافية:**\n```javascript\n// حالة استخدام 1\n\n// حالة استخدام 2\n```\n\n**⚠️ نقاط مهمة:**\n- انتبه لـ ...\n- تجنب ...\n- استخدم ... للأداء الأفضل\n\n**🎯 تمارين مقترحة:**\n1. جرب تطبيق ...\n2. حاول تعديل ...\n3. اكتب كود يستخدم ...\n\n**📌 الخلاصة:**\nهذا المفهوم مهم جداً في البرمجة الحديثة، وتقدر تستخدمه في...\n\n💪 **واصل التعلم!** الممارسة أهم شيء للإتقان.',
-        ],
-      },
-    };
-
-    const modeResponses = responses[mode] || responses.general;
-    const complexityResponses =
-      modeResponses[complexity] || modeResponses[QuestionComplexity.SIMPLE];
-    const randomResponse =
-      complexityResponses[
-        Math.floor(Math.random() * complexityResponses.length)
-      ];
-
-    // Personalize based on user message
-    let response = randomResponse;
-    if (
-      userMessage.includes('كيف') ||
-      userMessage.includes('شو') ||
-      userMessage.includes('ما هو')
-    ) {
-      response = `سؤال ${complexity === QuestionComplexity.ADVANCED ? 'متقدم ورائع' : 'جيد'}!\n\n${randomResponse}`;
-    } else if (userMessage.includes('شكرا') || userMessage.includes('شكراً')) {
-      response = 'العفو! سعيد بمساعدتك. هل لديك أسئلة أخرى؟';
-    } else if (userMessage.includes('مرحب') || userMessage.includes('هلا')) {
-      response =
-        'أهلاً وسهلاً! أنا هنا لمساعدتك في رحلتك البرمجية. كيف يمكنني مساعدتك اليوم؟';
-    }
-
-    // Token estimation based on complexity
-    const estimatedTokens =
-      complexity === QuestionComplexity.ADVANCED
-        ? Math.floor(Math.random() * 1500) + 500
-        : complexity === QuestionComplexity.MODERATE
-          ? Math.floor(Math.random() * 800) + 200
-          : Math.floor(Math.random() * 400) + 100;
-
-    return { response, tokensUsed: estimatedTokens, complexity };
   }
 
   /**

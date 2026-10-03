@@ -84,3 +84,7 @@ yarn-error.*
 
 kodax-admin/.next
 kodax-admin/.next/*
+
+# local environment (never commit)
+.env
+.claude/launch.json

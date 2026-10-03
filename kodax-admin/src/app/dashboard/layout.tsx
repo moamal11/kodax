@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard,
-  ShoppingCart,
+  Flag,
   Users,
   LogOut,
   Menu,
@@ -76,9 +76,9 @@ export default function DashboardLayout({
 
   const loadPendingCount = async () => {
     const { count } = await supabase
-      .from('payment_orders')
+      .from('content_reports')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending');
+      .eq('status', 'open');
     setPendingCount(count || 0);
   };
 
@@ -90,13 +90,13 @@ export default function DashboardLayout({
     setOpenTicketCount(count || 0);
   };
 
-  // الاشتراك في تحديثات الطلبات الجديدة
+  // متابعة البلاغات الجديدة والتذاكر
   useEffect(() => {
     const channel = supabase
-      .channel('admin-orders')
+      .channel('admin-reports')
       .on(
         'postgres_changes' as any,
-        { event: '*', schema: 'public', table: 'payment_orders' },
+        { event: '*', schema: 'public', table: 'content_reports' },
         () => {
           loadPendingCount();
         }
@@ -132,9 +132,9 @@ export default function DashboardLayout({
       icon: LayoutDashboard,
     },
     {
-      href: '/dashboard/orders',
-      label: 'إدارة الطلبات',
-      icon: ShoppingCart,
+      href: '/dashboard/reports',
+      label: 'البلاغات والمحتوى',
+      icon: Flag,
       badge: pendingCount,
     },
     {
@@ -293,11 +293,11 @@ export default function DashboardLayout({
             <div className="flex items-center gap-4">
               {pendingCount > 0 && (
                 <Link
-                  href="/dashboard/orders"
+                  href="/dashboard/reports"
                   className="relative flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2 text-amber-400 text-sm hover:bg-amber-500/20 transition-colors"
                 >
                   <Bell className="w-4 h-4" />
-                  <span>{pendingCount} طلب معلق</span>
+                  <span>{pendingCount} بلاغ مفتوح</span>
                 </Link>
               )}
             </div>

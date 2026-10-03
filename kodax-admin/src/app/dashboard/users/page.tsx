@@ -181,7 +181,7 @@ export default function UsersPage() {
     }
   };
 
-  // ===== منع / السماح بالشراء =====
+  // ===== تقييد / السماح بالكوينات (منع استغلال المكافآت) =====
   const handleTogglePurchaseBlock = async (
     user: UserProfile,
     block: boolean
@@ -191,7 +191,7 @@ export default function UsersPage() {
       const { error } = await supabase.rpc('admin_toggle_purchase_block', {
         p_user_id: user.id,
         p_block: block,
-        p_reason: block ? 'تم منع الشراء من قبل الإدارة' : null,
+        p_reason: block ? 'تم تقييد الكوينات من قبل الإدارة' : null,
         p_admin_id: adminId,
       });
       if (error) throw error;
@@ -241,9 +241,9 @@ export default function UsersPage() {
       case 'unban':
         return 'إلغاء حظر';
       case 'block_purchase':
-        return 'منع شراء';
+        return 'تقييد الكوينات';
       case 'unblock_purchase':
-        return 'إلغاء منع شراء';
+        return 'إلغاء تقييد الكوينات';
       default:
         return action;
     }
@@ -431,7 +431,7 @@ export default function UsersPage() {
                         )}
                         {user.is_purchase_blocked && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-medium border border-yellow-500/20 w-fit">
-                            <ShoppingCart className="w-3 h-3" /> ممنوع شراء
+                            <ShoppingCart className="w-3 h-3" /> كوينات مقيّدة
                           </span>
                         )}
                         {!user.is_banned && !user.is_purchase_blocked && (
@@ -517,12 +517,12 @@ export default function UsersPage() {
                           >
                             {user.is_purchase_blocked ? (
                               <>
-                                <ShoppingCart className="w-3.5 h-3.5" /> سماح
-                                شراء
+                                <ShoppingCart className="w-3.5 h-3.5" /> رفع
+                                التقييد
                               </>
                             ) : (
                               <>
-                                <ShieldOff className="w-3.5 h-3.5" /> منع شراء
+                                <ShieldOff className="w-3.5 h-3.5" /> تقييد الكوينات
                               </>
                             )}
                           </button>

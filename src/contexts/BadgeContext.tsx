@@ -57,17 +57,17 @@ const BadgeContext = createContext<BadgeContextType | undefined>(undefined);
 // ===== BadgeProvider =====
 interface BadgeProviderProps {
   children: ReactNode;
-  isPremium?: boolean;
+  lifetimeCoins?: number;
   unlockedCoursesCount?: number;
-  hasPurchased?: boolean;
+  hasUnlockedWithCoins?: boolean;
   userId?: string; // إضافة معرف المستخدم
 }
 
 export function BadgeProvider({
   children,
-  isPremium = false,
+  lifetimeCoins = 0,
   unlockedCoursesCount = 0,
-  hasPurchased = false,
+  hasUnlockedWithCoins = false,
   userId,
 }: BadgeProviderProps) {
   const [earnedBadgeIds, setEarnedBadgeIds] = useState<string[]>([]);
@@ -266,9 +266,9 @@ export function BadgeProvider({
         hardChallengesCompleted: hardCount,
         challengesWithoutHints: noHintCount,
         challengeStreak,
-        isPremium,
+        lifetimeCoins,
         unlockedCourses: unlockedCoursesCount,
-        hasPurchased,
+        hasUnlockedWithCoins,
         isComeback,
         hasCourse100Percent: false,
         ...extra,
@@ -278,7 +278,7 @@ export function BadgeProvider({
 
       return context;
     },
-    [isPremium, unlockedCoursesCount, hasPurchased, userId]
+    [lifetimeCoins, unlockedCoursesCount, hasUnlockedWithCoins, userId]
   );
 
   // ===== فحص الشارات =====

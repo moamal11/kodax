@@ -12,6 +12,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { tokenizeCode } from '@/utils/syntaxHighlighter';
 import { Token } from '@/utils/syntaxHighlighter';
 
+/**
+ * نص عربي داخل سطر كود LTR (تعليق، نص، اسم): خوارزمية الاتجاه الثنائي في المتصفح قد تقلب
+ * موضع الرموز حوله (مثلاً "# تعليق" يظهر "تعليق #"). علامتا العزل LRI/PDI (غير مرئيتين)
+ * تُبقيان الرمز في مكانه. على الويب فقط، والنسخ يستخدم الكود الأصلي بدونهما.
+ */
+const ARABIC = /[؀-ۿ]/;
+function isolate(content: string): string {
+  return Platform.OS === 'web' && ARABIC.test(content) ? `⁦${content}⁩` : content;
+}
+
 // ألوان Syntax Highlighting
 const COLORS: Record<string, string> = {
   keyword: '#c084fc',
@@ -106,7 +116,7 @@ export function CodeBlock({
                       color: COLORS[token.type] || COLORS.default,
                     }}
                   >
-                    {token.content}
+                    {isolate(token.content)}
                   </Text>
                 ))}
               </Text>
@@ -127,7 +137,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingTop: 0,
     paddingBottom: 33,
-    direction: 'ltr' as any,
+    ...(Platform.OS === 'web' ? {} : { direction: 'ltr' as const }),
   },
 
   header: {

@@ -19,7 +19,6 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import { useAuth } from '../_layout';
-import { useSubscription } from '@/contexts/SubscriptionContext';
 // ===== نظام Hybrid: المحتوى محلي، التقدم من Supabase =====
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -27,12 +26,12 @@ import {
   ALL_COURSES,
   getLessonsByCourse,
   Lesson,
-  getFieldRemainingPrice,
-  getLockedPaidCourses,
-  FULL_FIELD_DISCOUNT,
 } from '@/constants/courseData';
-import { usePoints } from '@/contexts/PointsContext';
-import PointsModal from '@/components/subscription/PointsModal';
+import { useCoins } from '@/contexts/CoinsContext';
+import { coinService } from '@/services/coinService';
+import LockedCourseScreen, {
+  getPreviewLessonId,
+} from '@/components/coins/LockedCourseScreen';
 import { useHybridProgress } from '@/hooks/useHybridProgress';
 import { ExplainWithAI } from '@/components/ai';
 import CustomModal, {
@@ -40,6 +39,7 @@ import CustomModal, {
   ModalType,
 } from '@/components/ui/CustomModal';
 import CodeHighlight from '@/components/ui/CodeHighlight';
+import LessonContent from '@/components/lesson/LessonContent';
 import { useResponsiveLayout } from '@/hooks';
 
 const { width } = Dimensions.get('window');
@@ -198,7 +198,9 @@ const shuffleArray = <T,>(
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { isSubscribed, openSubscriptionModal } = useSubscription();
+  useEffect(() => {
+    if (user?.id && id) coinService.track('lesson_opened', { lesson_id: String(id) });
+  }, [user?.id, id]);
   const { isLargeScreen, isWeb } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const [showQuiz, setShowQuiz] = useState(false);
@@ -208,16 +210,7 @@ export default function LessonScreen() {
   const [showCode, setShowCode] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
   const { showModal, hideModal, ModalComponent } = useCustomModal();
-  const {
-    points,
-    isCourseUnlocked: checkCourseUnlocked,
-    unlockCourse,
-    unlockField,
-    refreshPoints,
-  } = usePoints();
-  const [showPointsModal, setShowPointsModal] = useState(false);
-  const [purchaseLoading, setPurchaseLoading] = useState(false);
-  const [purchaseError, setPurchaseError] = useState('');
+  const { isCourseUnlocked: checkCourseUnlocked } = useCoins();
 
   // ===== نظام Hybrid: المحتوى من البيانات المحلية =====
   const lesson = ALL_LESSONS.find((l) => l.id === id) || null;
@@ -246,6 +239,8 @@ export default function LessonScreen() {
     return {
       options: shuffled,
       correctAnswer: newCorrectIndex,
+      // الخيار المعروض i هو الخيار الأصلي indexMap[i] — السيرفر يتحقق بالترتيب الأصلي
+      indexMap,
       originalQuestion: quiz.question,
       explanation: quiz.explanation,
     };
@@ -284,434 +279,26 @@ export default function LessonScreen() {
     );
   }
 
-  // ===== حماية الوصول: التحقق من شراء الكورس =====
+  // ===== حماية الوصول: الدورات المتقدمة تُفتح بالكوينات =====
+  // الدرس الأول من كل دورة متاح دائماً كمعاينة مجانية.
   const parentCourse = ALL_COURSES.find((c) => c.id === lesson.courseId);
-  const isCourseAlreadyUnlocked = parentCourse
-    ? checkCourseUnlocked(parentCourse.id)
-    : true;
+  const isPreviewLesson = parentCourse
+    ? getPreviewLessonId(parentCourse.id) === lesson.id
+    : false;
   const isCourseLocked = parentCourse
     ? parentCourse.pointsCost > 0 &&
       parentCourse.isLocked &&
-      !isCourseAlreadyUnlocked
+      !checkCourseUnlocked(parentCourse.id) &&
+      !isPreviewLesson
     : false;
 
   if (isCourseLocked && parentCourse) {
-    const fieldPricing = getFieldRemainingPrice(
-      parentCourse.fieldId,
-      ALL_COURSES.filter((c) => checkCourseUnlocked(c.id)).map((c) => c.id)
-    );
-    const lockedFieldCourses = getLockedPaidCourses(
-      parentCourse.fieldId,
-      ALL_COURSES.filter((c) => checkCourseUnlocked(c.id)).map((c) => c.id)
-    );
-    const canAffordCourse = points >= parentCourse.pointsCost;
-    const canAffordField = fieldPricing
-      ? points >= fieldPricing.discountedRemaining
-      : false;
-    const hasMultipleLockedInField = lockedFieldCourses.length > 1;
-
-    const handleBuyCourseFromLesson = async () => {
-      if (purchaseLoading) return;
-      setPurchaseLoading(true);
-      setPurchaseError('');
-      try {
-        await unlockCourse(
-          parentCourse.id,
-          parentCourse.pointsCost,
-          parentCourse.title
-        );
-        await refreshPoints();
-      } catch (err: any) {
-        setPurchaseError(err?.message || 'حدث خطأ أثناء الشراء');
-      } finally {
-        setPurchaseLoading(false);
-      }
-    };
-
-    const handleBuyFieldFromLesson = async () => {
-      if (purchaseLoading || !fieldPricing) return;
-      setPurchaseLoading(true);
-      setPurchaseError('');
-      try {
-        const courseIds = lockedFieldCourses.map((c) => c.id);
-        await unlockField(
-          parentCourse.fieldId,
-          fieldPricing.discountedRemaining,
-          courseIds
-        );
-        await refreshPoints();
-      } catch (err: any) {
-        setPurchaseError(err?.message || 'حدث خطأ أثناء الشراء');
-      } finally {
-        setPurchaseLoading(false);
-      }
-    };
-
     return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={['#0f0f1e', '#1a1a3e', '#0f0f1e']}
-          style={styles.gradient}
-        >
-          {/* Header */}
-          <View style={[styles.header, { paddingTop: 16 }]}>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>محتوى مدفوع</Text>
-            <View style={{ width: 40 }} />
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              padding: 20,
-              paddingBottom: 40,
-              maxWidth: isLargeScreen ? 600 : '100%',
-              width: '100%',
-              alignSelf: 'center',
-            }}
-          >
-            {/* Lock Info */}
-            <View
-              style={{ alignItems: 'center', marginBottom: 32, marginTop: 20 }}
-            >
-              <View
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  backgroundColor: '#ef444430',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginBottom: 16,
-                }}
-              >
-                <Ionicons name="lock-closed" size={36} color="#ef4444" />
-              </View>
-              <Text
-                style={{
-                  color: '#fff',
-                  fontSize: 22,
-                  fontWeight: '700',
-                  textAlign: 'center',
-                  marginBottom: 8,
-                }}
-              >
-                هذا المحتوى مدفوع
-              </Text>
-              <Text
-                style={{
-                  color: '#9ca3af',
-                  fontSize: 15,
-                  textAlign: 'center',
-                  lineHeight: 22,
-                }}
-              >
-                يجب شراء كورس "{parentCourse.title}" للوصول إلى هذا الدرس
-              </Text>
-            </View>
-
-            {/* Error */}
-            {purchaseError ? (
-              <View
-                style={{
-                  backgroundColor: '#ef444420',
-                  borderRadius: 12,
-                  padding: 12,
-                  marginBottom: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <Ionicons name="alert-circle" size={20} color="#ef4444" />
-                <Text style={{ color: '#ef4444', fontSize: 14, flex: 1 }}>
-                  {purchaseError}
-                </Text>
-              </View>
-            ) : null}
-
-            {/* Buy Course */}
-            <TouchableOpacity
-              onPress={handleBuyCourseFromLesson}
-              disabled={purchaseLoading || !canAffordCourse}
-              activeOpacity={0.8}
-              style={{ marginBottom: 16, borderRadius: 16, overflow: 'hidden' }}
-            >
-              <LinearGradient
-                colors={
-                  canAffordCourse
-                    ? ['#8B5CF6', '#6D28D9']
-                    : ['#374151', '#1F2937']
-                }
-                style={{
-                  padding: 20,
-                  borderRadius: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 16,
-                }}
-              >
-                <View
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    backgroundColor: '#ffffff20',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Ionicons
-                    name={canAffordCourse ? 'cart' : 'lock-closed'}
-                    size={24}
-                    color="#fff"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      color: '#fff',
-                      fontSize: 17,
-                      fontWeight: '700',
-                      marginBottom: 4,
-                    }}
-                  >
-                    شراء الكورس
-                  </Text>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 4,
-                    }}
-                  >
-                    <Ionicons name="diamond" size={14} color="#a78bfa" />
-                    <Text
-                      style={{
-                        color: '#e2e8f0',
-                        fontSize: 16,
-                        fontWeight: '600',
-                      }}
-                    >
-                      {parentCourse.pointsCost.toLocaleString()} نقطة
-                    </Text>
-                  </View>
-                </View>
-                {purchaseLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Ionicons name="chevron-back" size={24} color="#ffffff80" />
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-
-            {/* Buy Full Field */}
-            {hasMultipleLockedInField &&
-              fieldPricing &&
-              fieldPricing.remaining > parentCourse.pointsCost && (
-                <TouchableOpacity
-                  onPress={handleBuyFieldFromLesson}
-                  disabled={purchaseLoading || !canAffordField}
-                  activeOpacity={0.8}
-                  style={{
-                    marginBottom: 16,
-                    borderRadius: 16,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <LinearGradient
-                    colors={
-                      canAffordField
-                        ? ['#10b981', '#059669']
-                        : ['#374151', '#1F2937']
-                    }
-                    style={{
-                      padding: 20,
-                      borderRadius: 16,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 16,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 24,
-                        backgroundColor: '#ffffff20',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Ionicons name="gift" size={24} color="#fff" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          color: '#fff',
-                          fontSize: 17,
-                          fontWeight: '700',
-                          marginBottom: 4,
-                        }}
-                      >
-                        شراء الكورس كامل
-                      </Text>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 6,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: '#ffffff80',
-                            fontSize: 14,
-                            textDecorationLine: 'line-through',
-                          }}
-                        >
-                          {fieldPricing.remaining.toLocaleString()}
-                        </Text>
-                        <Ionicons name="diamond" size={14} color="#a78bfa" />
-                        <Text
-                          style={{
-                            color: '#e2e8f0',
-                            fontSize: 16,
-                            fontWeight: '600',
-                          }}
-                        >
-                          {fieldPricing.discountedRemaining.toLocaleString()}{' '}
-                          نقطة
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          backgroundColor: '#fbbf2430',
-                          borderRadius: 8,
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                          alignSelf: 'flex-start',
-                          marginTop: 6,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: '#fbbf24',
-                            fontSize: 12,
-                            fontWeight: '600',
-                          }}
-                        >
-                          خصم 15% - وفّر{' '}
-                          {(
-                            fieldPricing.remaining -
-                            fieldPricing.discountedRemaining
-                          ).toLocaleString()}{' '}
-                          نقطة
-                        </Text>
-                      </View>
-                    </View>
-                    {purchaseLoading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Ionicons
-                        name="chevron-back"
-                        size={24}
-                        color="#ffffff80"
-                      />
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              )}
-
-            {/* Go to Course Page */}
-            <TouchableOpacity
-              onPress={() => router.push(`/course/${parentCourse.id}` as any)}
-              style={{
-                backgroundColor: '#1a1a3e',
-                borderRadius: 16,
-                padding: 16,
-                marginBottom: 16,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <Ionicons name="book-outline" size={20} color="#3b82f6" />
-              <Text
-                style={{ color: '#3b82f6', fontSize: 15, fontWeight: '600' }}
-              >
-                عرض صفحة الكورس
-              </Text>
-            </TouchableOpacity>
-
-            {/* Current Points */}
-            <View
-              style={{
-                backgroundColor: '#1a1a3e',
-                borderRadius: 16,
-                padding: 16,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <View
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-              >
-                <Ionicons name="diamond" size={20} color="#a78bfa" />
-                <Text style={{ color: '#9ca3af', fontSize: 14 }}>
-                  رصيدك الحالي:
-                </Text>
-                <Text
-                  style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}
-                >
-                  {points.toLocaleString()} نقطة
-                </Text>
-              </View>
-              {!canAffordCourse && (
-                <TouchableOpacity
-                  onPress={() => setShowPointsModal(true)}
-                  style={{
-                    backgroundColor: '#8B5CF620',
-                    borderRadius: 12,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: '#8B5CF6',
-                      fontSize: 13,
-                      fontWeight: '600',
-                    }}
-                  >
-                    شحن نقاط
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </ScrollView>
-
-          {/* Points Modal */}
-          <PointsModal
-            visible={showPointsModal}
-            onClose={() => {
-              setShowPointsModal(false);
-              refreshPoints();
-            }}
-            mode="course"
-            courseId={parentCourse.id}
-            courseName={parentCourse.title}
-            courseCost={parentCourse.pointsCost}
-          />
-        </LinearGradient>
-      </View>
+      <LockedCourseScreen
+        course={parentCourse}
+        onBack={() => router.back()}
+        lockedLessonTitle={lesson.title}
+      />
     );
   }
 
@@ -776,8 +363,12 @@ export default function LessonScreen() {
     // عرض حالة التحميل
     setIsCompletingLesson(true);
 
-    // حفظ التقدم في Supabase مباشرة عبر Hybrid Sync
-    const result = await markLessonComplete(lesson.id, lesson.xpReward);
+    // الإكمال يُوثَّق على السيرفر (الإجابة بالترتيب الأصلي للخيارات)، و XP يُحسب هناك
+    const originalAnswer =
+      shuffledQuiz && selectedAnswer !== null && selectedAnswer !== undefined
+        ? shuffledQuiz.indexMap[selectedAnswer]
+        : null;
+    const result = await markLessonComplete(lesson.id, lesson.xpReward, undefined, originalAnswer);
 
     setIsCompletingLesson(false);
 
@@ -814,7 +405,7 @@ export default function LessonScreen() {
           type: 'success',
           title: 'أحسنت!',
           message: 'لقد أكملت هذا الدرس بنجاح!',
-          xpReward: lesson.xpReward,
+          xpReward: result.xpAwarded ?? lesson.xpReward,
           buttons: [
             {
               text: 'الدرس التالي',
@@ -835,12 +426,31 @@ export default function LessonScreen() {
           ],
         });
       }
+    } else if (!result.queued) {
+      // رفض من السيرفر (درس سابق غير مكتمل، دورة لم تُفتح بعد، إجابة غير صحيحة...) — بلا أي عقوبة
+      showModal({
+        type: 'warning',
+        title: result.code === 'previous_required' ? 'خطوة واحدة قبلها' : 'لم يُحفظ التقدم',
+        message: result.error || 'حاول مرة أخرى.',
+        buttons: [
+          {
+            text: 'حسناً',
+            onPress: () => {
+              hideModal();
+              if (result.code === 'wrong_answer') {
+                setSelectedAnswer(null);
+                setIsAnswered(false);
+              }
+            },
+            style: 'primary',
+          },
+        ],
+      });
     } else {
       showModal({
         type: 'warning',
-        title: 'تم الإكمال محلياً',
-        message: 'سيتم المزامنة عند الاتصال بالإنترنت',
-        xpReward: lesson.xpReward,
+        title: 'سنحفظ تقدمك لاحقاً',
+        message: 'لا يوجد اتصال الآن. سيُرسل إكمال الدرس تلقائياً عند عودة الإنترنت.',
         buttons: [
           {
             text: 'الدرس التالي',
@@ -938,66 +548,11 @@ export default function LessonScreen() {
   const isCorrect =
     shuffledQuiz && selectedAnswer === shuffledQuiz.correctAnswer;
 
-  // Parse markdown-like content - memoized لتجنب إعادة التحليل كل render
-  const renderedContent = useMemo(() => {
-    const content = lesson.content;
-    const lines = content.trim().split('\n');
-    return lines.map((line, index) => {
-      // Headers
-      if (line.startsWith('# ')) {
-        return (
-          <Text key={index} style={styles.contentH1}>
-            {line.substring(2)}
-          </Text>
-        );
-      }
-      if (line.startsWith('## ')) {
-        return (
-          <Text key={index} style={styles.contentH2}>
-            {line.substring(3)}
-          </Text>
-        );
-      }
-      if (line.startsWith('### ')) {
-        return (
-          <Text key={index} style={styles.contentH3}>
-            {line.substring(4)}
-          </Text>
-        );
-      }
-      // List items
-      if (line.startsWith('- ')) {
-        return (
-          <View key={index} style={styles.listItem}>
-            <Text style={styles.listBullet}>•</Text>
-            <Text style={styles.listText}>{line.substring(2)}</Text>
-          </View>
-        );
-      }
-      // Numbered lists
-      if (/^\d+\. /.test(line)) {
-        const match = line.match(/^(\d+)\. (.+)/);
-        if (match) {
-          return (
-            <View key={index} style={styles.listItem}>
-              <Text style={styles.listNumber}>{match[1]}.</Text>
-              <Text style={styles.listText}>{match[2]}</Text>
-            </View>
-          );
-        }
-      }
-      // Empty lines
-      if (line.trim() === '') {
-        return <View key={index} style={{ height: 12 }} />;
-      }
-      // Regular paragraphs
-      return (
-        <Text key={index} style={styles.contentParagraph}>
-          {line}
-        </Text>
-      );
-    });
-  }, [lesson.content]);
+  // محتوى الدرس (Markdown مبسّط مع كتل الكود والجداول) — انظر LessonContent
+  const renderedContent = useMemo(
+    () => <LessonContent content={lesson.content} defaultLanguage={lesson.language} />,
+    [lesson.content, lesson.language]
+  );
 
   return (
     <View style={styles.container}>
@@ -1453,8 +1008,6 @@ export default function LessonScreen() {
                     challengeDescription={lesson.content}
                     starterCode={lesson.codeExample}
                     language={lesson.language || 'javascript'}
-                    isSubscribed={isSubscribed}
-                    onSubscribePress={openSubscriptionModal}
                     contentType="lesson"
                   />
                 </Animated.View>
@@ -1526,8 +1079,6 @@ export default function LessonScreen() {
                       challengeDescription={lesson.content}
                       starterCode={lesson.codeExample}
                       language={lesson.language || 'javascript'}
-                      isSubscribed={isSubscribed}
-                      onSubscribePress={openSubscriptionModal}
                       contentType="lesson"
                     />
                   </Animated.View>

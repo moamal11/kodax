@@ -2765,6 +2765,14 @@ export function tokenizeCode(code: string, languageInput: string): Token[] {
       continue;
     }
 
+    // نص غير ASCII (العربية مثلاً) يُجمع كتلة واحدة: عنصر لكل حرف يمنع وصل الحروف العربية
+    if (code.charCodeAt(i) > 0x7f) {
+      const start = i;
+      while (i < code.length && code.charCodeAt(i) > 0x7f) i++;
+      tokens.push({ content: code.slice(start, i), type: 'default' });
+      continue;
+    }
+
     tokens.push({ content: code[i], type: 'default' });
     i++;
   }
@@ -3052,6 +3060,14 @@ function tokenizeCSS(code: string): Token[] {
       continue;
     }
 
+    // نص غير ASCII (العربية مثلاً) يُجمع كتلة واحدة: عنصر لكل حرف يمنع وصل الحروف العربية
+    if (code.charCodeAt(i) > 0x7f) {
+      const start = i;
+      while (i < code.length && code.charCodeAt(i) > 0x7f) i++;
+      tokens.push({ content: code.slice(start, i), type: 'default' });
+      continue;
+    }
+
     tokens.push({ content: code[i], type: 'default' });
     i++;
   }
@@ -3135,6 +3151,14 @@ function tokenizeJSON(code: string): Token[] {
     if (/[{}[\]:,]/.test(code[i])) {
       tokens.push({ content: code[i], type: 'punctuation' });
       i++;
+      continue;
+    }
+
+    // نص غير ASCII (العربية مثلاً) يُجمع كتلة واحدة: عنصر لكل حرف يمنع وصل الحروف العربية
+    if (code.charCodeAt(i) > 0x7f) {
+      const start = i;
+      while (i < code.length && code.charCodeAt(i) > 0x7f) i++;
+      tokens.push({ content: code.slice(start, i), type: 'default' });
       continue;
     }
 

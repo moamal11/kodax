@@ -120,10 +120,6 @@ export function AppProvider({ children, userId }: AppProviderProps) {
   const likesInProgressRef = useRef<Set<string>>(new Set());
   const likeCooldownRef = useRef<Set<string>>(new Set());
 
-  console.log(
-    `[AppProvider] Initializing with userId=${userId}, previousUserId=${prevUserIdRef.current}`
-  );
-
   // ===== Detect user change (login/logout/switch) =====
   useEffect(() => {
     const prevId = prevUserIdRef.current;
@@ -152,22 +148,14 @@ export function AppProvider({ children, userId }: AppProviderProps) {
   // ===== Data loaders =====
 
   /**
-   * loadProfile with retry logic
+   * loadProfile
    *
-   * === المشكلة ===
-   * قد لا يكون profile جاهز على Supabase حتى بعد OAuth
-   * - Google OAuth ينشئ user في auth
-   * - لكن profile قد لا يُنشأ فوراً (trigger delay)
-   * - أو session قد لا تكون مخزنة بعد في AsyncStorage
-   *
-   * === الحل ===
-   * Retry مع exponential backoff:
-   * - الحادثة الأولى: الآن
-   * - الحادثة الثانية: 300ms
-   * - الحادثة الثالثة: 600ms
-   * - الحادثة الرابعة: 1s
+   * IMPORTANT:
+   * AppProvider يستقبل userId من AuthContext (safe userId).
+   * هذا يعني أن الجلسة صالحة والملف الشخصي مُتحقق قبل أي استعلامات RLS.
+   * لذلك لا نستخدم setTimeout/polling هنا.
    */
-  const loadProfile = useCallback(async (uid: string, retries: number = 4) => {
+  const loadProfile = useCallback(async (uid: string) => {
     try {
       const { data, error } = await getProfile(uid);
 
@@ -176,29 +164,12 @@ export function AppProvider({ children, userId }: AppProviderProps) {
         setProfile(data);
         setFollowersCount(data.followers_count || 0);
         setFollowingCount(data.following_count || 0);
-        return; // No need to retry
+        return;
       }
 
-      // ❌ لا توجد بيانات
-      if (retries > 0 && !error) {
-        // Maybe profile isn't created yet — wait and retry
-        const delay = (4 - retries + 1) * 300; // 300, 600, 900, 1200ms
-        console.log(`[AppProvider] Profile not found, retrying in ${delay}ms`);
-        await new Promise((r) => setTimeout(r, delay));
-        return loadProfile(uid, retries - 1);
-      }
-
-      console.warn('[AppProvider] Profile load failed after retries:', error);
+      console.warn('[AppProvider] Profile load failed:', error);
     } catch (error) {
       console.error('[AppProvider] loadProfile error:', error);
-
-      // Retry on network errors
-      if (retries > 0) {
-        const delay = (4 - retries + 1) * 300;
-        console.log(`[AppProvider] Retrying profile load in ${delay}ms`);
-        await new Promise((r) => setTimeout(r, delay));
-        return loadProfile(uid, retries - 1);
-      }
     }
   }, []);
 

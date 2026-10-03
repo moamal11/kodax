@@ -4,6 +4,7 @@
  * مع مزامنة التقدم اليومي إلى Supabase
  */
 
+import { calculateLevel as calculateLevelShared } from '@/lib/utils';
 import AsyncStorage from '@/lib/platformStorage';
 import { badgeService } from '@/services/badgeService';
 import { supabase } from '@/lib/supabase';
@@ -375,19 +376,8 @@ class ProgressService {
 
   // حساب المستوى
   calculateLevel(xp: number): number {
-    // كل مستوى يتطلب 100 XP أكثر من السابق
-    // المستوى 1: 0-99, المستوى 2: 100-299, المستوى 3: 300-599...
-    let level = 1;
-    let xpRequired = 100;
-    let totalRequired = 0;
-
-    while (xp >= totalRequired + xpRequired) {
-      totalRequired += xpRequired;
-      level++;
-      xpRequired += 100;
-    }
-
-    return level;
+    // معادلة واحدة في كل Kodax (السيرفر kodax_level، التطبيق، والمساعد): max(1, floor(sqrt(xp/100)))
+    return calculateLevelShared(xp);
   }
 
   // الحصول على السلسلة

@@ -54,6 +54,11 @@ import {
 } from './algorithmContent';
 import { ALL_DS_CHALLENGES, ALL_DS_LESSONS } from './dataStructureContent';
 
+import type { ChallengeCheck } from '../services/challengeValidator';
+import { applyChallengeFixes } from './challengeFixes';
+import { EXPANSION_CHALLENGES } from './challengeExpansion';
+import { applyCurriculum } from './curriculum';
+
 // ===== أنواع البيانات =====
 export interface Course {
   id: string;
@@ -70,7 +75,7 @@ export interface Course {
   order: number;
   isLocked: boolean;
   requiredCourseId?: string;
-  pointsCost: number; // تكلفة فتح الدورة بالنقاط
+  pointsCost: number; // تكلفة فتح الدورة بالكوينات المكتسبة (0 = مجانية) — المصدر الرسمي: course_coin_catalog
 }
 
 export interface Lesson {
@@ -87,6 +92,8 @@ export interface Lesson {
   type?: 'theory' | 'practice' | 'quiz';
   estimatedMinutes?: number;
   isLocked?: boolean;
+  /** اسم القسم داخل الدورة (يُعرض كعنوان فوق أول درس فيه) */
+  section?: string;
 }
 
 export interface Quiz {
@@ -113,12 +120,24 @@ export interface Challenge {
   courseId?: string;
   xpReward?: number;
   timeLimit?: number;
+  /** متطلبات بنيوية للغات التي لا تُشغَّل داخل التطبيق (HTML/CSS/React/Dart/...) */
+  checks?: ChallengeCheck[];
+  /** الدالة التي تُستدعى بمدخلات الاختبار (افتراضياً: أول دالة في الكود الابتدائي) */
+  entryFunction?: string;
+  /** 'structural' = تحقق بالمتطلبات (checks) فقط */
+  validation?: 'execution' | 'structural';
+  /** كود تهيئة يسبق كود المستخدم عند التشغيل (بدائل وهمية لمكتبات مثل express) */
+  prelude?: string;
+  /** تحديات التوسعة: الدرس الذي يبني عليه التحدي (الوصول يتبع دورته مباشرة) */
+  afterLessonId?: string;
 }
 
 export interface TestCase {
   input: string;
   expectedOutput: string;
   description: string;
+  /** اختبار مخفي: يُشغَّل للتحقق ولا تُعرض مدخلاته/نتيجته للمستخدم */
+  hidden?: boolean;
 }
 
 // ===== دورات تطوير الويب =====
@@ -164,7 +183,7 @@ export const WEB_DEV_COURSES: Course[] = [
     order: 2.5,
     isLocked: true,
     requiredCourseId: 'web-css-styling',
-    pointsCost: 200, // CSS متقدم
+    pointsCost: 80, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'web-js-basics',
@@ -179,7 +198,7 @@ export const WEB_DEV_COURSES: Course[] = [
     order: 3,
     isLocked: true,
     requiredCourseId: 'web-html-basics',
-    pointsCost: 350, // JavaScript
+    pointsCost: 140, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'web-react-intro',
@@ -194,7 +213,7 @@ export const WEB_DEV_COURSES: Course[] = [
     order: 4,
     isLocked: true,
     requiredCourseId: 'web-js-basics',
-    pointsCost: 350, // React
+    pointsCost: 230, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'web-deployment',
@@ -209,7 +228,7 @@ export const WEB_DEV_COURSES: Course[] = [
     order: 5,
     isLocked: true,
     requiredCourseId: 'web-html-basics',
-    pointsCost: 300, // نشر المواقع
+    pointsCost: 90, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
 ];
 
@@ -242,7 +261,7 @@ export const PYTHON_COURSES: Course[] = [
     order: 2,
     isLocked: true,
     requiredCourseId: 'py-basics',
-    pointsCost: 150, // هياكل البيانات
+    pointsCost: 100, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'py-oop',
@@ -257,7 +276,7 @@ export const PYTHON_COURSES: Course[] = [
     order: 3,
     isLocked: true,
     requiredCourseId: 'py-data-structures',
-    pointsCost: 150, // البرمجة الكائنية
+    pointsCost: 120, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'py-advanced',
@@ -272,7 +291,7 @@ export const PYTHON_COURSES: Course[] = [
     order: 4,
     isLocked: true,
     requiredCourseId: 'py-oop',
-    pointsCost: 200, // Python المتقدم
+    pointsCost: 200, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
 ];
 
@@ -305,7 +324,7 @@ export const CPP_COURSES: Course[] = [
     order: 2,
     isLocked: true,
     requiredCourseId: 'cpp-basics',
-    pointsCost: 200, // المؤشرات
+    pointsCost: 100, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'cpp-oop',
@@ -320,7 +339,7 @@ export const CPP_COURSES: Course[] = [
     order: 3,
     isLocked: true,
     requiredCourseId: 'cpp-pointers',
-    pointsCost: 300, // OOP
+    pointsCost: 200, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'cpp-advanced',
@@ -335,7 +354,7 @@ export const CPP_COURSES: Course[] = [
     order: 4,
     isLocked: true,
     requiredCourseId: 'cpp-oop',
-    pointsCost: 300, // C++ المتقدم
+    pointsCost: 180, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
 ];
 
@@ -368,7 +387,7 @@ export const CYBER_COURSES: Course[] = [
     order: 2,
     isLocked: true,
     requiredCourseId: 'cyber-basics',
-    pointsCost: 400, // أمن الشبكات
+    pointsCost: 120, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'cyber-advanced',
@@ -383,7 +402,7 @@ export const CYBER_COURSES: Course[] = [
     order: 3,
     isLocked: true,
     requiredCourseId: 'cyber-network',
-    pointsCost: 400, // الأمن المتقدم
+    pointsCost: 140, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'cyber-ethical-hacking',
@@ -398,7 +417,7 @@ export const CYBER_COURSES: Course[] = [
     order: 4,
     isLocked: true,
     requiredCourseId: 'cyber-advanced',
-    pointsCost: 400, // الاختراق الأخلاقي
+    pointsCost: 230, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
 ];
 
@@ -431,7 +450,7 @@ export const AI_COURSES: Course[] = [
     order: 2,
     isLocked: true,
     requiredCourseId: 'ai-basics',
-    pointsCost: 300, // تعلم الآلة
+    pointsCost: 140, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'ai-deep-learning',
@@ -446,7 +465,7 @@ export const AI_COURSES: Course[] = [
     order: 3,
     isLocked: true,
     requiredCourseId: 'ai-ml-basics',
-    pointsCost: 500, // التعلم العميق
+    pointsCost: 230, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
 ];
 
@@ -479,7 +498,7 @@ export const REACT_NATIVE_COURSES: Course[] = [
     order: 2,
     isLocked: true,
     requiredCourseId: 'rn-basics',
-    pointsCost: 250, // React Native المتقدم
+    pointsCost: 100, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
 ];
 
@@ -512,7 +531,7 @@ export const FLUTTER_COURSES: Course[] = [
     order: 4,
     isLocked: true,
     requiredCourseId: 'flutter-basics',
-    pointsCost: 550, // Flutter المتقدم
+    pointsCost: 170, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
 ];
 
@@ -545,7 +564,7 @@ export const BACKEND_COURSES: Course[] = [
     order: 2,
     isLocked: true,
     requiredCourseId: 'backend-nodejs',
-    pointsCost: 150, // REST APIs
+    pointsCost: 100, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'backend-auth',
@@ -560,7 +579,7 @@ export const BACKEND_COURSES: Course[] = [
     order: 3,
     isLocked: true,
     requiredCourseId: 'backend-rest-api',
-    pointsCost: 250, // Auth & Security
+    pointsCost: 90, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
 ];
 
@@ -592,7 +611,7 @@ export const DATABASE_COURSES: Course[] = [
     difficulty: 'intermediate',
     order: 2,
     isLocked: false,
-    pointsCost: 100, // Supabase
+    pointsCost: 90, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'backend-firebase',
@@ -606,7 +625,7 @@ export const DATABASE_COURSES: Course[] = [
     difficulty: 'intermediate',
     order: 3,
     isLocked: false,
-    pointsCost: 100, // Firebase
+    pointsCost: 80, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
   {
     id: 'backend-mongodb',
@@ -621,7 +640,7 @@ export const DATABASE_COURSES: Course[] = [
     order: 4,
     isLocked: true,
     requiredCourseId: 'backend-sql',
-    pointsCost: 50, // MongoDB
+    pointsCost: 80, // كوينات (مُسعّر حسب المستوى وعدد الدروس)
   },
 ];
 
@@ -639,7 +658,7 @@ const rawCourses = [
 ];
 
 // Add fieldName and fieldNameAr to all courses
-export const ALL_COURSES: Course[] = rawCourses.map((course) => {
+const BASE_COURSES: Course[] = rawCourses.map((course) => {
   const { fieldName, fieldNameAr } = getFieldNames(course.fieldId);
   return {
     ...course,
@@ -648,7 +667,7 @@ export const ALL_COURSES: Course[] = rawCourses.map((course) => {
   };
 });
 
-// ===== نسبة خصم الشراء الكامل =====
+// ===== نسبة الخصم عند فتح المسار كاملاً بالكوينات =====
 export const FULL_FIELD_DISCOUNT = 0.15; // 15%
 
 /**
@@ -661,7 +680,7 @@ export function getFieldTotalPrice(fieldId: string): number {
 }
 
 /**
- * حساب السعر بعد خصم 15% لشراء المجال كاملاً
+ * حساب تكلفة فتح المسار كاملاً بالكوينات بعد خصم 15%
  */
 export function getFieldDiscountedPrice(fieldId: string): number {
   const total = getFieldTotalPrice(fieldId);
@@ -669,7 +688,7 @@ export function getFieldDiscountedPrice(fieldId: string): number {
 }
 
 /**
- * حساب السعر المتبقي لشراء المجال كاملاً بعد خصم الكورسات المشتراة
+ * حساب التكلفة المتبقية لفتح المسار كاملاً بعد خصم الدورات المفتوحة مسبقاً
  */
 export function getFieldRemainingPrice(
   fieldId: string,
@@ -693,7 +712,7 @@ export function getFieldRemainingPrice(
 }
 
 /**
- * الحصول على قائمة الكورسات المدفوعة غير المفتوحة في مجال معيّن
+ * الحصول على قائمة الدورات التي تُفتح بالكوينات ولم تُفتح بعد في مجال معيّن
  */
 export function getLockedPaidCourses(
   fieldId: string,
@@ -1455,7 +1474,7 @@ export const CHALLENGES: Challenge[] = [
 ];
 
 // ===== جميع الدروس =====
-export const ALL_LESSONS: Lesson[] = [
+const RAW_LESSONS: Lesson[] = [
   ...HTML_LESSONS,
   ...ALL_CSS_LESSONS,
   ...ALL_PYTHON_LESSONS,
@@ -1474,8 +1493,14 @@ export const ALL_LESSONS: Lesson[] = [
   ...ALL_EXPANDED_APP_DEV_LESSONS,
 ];
 
+// ===== المناهج: الترتيب والأقسام والدروس المضافة/المحسّنة (انظر curriculum/) =====
+const CURRICULUM = applyCurriculum(BASE_COURSES, RAW_LESSONS);
+export const ALL_COURSES: Course[] = CURRICULUM.courses;
+export const ALL_LESSONS: Lesson[] = CURRICULUM.lessons;
+
 // ===== جميع التحديات =====
-export const ALL_CHALLENGES: Challenge[] = [
+// التصحيحات الناتجة عن تدقيق التحديات (انظر challengeFixes.ts)
+const LEGACY_CHALLENGES: Challenge[] = applyChallengeFixes([
   ...CHALLENGES,
   ...ALL_CSS_CHALLENGES,
   ...ALL_PYTHON_CHALLENGES,
@@ -1495,7 +1520,10 @@ export const ALL_CHALLENGES: Challenge[] = [
   // الخوارزميات وهياكل البيانات
   ...ALL_ALGORITHM_CHALLENGES,
   ...ALL_DS_CHALLENGES,
-];
+]);
+
+// تحديات التوسعة (مرتبطة بدروس محددة) تُضاف بعد القديمة ولا تغيّر ترتيب/وصول أي تحدٍ قديم
+export const ALL_CHALLENGES: Challenge[] = [...LEGACY_CHALLENGES, ...EXPANSION_CHALLENGES];
 
 // ===== دالة الحصول على الدورات حسب المجال =====
 export function getCoursesByField(fieldId: string): Course[] {
@@ -1514,7 +1542,9 @@ export function getChallengesByDifficulty(
   return CHALLENGES.filter((ch) => ch.difficulty === difficulty);
 }
 
-// ===== نظام الوصول للتحديات (20% مجاني، 60% يتطلب دورة مدفوعة، 20% بريميوم) =====
+// ===== نظام الوصول للتحديات =====
+// - أول 40% من تحديات كل لغة → مجانية للجميع
+// - الباقي → تُفتح مع الدورة المرتبطة (تُفتح بالكوينات المكتسبة، بدون أي دفع)
 
 // كاش لفهرس كل تحدي داخل مجموعة لغته (يُحسب مرة واحدة فقط)
 const _challengeIndexCache = new Map<string, number>();
@@ -1525,7 +1555,8 @@ function _buildChallengeIndexCache() {
 
   // تجميع عدد التحديات حسب اللغة + ترتيبها
   const langCounters = new Map<string, number>();
-  for (const ch of ALL_CHALLENGES) {
+  // قاعدة "أول 40% مجانية" للتحديات القديمة فقط: تحديات التوسعة لا تغيّر ترتيبها
+  for (const ch of LEGACY_CHALLENGES) {
     const lang = (ch.language || '').toLowerCase();
     const idx = langCounters.get(lang) ?? 0;
     _challengeIndexCache.set(ch.id, idx);
@@ -1536,48 +1567,46 @@ function _buildChallengeIndexCache() {
   }
 }
 
+export type ChallengeAccessType = 'free' | 'course-required';
+
 /**
  * تحديد نوع الوصول للتحدي:
- * - أول 20% من تحديات كل لغة → مجاني للجميع
- * - الـ 60% التالية → يتطلب فتح دورة مدفوعة مرتبطة باللغة
- * - آخر 20% → يتطلب الاشتراك المدفوع (بريميوم)
+ * - أول 40% من تحديات كل لغة → مجاني للجميع
+ * - الباقي → يتطلب فتح الدورة المرتبطة باللغة (بالكوينات)
+ * - إذا لم توجد دورة قابلة للفتح في المجال → مجاني
  */
 export function getChallengeAccessType(
   challenge: Challenge
-): 'free' | 'course-required' | 'premium' {
+): ChallengeAccessType {
+  if (challenge.afterLessonId) {
+    return getChallengeRequiredCourseId(challenge) ? 'course-required' : 'free';
+  }
   _buildChallengeIndexCache();
 
   const lang = (challenge.language || '').toLowerCase();
   const idx = _challengeIndexCache.get(challenge.id) ?? 0;
   const total = _challengeCountCache.get(lang) ?? 1;
-  const freeCount = Math.max(1, Math.ceil(total * 0.2)); // أول 20% مجاني
-  const courseCount = Math.max(1, Math.floor(total * 0.6)); // 60% يتطلب دورة
+  const freeCount = Math.max(1, Math.ceil(total * 0.4));
 
   if (idx < freeCount) return 'free';
-  if (idx < freeCount + courseCount) {
-    // تحقق إضافي: إذا كانت الدورة المطلوبة مجانية → يصبح التحدي مجاني
-    const reqCourseId = _getRawChallengeRequiredCourseId(challenge);
-    if (reqCourseId) {
-      const course = ALL_COURSES.find((c) => c.id === reqCourseId);
-      if (course && course.pointsCost === 0) {
-        // الدورة مجانية → إعادة ربط بأقرب دورة مدفوعة
-        const paidCourseId = _findFirstPaidCourseInField(course.fieldId);
-        if (!paidCourseId) return 'free'; // لا توجد دورة مدفوعة في المجال → مجاني
-      }
-    }
-    return 'course-required';
-  }
-  return 'premium';
+  return getChallengeRequiredCourseId(challenge) ? 'course-required' : 'free';
 }
 
 /**
- * إيجاد أول دورة مدفوعة في نفس المجال
+ * إيجاد أول دورة تُفتح بالكوينات في نفس المجال
  */
-function _findFirstPaidCourseInField(fieldId: string): string | undefined {
-  const paidCourse = ALL_COURSES.find(
+function _findFirstPaidCourseInField(
+  fieldId: string,
+  trackId?: string
+): string | undefined {
+  const paidInField = ALL_COURSES.filter(
     (c) => c.fieldId === fieldId && c.pointsCost > 0
   );
-  return paidCourse?.id;
+  // نفس المسار أولاً (flutter-basics ← flutter-advanced وليس rn-advanced في مجال mobile-dev)
+  const sameTrack = trackId
+    ? paidInField.find((c) => c.id.split('-')[0] === trackId)
+    : undefined;
+  return (sameTrack ?? paidInField[0])?.id;
 }
 
 /**
@@ -1628,11 +1657,16 @@ function _getRawChallengeRequiredCourseId(
 /**
  * ربط التحدي بالدورة المطلوبة حسب اللغة أو المعرّف
  * ⚡ إصلاح: إذا كانت الدورة مجانية (pointsCost === 0)
- *    يتم إعادة الربط تلقائياً بأول دورة مدفوعة في نفس المجال
+ *    يتم إعادة الربط تلقائياً بأول دورة تُفتح بالكوينات في نفس المجال
  */
 export function getChallengeRequiredCourseId(
   challenge: Challenge
 ): string | undefined {
+  // تحديات التوسعة: دورتها نفسها (المبتدئة مفتوحة دائماً → بلا قفل)
+  if (challenge.afterLessonId) {
+    const own = ALL_COURSES.find((c) => c.id === challenge.courseId);
+    return own && own.difficulty !== 'beginner' ? own.id : undefined;
+  }
   const rawCourseId = _getRawChallengeRequiredCourseId(challenge);
   if (!rawCourseId) return undefined;
 
@@ -1641,9 +1675,12 @@ export function getChallengeRequiredCourseId(
   if (!course) return rawCourseId;
 
   if (course.pointsCost === 0) {
-    // الدورة مجانية → ابحث عن أول دورة مدفوعة في نفس المجال
-    const paidCourseId = _findFirstPaidCourseInField(course.fieldId);
-    return paidCourseId || undefined; // إذا لا توجد دورة مدفوعة → undefined (مجاني)
+    // الدورة مجانية → ابحث عن أول دورة تُفتح بالكوينات في نفس المجال
+    const paidCourseId = _findFirstPaidCourseInField(
+      course.fieldId,
+      course.id.split('-')[0]
+    );
+    return paidCourseId || undefined; // لا توجد دورة تُفتح بالكوينات → undefined (مجاني)
   }
 
   return rawCourseId;

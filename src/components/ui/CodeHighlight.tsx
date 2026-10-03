@@ -11,6 +11,16 @@ interface CodeHighlightProps {
   language: string;
 }
 
+/**
+ * نص عربي داخل سطر كود LTR: خوارزمية الاتجاه الثنائي تُعيد ترتيب ما حوله
+ * (مثلاً 'قلم', 1.5, 3 تظهر بترتيب معكوس). علامتا العزل FSI/PDI (غير مرئيتين)
+ * تُبقيان موضع النص ثابتاً. على الويب فقط حيث تحققنا من المشكلة والحل.
+ */
+const ARABIC = /[؀-ۿ]/;
+function isolateRtl(token: string): string {
+  return Platform.OS === 'web' && ARABIC.test(token) ? `⁨${token}⁩` : token;
+}
+
 // ألوان Syntax Highlighting
 const SYNTAX_COLORS = {
   keyword: '#c678dd', // البنفسجي - const, let, function, class
@@ -263,7 +273,7 @@ export default function CodeHighlight({ code, language }: CodeHighlightProps) {
               key={`${lineIndex}-string-${currentPos}`}
               style={{ color: SYNTAX_COLORS.string }}
             >
-              {stringMatch[0]}
+              {isolateRtl(stringMatch[0])}
             </Text>
           );
           currentPos += stringMatch[0].length;
@@ -376,11 +386,14 @@ export default function CodeHighlight({ code, language }: CodeHighlightProps) {
           return true;
         }
 
-        // أي شيء آخر
+        // أي شيء آخر — نص غير ASCII (العربية مثلاً) يُجمع كتلة واحدة مع المسافات بين كلماته:
+        // عنصر لكل حرف يمنع المتصفح من وصل الحروف العربية فتظهر متقطعة
+        const otherMatch = remaining.match(/^[^\x00-\x7F]+(?:\s+[^\x00-\x7F]+)*/);
+        const other = otherMatch ? otherMatch[0] : remaining[0];
         tokens.push(
-          <Text key={`${lineIndex}-other-${currentPos}`}>{remaining[0]}</Text>
+          <Text key={`${lineIndex}-other-${currentPos}`}>{other}</Text>
         );
-        currentPos += 1;
+        currentPos += other.length;
         return true;
       };
 

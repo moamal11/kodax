@@ -31,8 +31,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useResponsiveLayout } from '@/hooks';
 import * as WebBrowser from 'expo-web-browser';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { processAuthDeepLink } from '@/services/deepLinkAuthService';
+import { useLocalSearchParams } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -40,10 +40,14 @@ const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const params = useLocalSearchParams();
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // بعد نجاح signIn/signUp تبقى الواجهة في حالة تحميل حتى يُكمل AuthContext
+  // التحقق من الجلسة والملف الشخصي، ثم ينقل NavigationGuard المستخدم للتطبيق.
+  const { session, isAuthenticated } = useAuth();
+  const verifyingSession = !!session?.user && !isAuthenticated;
+  const busy = loading || verifyingSession;
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -88,9 +92,15 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       if (isSignUp) {
+        console.log('[AUTH] signUp started');
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
+        });
+        console.log('[AUTH] signUp result:', {
+          error: error?.message ?? null,
+          hasUser: !!data?.user,
+          hasSession: !!data?.session,
         });
 
         if (error) throw error;
@@ -106,9 +116,15 @@ export default function LoginScreen() {
           // Navigation will happen automatically via auth listener
         }
       } else {
+        console.log('[AUTH] signIn started');
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
+        });
+        console.log('[AUTH] signIn result:', {
+          error: error?.message ?? null,
+          hasUser: !!data?.user,
+          hasSession: !!data?.session,
         });
 
         if (error) throw error;
@@ -118,6 +134,7 @@ export default function LoginScreen() {
         }
       }
     } catch (error: any) {
+      console.warn('[AUTH] auth error:', error?.message);
       let errorMessage = 'حدث خطأ أثناء العملية';
 
       if (error.message?.includes('Invalid login credentials')) {
@@ -173,43 +190,8 @@ export default function LoginScreen() {
         );
 
         if (result.type === 'success') {
-          // Prefer global deep-link listener in _layout to process tokens.
-          // Here we only wait for session; if it doesn't appear, process URL once as fallback.
-          let activeSession = null;
-
-          for (let attempt = 0; attempt < 20; attempt++) {
-            const {
-              data: { session: currentSession },
-            } = await supabase.auth.getSession();
-
-            if (currentSession) {
-              activeSession = currentSession;
-              break;
-            }
-
-            await new Promise((r) => setTimeout(r, 200));
-          }
-
-          if (!activeSession && result.url) {
-            const deepLinkResult = await processAuthDeepLink(result.url);
-            if (!deepLinkResult.success) {
-              throw new Error(deepLinkResult.error || 'فشل معالجة تسجيل الدخول');
-            }
-
-            const {
-              data: { session: fallbackSession },
-            } = await supabase.auth.getSession();
-
-            activeSession = fallbackSession;
-          }
-
-          if (!activeSession) {
-            throw new Error('تعذر تثبيت جلسة تسجيل الدخول');
-          }
-
-          // Don't navigate immediately here.
-          // NavigationGuard in app/_layout.tsx will redirect only after
-          // AuthContext finishes full verification (session + profile).
+          // Session setup is centralized in deep-link listener + AuthContext.
+          // Do not add local auth listeners here to avoid race conditions.
           return;
         } else if (result.type === 'cancel') {
           throw new Error('تم إلغاء عملية تسجيل الدخول');
@@ -377,7 +359,7 @@ export default function LoginScreen() {
                     onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    editable={!loading}
+                    editable={!busy}
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
                   />
@@ -418,7 +400,7 @@ export default function LoginScreen() {
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
-                    editable={!loading}
+                    editable={!busy}
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                   />
@@ -438,9 +420,9 @@ export default function LoginScreen() {
 
               {/* Submit Button */}
               <TouchableOpacity
-                style={[styles.submitButton, loading && { opacity: 0.6 }]}
+                style={[styles.submitButton, busy && { opacity: 0.6 }]}
                 onPress={handleEmailAuth}
-                disabled={loading}
+                disabled={busy}
                 activeOpacity={0.85}
               >
                 <LinearGradient
@@ -449,7 +431,7 @@ export default function LoginScreen() {
                   end={{ x: 1, y: 0 }}
                   style={styles.submitInner}
                 >
-                  {loading ? (
+                  {busy ? (
                     <ActivityIndicator color="#fff" size="small" />
                   ) : (
                     <>
@@ -473,7 +455,7 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={styles.googleButton}
                 onPress={handleGoogleSignIn}
-                disabled={loading}
+                disabled={busy}
                 activeOpacity={0.7}
               >
                 <View style={styles.googleInner}>

@@ -11,6 +11,9 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug"
+      },
+      "env": {
+        "EXPO_PUBLIC_ADMOB_USE_TEST_ADS": "true"
       }
     },
     "preview": {
@@ -19,6 +22,9 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_ADMOB_USE_TEST_ADS": "true"
       }
     },
     "production": {
@@ -27,6 +33,9 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_ADMOB_USE_TEST_ADS": "false"
       }
     }
   },

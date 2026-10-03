@@ -25,8 +25,8 @@ export type BadgeConditionType =
   | 'first_xp'
   | 'streak_days'
   | 'comeback_streak'
-  | 'first_purchase'
-  | 'premium_subscriber'
+  | 'first_coin_unlock'
+  | 'coins_earned'
   | 'courses_unlocked';
 
 export interface BadgeDefinition {
@@ -544,28 +544,29 @@ const streakBadges: BadgeDefinition[] = [
 
 // ===== شارات الاقتصاد =====
 const economyBadges: BadgeDefinition[] = [
+  // ملاحظة: المعرّفات (id) محفوظة كما هي حتى لا يفقد المستخدمون شاراتهم المكتسبة سابقاً.
   {
     id: 'first_purchase',
-    name: 'First Investment',
-    nameAr: 'أول استثمار',
-    description: 'Make your first purchase',
-    descriptionAr: 'قم بأول عملية شراء',
-    icon: 'shopping-cart',
+    name: 'First Unlock',
+    nameAr: 'أول فتح',
+    description: 'Unlock your first course with earned coins',
+    descriptionAr: 'افتح أول دورة بالكوينات التي جمعتها',
+    icon: 'lock-open',
     rarity: 'common',
-    conditionType: 'first_purchase',
+    conditionType: 'first_coin_unlock',
     conditionValue: 1,
     xpReward: 25,
   },
   {
     id: 'premium_member',
-    name: 'Premium Member',
-    nameAr: 'عضو مميز',
-    description: 'Subscribe to premium',
-    descriptionAr: 'اشترك في العضوية المميزة',
-    icon: 'workspace-premium',
+    name: 'Coin Collector',
+    nameAr: 'جامع الكوينات',
+    description: 'Earn 500 coins from learning',
+    descriptionAr: 'اجمع 500 كوين من التعلم',
+    icon: 'savings',
     rarity: 'epic',
-    conditionType: 'premium_subscriber',
-    conditionValue: 1,
+    conditionType: 'coins_earned',
+    conditionValue: 500,
     xpReward: 100,
   },
   {

@@ -19,6 +19,11 @@ export interface CodeExecutionResult {
   error?: string;
   executionTime?: number;
   memory?: number;
+  /** فشل الاتصال بخادم التنفيذ أو انتهت مهلته (ليس خطأ في كود المستخدم) */
+  serviceError?: boolean;
+  timedOut?: boolean;
+  /** رفض Wandbox اسم المترجم (أُزيل أو تغيّر إصداره) */
+  compilerRejected?: boolean;
   logs?: Array<{
     type: 'log' | 'error' | 'warn';
     message: string;
@@ -30,17 +35,17 @@ export interface CodeExecutionResult {
 // https://wandbox.org/api/list.json
 const WANDBOX_COMPILERS: Record<string, string> = {
   python: 'cpython-3.12.7',
-  javascript: 'nodejs-20.11.1',
+  javascript: 'nodejs-20.17.0',
   java: 'openjdk-jdk-22+36',
   cpp: 'gcc-head',
   c: 'gcc-head-c',
   csharp: 'mono-6.12.0.199',
   php: 'php-8.3.12',
-  ruby: 'ruby-3.4.1',
+  ruby: 'ruby-3.4.9',
   go: 'go-1.23.2',
   rust: 'rust-1.82.0',
   swift: 'swift-6.0.1',
-  dart: 'dart-3.5.4', // may not be available — handled gracefully
+  // dart: غير متوفر على Wandbox — تحديات Dart تُتحقق بنيوياً في challengeValidator
   lua: 'lua-5.4.7',
   perl: 'perl-5.42.0',
   r: 'r-4.4.1',
@@ -78,6 +83,46 @@ const FILE_EXT: Record<string, string> = {
   javascript: 'js',
   react: 'jsx',
 };
+
+// عائلة كل مترجم على Wandbox — تُستخدم إذا اختفى الإصدار المحدد أعلاه
+// (حدث فعلاً: أُزيل nodejs-20.11.1 فكانت كل تشغيلات JavaScript تفشل).
+const COMPILER_FAMILY: Record<string, string> = {
+  python: 'cpython-3.',
+  javascript: 'nodejs-',
+  java: 'openjdk-jdk-',
+  cpp: 'gcc-',
+  typescript: 'typescript-',
+  sql: 'sqlite-',
+  ruby: 'ruby-',
+  php: 'php-',
+  go: 'go-',
+  rust: 'rust-',
+};
+
+let resolvedCompilers: Record<string, string> | null = null;
+
+async function resolveCompilerFromList(lang: string): Promise<string | null> {
+  if (!COMPILER_FAMILY[lang]) return null;
+  try {
+    if (!resolvedCompilers) {
+      const res = await fetch('https://wandbox.org/api/list.json');
+      if (!res.ok) return null;
+      const list: Array<{ name: string }> = await res.json();
+      const found: Record<string, string> = {};
+      for (const [l, prefix] of Object.entries(COMPILER_FAMILY)) {
+        const names = list
+          .map((c) => c.name)
+          .filter((n) => n.startsWith(prefix) && !n.includes('head'))
+          .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        if (names.length) found[l] = names[names.length - 1];
+      }
+      resolvedCompilers = found;
+    }
+    return resolvedCompilers[lang] ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // ===== Main entry point =====
 export async function executeCode(
@@ -117,20 +162,14 @@ export async function executeCode(
 
     const result = await executeWandbox(request, compiler, startTime);
 
-    // If Node.js compiler is not available on Wandbox, retry with TypeScript
-    if (
-      !result.success &&
-      lang === 'javascript' &&
-      compiler !== WANDBOX_COMPILERS['typescript']
-    ) {
-      const tsCompiler = WANDBOX_COMPILERS['typescript'];
-      if (tsCompiler) {
-        const retryResult = await executeWandbox(
-          request,
-          tsCompiler,
-          startTime
-        );
-        if (retryResult.success) return retryResult;
+    // إذا رفض Wandbox اسم المترجم (أُزيل أو تغيّر إصداره) نختار أحدث إصدار
+    // من نفس العائلة. (سابقاً كان JavaScript يُعاد تشغيله بمترجم TypeScript،
+    // فتظهر أخطاء tsc كأنها مخرجات البرنامج.)
+    if (result.compilerRejected) {
+      const family = lang === 'js' ? 'javascript' : lang;
+      const fallback = await resolveCompilerFromList(family);
+      if (fallback && fallback !== compiler) {
+        return await executeWandbox(request, fallback, startTime);
       }
     }
 
@@ -189,6 +228,9 @@ async function executeWandbox(
       );
       return {
         success: false,
+        serviceError: true,
+        // Wandbox يرد بـ 500 "Unknown compiler" عند إزالة إصدار المترجم
+        compilerRejected: /unknown compiler/i.test(body),
         error: `خطأ من خادم التنفيذ (${response.status}):\n${body.slice(0, 300) || response.statusText || 'خطأ غير معروف'}`,
         logs: [
           {
@@ -208,9 +250,12 @@ async function executeWandbox(
     const compilerOutput = data.compiler_output || '';
     const status = data.status;
 
-    // Combine outputs
-    const output = programOutput || compilerOutput || '';
-    const errorText = programError || compilerError || '';
+    // مخرجات البرنامج فقط — رسائل المترجم (أخطاء/تحذيرات) ليست مخرجات
+    // (كانت رسائل tsc/gcc تُعامل كمخرجات وتُقارن بالنتيجة المتوقعة)
+    const output = programOutput;
+    const errorText =
+      [compilerError, programError].filter(Boolean).join('\n') ||
+      (status !== '0' ? compilerOutput : '');
     // Only treat as error if exit status is non-zero OR there's a real error with no output
     // Warnings in stderr should NOT fail the execution if there is valid output
     const isRealError =
@@ -250,6 +295,8 @@ async function executeWandbox(
     if (fetchError.name === 'AbortError') {
       return {
         success: false,
+        serviceError: true,
+        timedOut: true,
         error:
           'انتهت مهلة الاتصال بخادم التنفيذ (20 ثانية).\nتأكد من اتصالك بالإنترنت وحاول مرة أخرى.',
         logs: [
@@ -263,6 +310,7 @@ async function executeWandbox(
     }
     return {
       success: false,
+      serviceError: true,
       error: `فشل الاتصال بخادم التنفيذ:\n${fetchError.message || 'تحقق من اتصال الإنترنت'}`,
       logs: [
         {

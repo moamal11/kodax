@@ -62,7 +62,7 @@ function validateChallenge(challenge: any): ValidationResult {
       // محاولة parse JavaScript code
       new Function(challenge.solution);
     } catch (e) {
-      issues.push(`❌ الحل يحتوي على syntax error: ${e.message}`);
+      issues.push(`❌ الحل يحتوي على syntax error: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 

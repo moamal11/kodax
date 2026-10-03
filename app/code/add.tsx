@@ -56,6 +56,16 @@ import { useAuth } from '../_layout';
 import { useResponsiveLayout } from '@/hooks';
 import { tokenizeCode, Token, TokenType } from '@/utils/syntaxHighlighter';
 import { createSnippet, updateSnippet } from '@/services/codeFeedService';
+import AsyncStorage from '@/lib/platformStorage';
+
+// قواعد النشر: الأكواد والمشاريع المنشورة يراها ويشغّلها الآخرون
+const PUBLISH_RULES_KEY = '@kodax_publish_rules_accepted_v1';
+const PUBLISH_RULES = [
+  'لا تنشر صفحات تطلب كلمات مرور أو بيانات دفع أو معلومات شخصية.',
+  'لا كود ضار أو مخفي، ولا محتوى مسيء أو مخالف.',
+  'احترم حقوق الآخرين ولا تنشر عملاً ليس لك دون إذن.',
+  'المحتوى المخالف يُخفى بعد البلاغات وقد يُحذف.',
+];
 import { executeCode } from '@/services/codeExecution';
 import { WebView } from 'react-native-webview';
 import MobileWebEditor, {
@@ -1446,6 +1456,21 @@ export default function AddCodeScreen() {
   const [pubTitle, setPubTitle] = useState(editTitle);
   const [pubDesc, setPubDesc] = useState(editDesc);
   const [publishing, setPublishing] = useState(false);
+  const [rulesAccepted, setRulesAccepted] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(PUBLISH_RULES_KEY)
+      .then((v: string | null) => setRulesAccepted(v === '1'))
+      .catch(() => {});
+  }, []);
+
+  const toggleRules = useCallback(() => {
+    setRulesAccepted((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(PUBLISH_RULES_KEY, next ? '1' : '0').catch(() => {});
+      return next;
+    });
+  }, []);
   const [saving, setSaving] = useState(false);
 
   // UI
@@ -2299,6 +2324,26 @@ export default function AddCodeScreen() {
                   <Text style={s.pubPreviewLines}>{lineCount} سطر</Text>
                 </View>
 
+                <TouchableOpacity
+                  style={s.rulesBox}
+                  onPress={toggleRules}
+                  activeOpacity={0.8}
+                >
+                  <View style={s.rulesHeader}>
+                    <Ionicons
+                      name={rulesAccepted ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={rulesAccepted ? '#10b981' : '#9ca3af'}
+                    />
+                    <Text style={s.rulesTitle}>أوافق على قواعد النشر</Text>
+                  </View>
+                  {PUBLISH_RULES.map((rule) => (
+                    <Text key={rule} style={s.rulesItem}>
+                      • {rule}
+                    </Text>
+                  ))}
+                </TouchableOpacity>
+
                 <View style={s.pubActions}>
                   <TouchableOpacity
                     style={s.discardBtn}
@@ -2328,9 +2373,12 @@ export default function AddCodeScreen() {
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
-                    style={[s.pubDialogBtn, !pubTitle.trim() && s.disabled]}
+                    style={[
+                      s.pubDialogBtn,
+                      (!pubTitle.trim() || !rulesAccepted) && s.disabled,
+                    ]}
                     onPress={handlePublish}
-                    disabled={!pubTitle.trim() || publishing}
+                    disabled={!pubTitle.trim() || !rulesAccepted || publishing}
                   >
                     {publishing ? (
                       <ActivityIndicator size="small" color="#fff" />
@@ -2368,6 +2416,28 @@ export default function AddCodeScreen() {
 const MONO = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 
 const s = StyleSheet.create({
+  rulesBox: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+    gap: 4,
+  },
+  rulesHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  rulesTitle: { color: '#e5e7eb', fontSize: 14, fontWeight: '700' },
+  rulesItem: {
+    color: '#9ca3af',
+    fontSize: 12,
+    textAlign: 'right',
+    lineHeight: 18,
+  },
   flex: { flex: 1 },
   safe: { flex: 1, backgroundColor: '#0f0f1e' },
   container: { flex: 1, backgroundColor: '#0f0f1e' },

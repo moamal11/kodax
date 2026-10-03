@@ -1,11 +1,11 @@
 /**
  * useProgressWithPoints Hook
- * دمج نظام التقدم مع نظام النقاط + فحص الشارات
+ * دمج نظام التقدم مع مكافآت الكوينات (من السيرفر) + فحص الشارات
  */
 
 import { useCallback } from 'react';
 import { progressService } from '@/services/progressService';
-import { usePoints } from '@/contexts/PointsContext';
+import { coinService } from '@/services/coinService';
 import { badgeService } from '@/services/badgeService';
 import { notificationService } from '@/services/notificationService';
 
@@ -17,7 +17,6 @@ export function setCheckBadgesFn(fn: ((extra?: any) => Promise<any>) | null) {
 }
 
 export function useProgressWithPoints() {
-  const { addPoints, REWARDS } = usePoints();
 
   /**
    * إكمال درس مع منح النقاط + فحص الشارات
@@ -31,9 +30,6 @@ export function useProgressWithPoints() {
       );
 
       if (result.success) {
-        // منح نقاط إضافية من نظام النقاط
-        await addPoints(REWARDS.COMPLETE_LESSON, `إكمال الدرس: ${lessonId}`);
-
         // إشعار إكمال الدرس
         await notificationService.notifyLessonCompleted(lessonId, lessonXP);
 
@@ -51,7 +47,7 @@ export function useProgressWithPoints() {
 
       return result;
     },
-    [addPoints, REWARDS]
+    []
   );
 
   /**
@@ -73,15 +69,8 @@ export function useProgressWithPoints() {
       );
 
       if (result.success) {
-        // منح نقاط حسب صعوبة التحدي
-        let pointsReward = REWARDS.COMPLETE_CHALLENGE_EASY;
-        if (difficulty === 'medium') {
-          pointsReward = REWARDS.COMPLETE_CHALLENGE_MEDIUM;
-        } else if (difficulty === 'hard') {
-          pointsReward = REWARDS.COMPLETE_CHALLENGE_HARD;
-        }
-
-        await addPoints(pointsReward, `إكمال التحدي: ${challengeId}`);
+        // مكافأة كوينات (السيرفر يتحقق من الإكمال ويمنع التكرار)
+        await coinService.rewardChallenge(challengeId, difficulty);
 
         // تحديث عدادات الشارات
         // سلسلة التحديات
@@ -117,7 +106,7 @@ export function useProgressWithPoints() {
 
       return result;
     },
-    [addPoints, REWARDS]
+    []
   );
 
   /**
@@ -125,8 +114,8 @@ export function useProgressWithPoints() {
    */
   const completeCourse = useCallback(
     async (courseId: string) => {
-      // إضافة للدورات المكتملة
-      await addPoints(REWARDS.COMPLETE_COURSE, `إكمال الدورة: ${courseId}`);
+      // مكافأة إكمال الدورة (السيرفر يتحقق من إكمال كل الدروس)
+      await coinService.rewardCourseCompletion(courseId);
 
       // إشعار
       await notificationService.notifyCourseCompleted(courseId);
@@ -138,7 +127,7 @@ export function useProgressWithPoints() {
 
       return { success: true };
     },
-    [addPoints, REWARDS]
+    []
   );
 
   /**

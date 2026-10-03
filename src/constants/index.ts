@@ -7,7 +7,7 @@ export const SUPABASE_ANON_KEY =
 export const APP_NAME = 'Kodax';
 export const APP_VERSION = '1.0.0';
 
-// API Configuration (لاحقاً سنضيف GPT-5.2)
+// API Configuration (Edge Function ai-chat — Google Gemini على السيرفر)
 export const AI_API_ENDPOINT = process.env.EXPO_PUBLIC_AI_API_ENDPOINT || '';
 
 // Gamification Constants

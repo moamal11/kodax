@@ -1093,13 +1093,13 @@ class SQLInjectionDemo:
         فحص المدخلات للأنماط المشبوهة
         """
         suspicious_patterns = [
-            r"('\s*OR\s*')",
+            r"('\\s*OR\\s*')",
             r"(--)",
             r"(;)",
-            r"(UNION\s+SELECT)",
-            r"(DROP\s+TABLE)",
-            r"(INSERT\s+INTO)",
-            r"(DELETE\s+FROM)",
+            r"(UNION\\s+SELECT)",
+            r"(DROP\\s+TABLE)",
+            r"(INSERT\\s+INTO)",
+            r"(DELETE\\s+FROM)",
         ]
         
         for pattern in suspicious_patterns:
@@ -1220,7 +1220,7 @@ class XSSProtection:
         cleaned = re.sub(pattern, '', text)
         
         # إزالة الأحداث مثل onclick, onerror
-        event_pattern = r'\s+on\w+\s*=\s*["\'][^"\']*["\']'
+        event_pattern = r'\\s+on\\w+\\s*=\\s*["\\'][^"\\']*["\\']'
         cleaned = re.sub(event_pattern, '', cleaned, flags=re.IGNORECASE)
         
         return cleaned
@@ -1232,14 +1232,14 @@ class XSSProtection:
         """
         patterns = {
             'script_tag': r'<script[^>]*>.*?</script>',
-            'event_handler': r'\s+on\w+\s*=',
-            'javascript_url': r'javascript\s*:',
-            'data_url': r'data\s*:',
-            'vbscript': r'vbscript\s*:',
-            'expression': r'expression\s*\(',
+            'event_handler': r'\\s+on\\w+\\s*=',
+            'javascript_url': r'javascript\\s*:',
+            'data_url': r'data\\s*:',
+            'vbscript': r'vbscript\\s*:',
+            'expression': r'expression\\s*\\(',
             'iframe': r'<iframe[^>]*>',
             'object_embed': r'<(object|embed)[^>]*>',
-            'svg_event': r'<svg[^>]*on\w+',
+            'svg_event': r'<svg[^>]*on\\w+',
             'img_onerror': r'<img[^>]*onerror',
         }
         
@@ -1645,15 +1645,15 @@ print(detect_sqli("1; DROP TABLE"))     # True`,
 
 def detect_sqli(input_string):
     patterns = [
-        r"('\s*OR\s*')|('\s*or\s*')",
+        r"('\\s*OR\\s*')|('\\s*or\\s*')",
         r"(--)",
-        r"(;\s*(DROP|SELECT|INSERT|UPDATE|DELETE|ALTER|CREATE)\b)",
-        r"(UNION\s+SELECT)",
-        r"(DROP\s+TABLE)",
-        r"(INSERT\s+INTO)",
-        r"(SELECT\s+\*)",
-        r"(1\s*=\s*1)",
-        r"(admin\s*'--)"
+        r"(;\\s*(DROP|SELECT|INSERT|UPDATE|DELETE|ALTER|CREATE)\\b)",
+        r"(UNION\\s+SELECT)",
+        r"(DROP\\s+TABLE)",
+        r"(INSERT\\s+INTO)",
+        r"(SELECT\\s+\\*)",
+        r"(1\\s*=\\s*1)",
+        r"(admin\\s*'--)"
     ]
     
     for pattern in patterns:

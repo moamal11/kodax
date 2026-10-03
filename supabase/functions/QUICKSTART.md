@@ -17,7 +17,7 @@
 ### 1️⃣ إضافة API Key
 
 ```bash
-supabase secrets set OPENAI_API_KEY=sk-proj-YOUR_KEY
+supabase secrets set GEMINI_API_KEY=<مفتاح Gemini>
 ```
 
 ### 2️⃣ Deploy
@@ -96,7 +96,7 @@ console.log(data.reply);
 ## 🔗 روابط مفيدة
 
 - 📖 [README الكامل](./ai-chat/README.md)
-- 🔑 [OpenAI API Keys](https://platform.openai.com/api-keys)
+- 🔑 [Gemini API Keys](https://aistudio.google.com/apikey)
 - 📚 [Supabase Edge Functions Docs](https://supabase.com/docs/guides/functions)
 
 ---

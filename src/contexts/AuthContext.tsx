@@ -44,7 +44,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { AppState, Platform } from 'react-native';
-import { Session, User } from '@supabase/supabase-js';
+import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { clearAllKodaxData } from '@/utils/clearUserData';
 import { badgeService } from '@/services/badgeService';
@@ -52,6 +52,7 @@ import { notificationService } from '@/services/notificationService';
 import { progressService } from '@/services/progressService';
 import { hybridSyncService } from '@/services/hybridSyncService';
 import { clearBroadcastCache } from '@/services/broadcastService';
+import { isOAuthExchangeInProgress } from '@/services/deepLinkAuthService';
 
 // ===== Types =====
 
@@ -110,8 +111,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const initialSessionEventSeenRef = useRef(false);
   // Version counter: كل عملية جديدة تلغي العمليات القديمة
   const processingVersionRef = useRef(0);
-  // منع تكرار SIGNED_IN السريع (نفس المستخدم خلال 3 ثوانٍ)
-  const lastSignedInRef = useRef<{ uid: string; time: number } | null>(null);
 
   // ===== Helper: مسح جميع البيانات المحلية =====
   const clearLocalData = useCallback(async () => {
@@ -174,7 +173,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const idSuffix = user.id.replace(/-/g, '').substring(0, 6);
         const generatedUsername = `${emailBase}_${idSuffix}`.toLowerCase();
 
-        await supabase.from('profiles').insert({
+        // supabase-js يُرجع الخطأ ولا يرميه — نرميه هنا ليصل لمعالجة الأخطاء أدناه
+        const { error: insertError } = await supabase.from('profiles').insert({
           id: user.id,
           username: generatedUsername,
           full_name: name || generatedUsername,
@@ -183,7 +183,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           level: 1,
           streak_days: 0,
         });
-        console.log('[Auth] ✅ Profile created for Google OAuth user');
+        if (insertError) throw insertError;
+        console.log('[AUTH] ✅ Profile created (client fallback)');
       } catch (error: any) {
         if (
           error?.message?.includes('duplicate') ||
@@ -195,7 +196,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           await new Promise((r) => setTimeout(r, 500));
           return ensureProfile(user, retries - 1);
         }
-        console.warn('[Auth] ensureProfile failed:', error?.message);
+        // لا نمنع الدخول: فشل إنشاء الملف لا يعني فشل تسجيل الدخول
+        console.warn(
+          '[AUTH] auth error: ensureProfile failed:',
+          error?.message
+        );
       }
     },
     []
@@ -207,11 +212,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('full_name')
+          .select('full_name, username')
           .eq('id', uid)
           .single();
 
         if (data?.full_name) return data.full_name;
+        if (data?.username) return data.username;
 
         if (retries > 0) {
           await new Promise((r) => setTimeout(r, 400));
@@ -288,24 +294,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // === Step 1: Check token expiry — proactively refresh ===
       const expiresAt = newSession.expires_at;
       if (expiresAt && expiresAt * 1000 < Date.now()) {
-        console.log('[Auth] Token expired, refreshing...');
+        console.log('[AUTH] Token expired, refreshing...');
         try {
           const { data, error } = await supabase.auth.refreshSession();
           if (processingVersionRef.current !== version || !mountedRef.current)
             return false;
 
           if (error || !data?.session) {
-            console.warn('[Auth] ❌ Token refresh failed:', error?.message);
+            console.warn('[AUTH] ❌ Token refresh failed:', error?.message);
             await signOut();
             return false;
           }
           activeSession = data.session;
           setSession(activeSession);
-          console.log('[Auth] ✅ Token refreshed successfully');
+          console.log('[AUTH] ✅ Token refreshed successfully');
         } catch (err) {
           if (processingVersionRef.current !== version || !mountedRef.current)
             return false;
-          console.warn('[Auth] ❌ Token refresh error:', err);
+          console.warn('[AUTH] ❌ Token refresh error:', err);
           await signOut();
           return false;
         }
@@ -315,6 +321,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return false;
 
       // === Step 2: Ensure profile exists ===
+      console.log('[AUTH] profile loading');
       await ensureProfile(activeSession.user);
       if (processingVersionRef.current !== version || !mountedRef.current)
         return false;
@@ -330,16 +337,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // === Step 4: Fetch display name ===
       const name = await fetchFullName(activeSession.user.id);
+      const metadata = activeSession.user.user_metadata || {};
+      const metadataName =
+        metadata.full_name || metadata.name || metadata.display_name || '';
+      const emailPrefix = activeSession.user.email?.split('@')[0] || '';
+      const resolvedName = name || metadataName || emailPrefix;
       if (processingVersionRef.current !== version || !mountedRef.current)
         return false;
-      if (name) setFullName(name);
+      setFullName(resolvedName);
+      console.log('[AUTH] profile loaded');
 
       // === Step 5: All verified — mark as authenticated ===
       setProfileVerified(true);
       setAuthVersion((v) => v + 1);
       console.log(
-        '[Auth] ✅ Session fully verified for:',
-        activeSession.user.email
+        '[AUTH] session verified → navigating to app, user=',
+        activeSession.user.id
       );
       return true;
     },
@@ -351,20 +364,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
     mountedRef.current = true;
     initialSessionEventSeenRef.current = false;
 
-    // Safety timeout: if init takes more than 10 seconds, force complete
-    const safetyTimer = setTimeout(() => {
-      if (!initCompleteRef.current && mountedRef.current) {
-        console.warn('[Auth] ⚠️ Safety timeout — forcing init complete');
-        markInitComplete();
-      }
-    }, 10000);
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+    // ⚠️ لا تنتظر (await) أي استدعاء Supabase داخل callback الخاص بـ
+    // onAuthStateChange. مكتبة auth-js تُطلق INITIAL_SESSION و SIGNED_IN
+    // (عند استعادة الجلسة) وهي تمسك قفلها الداخلي، وتنتظر انتهاء الـcallback.
+    // أي استعلام (profiles / rpc / refreshSession) يحتاج نفس القفل عبر
+    // getSession() → انتظار دائري → deadlock: الجلسة لا تُعتمد أبداً، وكل
+    // signIn/signUp/signOut لاحق يعلق. لذلك الـcallback يعود فوراً والمعالجة
+    // تتم خارج القفل. (processingVersionRef يلغي المعالجات القديمة.)
+    const handleAuthEvent = async (
+      event: AuthChangeEvent,
+      newSession: Session | null
+    ) => {
       if (!mountedRef.current) return;
 
-      console.log('[Auth] Event:', event, newSession?.user?.email ?? 'no user');
+      console.log(
+        '[AUTH] session changed:',
+        event,
+        newSession?.user ? `user=${newSession.user.id}` : 'no session'
+      );
 
       if (event === 'INITIAL_SESSION') {
         initialSessionEventSeenRef.current = true;
@@ -375,23 +392,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
         markInitComplete();
       } else if (event === 'SIGNED_IN' && newSession) {
         // ---- New sign-in (e.g., after Google OAuth deep link) ----
-        // Deduplicate: skip if same user within 3 seconds
-        const now = Date.now();
-        const uid = newSession.user.id;
-        if (
-          lastSignedInRef.current?.uid === uid &&
-          now - lastSignedInRef.current.time < 3000
-        ) {
-          markInitComplete();
-          return;
-        }
-        lastSignedInRef.current = { uid, time: now };
-
+        // Always process SIGNED_IN.
+        // Supabase may emit multiple events in native OAuth flows and skipping
+        // can leave profileVerified=false (user appears half-authenticated).
         const version = ++processingVersionRef.current;
         await processSession(newSession, version);
         markInitComplete();
       } else if (event === 'SIGNED_OUT') {
         // ---- Signed out ----
+        if (isOAuthExchangeInProgress()) {
+          console.log(
+            '[AUTH] Ignoring transient SIGNED_OUT during OAuth exchange'
+          );
+          return;
+        }
         processingVersionRef.current++;
         setSession(null);
         setProfileVerified(false);
@@ -402,40 +416,45 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (newSession) setSession(newSession);
         markInitComplete();
       }
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      // يعود فوراً حتى تُحرّر auth-js قفلها (انظر الشرح أعلاه)
+      handleAuthEvent(event, newSession).catch((err) => {
+        console.warn('[AUTH] auth error while handling', event, err?.message);
+        markInitComplete();
+      });
     });
 
-    // Native fallback: in some Expo mobile cases INITIAL_SESSION may be delayed/missed.
-    // Bootstrap explicitly from persisted storage to avoid false logged-out UI.
-    const nativeBootstrapTimer = setTimeout(async () => {
-      if (
-        Platform.OS === 'web' ||
-        initialSessionEventSeenRef.current ||
-        initCompleteRef.current ||
-        !mountedRef.current
-      ) {
-        return;
-      }
-
+    // Immediate bootstrap from persisted session without timers.
+    (async () => {
       try {
-        console.warn(
-          '[Auth] INITIAL_SESSION not received yet on native, bootstrapping via getSession()'
-        );
-        const version = ++processingVersionRef.current;
+        if (initCompleteRef.current || !mountedRef.current) return;
         const {
           data: { session: persistedSession },
         } = await supabase.auth.getSession();
+        console.log(
+          '[AUTH] current session:',
+          persistedSession?.user ? `user=${persistedSession.user.id}` : 'none'
+        );
+
+        if (initialSessionEventSeenRef.current || initCompleteRef.current) {
+          return;
+        }
+
+        const version = ++processingVersionRef.current;
         await processSession(persistedSession, version);
       } catch (err) {
-        console.warn('[Auth] Native bootstrap getSession() failed:', err);
+        console.warn('[AUTH] Bootstrap getSession() failed:', err);
       } finally {
         markInitComplete();
       }
-    }, 1200);
+    })();
 
     return () => {
       mountedRef.current = false;
-      clearTimeout(safetyTimer);
-      clearTimeout(nativeBootstrapTimer);
       subscription.unsubscribe();
     };
   }, [processSession, markInitComplete]);
@@ -479,16 +498,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (!currentSession && session) {
           // Session disappeared from memory — try to recover
           console.log(
-            '[Auth] Session lost on foreground — attempting recovery'
+            '[AUTH] Session lost on foreground — attempting recovery'
           );
           const { data: refreshed } = await supabase.auth.refreshSession();
           if (refreshed?.session) {
             setSession(refreshed.session);
-            console.log('[Auth] ✅ Session recovered on foreground');
+            console.log('[AUTH] ✅ Session recovered on foreground');
           } else {
-            console.warn('[Auth] ❌ Session recovery failed — signing out');
-            await signOut();
-            return;
+            console.warn(
+              '[AUTH] ⚠️ Session recovery returned empty on foreground; keep state and wait for auth events'
+            );
           }
         }
       } catch (_e) {
@@ -509,7 +528,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       appStateSub?.remove();
     };
-  }, [session?.user?.id, checkBan, signOut]);
+  }, [session?.user?.id, checkBan]);
 
   // ===== Context Value =====
   // Key: isAuthenticated requires BOTH session AND profile verification

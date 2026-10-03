@@ -14,6 +14,7 @@ import {
 } from '@/services/hybridSyncService';
 import { getLessonsByCourse } from '@/constants/courseData';
 import { progressService } from '@/services/progressService';
+import { coinService } from '@/services/coinService';
 
 // مرجع لدالة فحص الشارات (يُعيّن من BadgeContext)
 let _checkBadgesRef: (() => Promise<any>) | null = null;
@@ -115,10 +116,14 @@ export function useHybridProgress({
     async (
       lessonId: string,
       xpReward: number,
-      quizScore?: number
+      quizScore?: number,
+      quizAnswer?: number | null
     ): Promise<{
       success: boolean;
       error?: string;
+      code?: string;
+      queued?: boolean;
+      xpAwarded?: number;
       alreadyCompleted?: boolean;
       levelUp?: boolean;
     }> => {
@@ -138,7 +143,8 @@ export function useHybridProgress({
         lessonId,
         courseId,
         xpReward,
-        quizScore ? Math.round(quizScore * 100) : undefined
+        quizScore ? Math.round(quizScore * 100) : undefined,
+        quizAnswer
       );
 
       if (!result.success) {
@@ -184,7 +190,7 @@ export function useHybridProgress({
         console.error('Error in post-lesson progress/badge update:', e);
       }
 
-      return { success: true, levelUp: false };
+      return { success: true, levelUp: false, xpAwarded: result.xpAwarded };
     },
     [courseId, userId, state.completedLessons]
   );
@@ -308,15 +314,16 @@ export function useCourseUnlock(
     if (!userId) return { success: false, error: 'غير مسجل' };
 
     setIsUnlocking(true);
-    const result = await hybridSyncService.unlockCourse(courseId, pointsCost);
+    const result = await coinService.unlockCourse(courseId);
 
     if (result.success) {
+      hybridSyncService.invalidateUnlock(courseId);
       setIsUnlocked(true);
     }
 
     setIsUnlocking(false);
     return result;
-  }, [courseId, userId, pointsCost]);
+  }, [courseId, userId]);
 
   return {
     isUnlocked,
@@ -374,24 +381,6 @@ export function useUserStats(userId?: string) {
       await hybridSyncService.setUser(userId);
       const data = await hybridSyncService.getUserXP();
       setStats(data);
-
-      // إذا عادت البيانات فارغة (XP=0, level=1, streak=0) احتمال ملف المستخدم لم يُنشأ بعد
-      // نحاول مرة أخرى بعد ثانية ونصف (تأخير الـ trigger في قاعدة البيانات)
-      if (!data || (data.xp === 0 && data.level === 1 && data.streak === 0)) {
-        setTimeout(async () => {
-          try {
-            const retryData = await hybridSyncService.getUserXP();
-            if (
-              retryData &&
-              (retryData.xp > 0 || retryData.level > 1 || retryData.streak > 0)
-            ) {
-              setStats(retryData);
-            }
-          } catch (_e) {
-            /* Silent */
-          }
-        }, 1500);
-      }
     } catch (err) {
       console.warn('[useUserStats] Error fetching stats:', err);
       // Keep previous stats — don't reset to defaults

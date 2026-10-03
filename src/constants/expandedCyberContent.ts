@@ -1773,7 +1773,7 @@ export const EXTRA_CYBER_CHALLENGES: Challenge[] = [
     pass`,
     solution: `def is_valid_email(email):
     import re
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
     return bool(re.match(pattern, email))`,
     hints: [
       'البريد يحتوي @ واحد فقط',
@@ -3943,7 +3943,7 @@ class PenTestReport:
         # أضف الثغرات الحرجة والعالية
         for f in self.report["findings"]:
             if f["severity"] in ["Critical", "High"]:
-                summary += f"• [{f['severity']}] {f['title']}\n"
+                summary += f"• [{f['severity']}] {f['title']}\\n"
         
         self.report["executive_summary"] = summary
         return summary
@@ -4395,25 +4395,25 @@ class SimpleIDS:
         # قواعد Signature-based
         self.signatures = {
             "sql_injection": [
-                r"'\s*OR\s*'1'\s*=\s*'1",
-                r"UNION\s+SELECT",
-                r"DROP\s+TABLE",
-                r"--\s*$",
+                r"'\\s*OR\\s*'1'\\s*=\\s*'1",
+                r"UNION\\s+SELECT",
+                r"DROP\\s+TABLE",
+                r"--\\s*$",
             ],
             "xss": [
                 r"<script[^>]*>",
                 r"javascript:",
-                r"onerror\s*=",
-                r"onload\s*=",
+                r"onerror\\s*=",
+                r"onload\\s*=",
             ],
             "command_injection": [
-                r";\s*cat\s+/etc/passwd",
-                r"\|\s*nc\s+",
-                r";\s*rm\s+-rf",
-                r"\$\(.*\)",
+                r";\\s*cat\\s+/etc/passwd",
+                r"\\|\\s*nc\\s+",
+                r";\\s*rm\\s+-rf",
+                r"\$\\(.*\\)",
             ],
             "path_traversal": [
-                r"\.\./\.\./",
+                r"\\.\\./\\.\\./",
                 r"etc/passwd",
                 r"windows/system32",
             ],
@@ -6111,11 +6111,11 @@ class CTFToolkit:
         """البحث عن flag"""
         import re
         patterns = [
-            r'flag\{[^}]+\}',
-            r'FLAG\{[^}]+\}',
-            r'ctf\{[^}]+\}',
-            r'CTF\{[^}]+\}',
-            r'picoCTF\{[^}]+\}',
+            r'flag\\{[^}]+\\}',
+            r'FLAG\\{[^}]+\\}',
+            r'ctf\\{[^}]+\\}',
+            r'CTF\\{[^}]+\\}',
+            r'picoCTF\\{[^}]+\\}',
         ]
         
         for p in patterns:
@@ -7567,7 +7567,7 @@ class PostExploitationDemo:
             },
             {
                 "name": "Web Shell",
-                "command": "echo '<?php system($_GET[\"c\"]); ?>' > /var/www/.hidden.php",
+                "command": "echo '<?php system($_GET[\\"c\\"]); ?>' > /var/www/.hidden.php",
                 "stealth": "Low",
                 "reliability": "Medium"
             },

@@ -20,17 +20,14 @@ import {
   ALL_COURSES,
   getLessonsByCourse,
   Lesson,
-  getFieldTotalPrice,
-  getFieldRemainingPrice,
-  getLockedPaidCourses,
-  FULL_FIELD_DISCOUNT,
   getChallengesByCourse,
 } from '@/constants/courseData';
 // استخدام Hook الهجين للتقدم من Supabase
 import { useHybridProgress, useCourseUnlock } from '@/hooks/useHybridProgress';
-import { usePoints } from '@/contexts/PointsContext';
+import { useCoins } from '@/contexts/CoinsContext';
 import { useResponsiveLayout } from '@/hooks';
-import PointsModal from '@/components/subscription/PointsModal';
+import LockedCourseScreen from '@/components/coins/LockedCourseScreen';
+import { showToast } from '@/components/ui/Toast';
 import { useCertificate } from '@/hooks/useCertificate';
 import CertificateProgressCard from '@/components/certificate/CertificateProgressCard';
 
@@ -147,19 +144,38 @@ export default function CourseDetailScreen() {
     refresh,
   } = useHybridProgress({ courseId: id || '', userId: user?.id });
 
+  // قفل الدروس بالتسلسل — لكن لا يُقفل درس أكمله المستخدم أو يقع قبل أبعد درس وصل إليه.
+  // (عند إضافة دروس جديدة داخل الدورة لا تُقفل الدروس التي أكملها المستخدم سابقاً)
+  const furthestCompletedIndex = useMemo(
+    () => lessons.reduce((max, l, i) => (completedLessonIds.includes(l.id) ? i : max), -1),
+    [lessons, completedLessonIds]
+  );
+  const isLessonLocked = (index: number) =>
+    index > 0 &&
+    index > furthestCompletedIndex &&
+    !completedLessonIds.includes(lessons[index].id) &&
+    !completedLessonIds.includes(lessons[index - 1].id);
+
+  // عنوان القسم قبل أول درس فيه
+  const sectionHeaderFor = (index: number) => {
+    const section = lessons[index]?.section;
+    if (!section || section === lessons[index - 1]?.section) return null;
+    return (
+      <View style={styles.lessonSectionHeader}>
+        <View style={styles.lessonSectionLine} />
+        <Text style={styles.lessonSectionText}>{section}</Text>
+        <View style={styles.lessonSectionLine} />
+      </View>
+    );
+  };
+
   // التحقق من فتح الكورس من Supabase
   const { isUnlocked: isCourseUnlocked, isLoading: unlockLoading } =
     useCourseUnlock(id || '', user?.id, course?.pointsCost || 0);
 
-  // نظام النقاط والشراء
-  const {
-    points,
-    unlockCourse,
-    unlockField,
-    isCourseUnlocked: isCourseAlreadyUnlocked,
-    unlockedCourses,
-    refreshPoints,
-  } = usePoints();
+  // نظام الكوينات (مجاني — تُكتسب من التعلم)
+  const { isCourseUnlocked: isCourseAlreadyUnlocked, rewardCourseCompletion } =
+    useCoins();
 
   // نظام الشهادات - الآن على مستوى المجال بأكمله
   const certificate = useCertificate({
@@ -170,11 +186,7 @@ export default function CourseDetailScreen() {
     isProgressLoading: progressLoading,
   });
 
-  const [showPointsModal, setShowPointsModal] = useState(false);
-  const [purchaseLoading, setPurchaseLoading] = useState(false);
-  const [purchaseError, setPurchaseError] = useState<string | null>(null);
-
-  // هل الكورس مدفوع وغير مفتوح؟
+  // هل الدورة تحتاج فتح بالكوينات وغير مفتوحة؟
   const isCourseLocked =
     course &&
     course.pointsCost > 0 &&
@@ -182,61 +194,16 @@ export default function CourseDetailScreen() {
     !isCourseUnlocked &&
     !isCourseAlreadyUnlocked(course?.id || '');
 
-  // حساب أسعار شراء المجال كاملاً
-  const fieldPricing = useMemo(() => {
-    if (!course) return null;
-    return getFieldRemainingPrice(course.fieldId, unlockedCourses);
-  }, [course?.fieldId, unlockedCourses]);
-
-  const lockedFieldCourses = useMemo(() => {
-    if (!course) return [];
-    return getLockedPaidCourses(course.fieldId, unlockedCourses);
-  }, [course?.fieldId, unlockedCourses]);
-
-  // شراء الكورس الحالي
-  const handleBuyCourse = async () => {
-    if (!course || !user?.id) return;
-    setPurchaseLoading(true);
-    setPurchaseError(null);
-    const result = await unlockCourse(
-      course.id,
-      course.pointsCost,
-      course.title
-    );
-    setPurchaseLoading(false);
-    if (!result.success) {
-      if (points < course.pointsCost) {
-        setShowPointsModal(true);
-      } else {
-        setPurchaseError(result.error || 'فشل في الشراء');
+  // مكافأة إكمال الدورة بالكوينات (السيرفر يتحقق من الإكمال ويمنع التكرار)
+  useEffect(() => {
+    if (!course || !user?.id || isCourseLocked || progressPercent < 100) return;
+    rewardCourseCompletion(course.id).then((res) => {
+      if (res.success && !res.duplicate && res.reward) {
+        showToast.success(`🎉 أكملت الدورة! +${res.reward} كوين`);
       }
-    } else {
-      await refreshPoints();
-    }
-  };
-
-  // شراء جميع كورسات المجال بخصم 15%
-  const handleBuyField = async () => {
-    if (!course || !fieldPricing || !user?.id) return;
-    setPurchaseLoading(true);
-    setPurchaseError(null);
-    const courseIds = lockedFieldCourses.map((c) => c.id);
-    const result = await unlockField(
-      course.fieldId,
-      fieldPricing.discountedRemaining,
-      courseIds
-    );
-    setPurchaseLoading(false);
-    if (!result.success) {
-      if (points < fieldPricing.discountedRemaining) {
-        setShowPointsModal(true);
-      } else {
-        setPurchaseError(result.error || 'فشل في الشراء');
-      }
-    } else {
-      await refreshPoints();
-    }
-  };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course?.id, user?.id, isCourseLocked, progressPercent]);
 
   const isLoading = progressLoading || unlockLoading;
 
@@ -316,423 +283,9 @@ export default function CourseDetailScreen() {
     advanced: '#ef4444',
   };
 
-  // ===== عرض صفحة الشراء إذا الكورس مقفل =====
+  // ===== الدورة مقفلة: عرض المحتوى + معاينة مجانية + الفتح بالكوينات =====
   if (isCourseLocked) {
-    const canAffordCourse = points >= course.pointsCost;
-    const canAffordField = fieldPricing
-      ? points >= fieldPricing.discountedRemaining
-      : false;
-    const hasMultipleLockedInField = lockedFieldCourses.length > 1;
-
-    return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={['#0f0f1e', '#1a1a3e', '#0f0f1e']}
-          style={styles.gradient}
-        >
-          {/* Header */}
-          <View style={[styles.header, { paddingTop: 16 }]}>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>محتوى مدفوع</Text>
-            <View style={{ width: 40 }} />
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              padding: 20,
-              paddingBottom: 40,
-              maxWidth: isLargeScreen ? 600 : '100%',
-              width: '100%',
-              alignSelf: 'center',
-            }}
-          >
-            {/* Course Info */}
-            <View
-              style={{ alignItems: 'center', marginBottom: 32, marginTop: 20 }}
-            >
-              <View
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  backgroundColor: course.color + '30',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginBottom: 16,
-                }}
-              >
-                <Ionicons name="lock-closed" size={36} color={course.color} />
-              </View>
-              <Text
-                style={{
-                  color: '#fff',
-                  fontSize: 24,
-                  fontWeight: '700',
-                  textAlign: 'center',
-                  marginBottom: 8,
-                }}
-              >
-                {course.title}
-              </Text>
-              <Text
-                style={{
-                  color: '#9ca3af',
-                  fontSize: 15,
-                  textAlign: 'center',
-                  lineHeight: 22,
-                }}
-              >
-                {course.description}
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginTop: 12,
-                }}
-              >
-                <Ionicons name="book-outline" size={16} color="#9ca3af" />
-                <Text style={{ color: '#9ca3af', fontSize: 14 }}>
-                  {lessons.length} درس
-                </Text>
-                <Ionicons name="star" size={16} color="#fbbf24" />
-                <Text style={{ color: '#9ca3af', fontSize: 14 }}>
-                  {course.totalXP} XP
-                </Text>
-              </View>
-            </View>
-
-            {/* Error Message */}
-            {purchaseError && (
-              <View
-                style={{
-                  backgroundColor: '#ef444420',
-                  borderRadius: 12,
-                  padding: 12,
-                  marginBottom: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <Ionicons name="alert-circle" size={20} color="#ef4444" />
-                <Text style={{ color: '#ef4444', fontSize: 14, flex: 1 }}>
-                  {purchaseError}
-                </Text>
-              </View>
-            )}
-
-            {/* Buy This Course */}
-            <TouchableOpacity
-              onPress={handleBuyCourse}
-              disabled={purchaseLoading || !canAffordCourse}
-              activeOpacity={0.8}
-              style={{ marginBottom: 16, borderRadius: 16, overflow: 'hidden' }}
-            >
-              <LinearGradient
-                colors={
-                  canAffordCourse
-                    ? ['#8B5CF6', '#6D28D9']
-                    : ['#374151', '#1F2937']
-                }
-                style={{
-                  padding: 20,
-                  borderRadius: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 16,
-                }}
-              >
-                <View
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    backgroundColor: '#ffffff20',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Ionicons
-                    name={canAffordCourse ? 'cart' : 'lock-closed'}
-                    size={24}
-                    color="#fff"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      color: '#fff',
-                      fontSize: 17,
-                      fontWeight: '700',
-                      marginBottom: 4,
-                    }}
-                  >
-                    شراء هذا الكورس
-                  </Text>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 4,
-                    }}
-                  >
-                    <Ionicons name="diamond" size={14} color="#a78bfa" />
-                    <Text
-                      style={{
-                        color: '#e2e8f0',
-                        fontSize: 16,
-                        fontWeight: '600',
-                      }}
-                    >
-                      {course.pointsCost.toLocaleString()} نقطة
-                    </Text>
-                  </View>
-                </View>
-                {purchaseLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Ionicons name="chevron-back" size={24} color="#ffffff80" />
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-
-            {/* Buy Full Field (with 15% discount) */}
-            {hasMultipleLockedInField &&
-              fieldPricing &&
-              fieldPricing.remaining > course.pointsCost && (
-                <TouchableOpacity
-                  onPress={handleBuyField}
-                  disabled={purchaseLoading || !canAffordField}
-                  activeOpacity={0.8}
-                  style={{
-                    marginBottom: 16,
-                    borderRadius: 16,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <LinearGradient
-                    colors={
-                      canAffordField
-                        ? ['#10b981', '#059669']
-                        : ['#374151', '#1F2937']
-                    }
-                    style={{
-                      padding: 20,
-                      borderRadius: 16,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 16,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 24,
-                        backgroundColor: '#ffffff20',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Ionicons name="gift" size={24} color="#fff" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          color: '#fff',
-                          fontSize: 17,
-                          fontWeight: '700',
-                          marginBottom: 4,
-                        }}
-                      >
-                        شراء الكورس كامل
-                      </Text>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 6,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: '#ffffff80',
-                            fontSize: 14,
-                            textDecorationLine: 'line-through',
-                          }}
-                        >
-                          {fieldPricing.remaining.toLocaleString()}
-                        </Text>
-                        <Ionicons name="diamond" size={14} color="#a78bfa" />
-                        <Text
-                          style={{
-                            color: '#e2e8f0',
-                            fontSize: 16,
-                            fontWeight: '600',
-                          }}
-                        >
-                          {fieldPricing.discountedRemaining.toLocaleString()}{' '}
-                          نقطة
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          backgroundColor: '#fbbf2430',
-                          borderRadius: 8,
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                          alignSelf: 'flex-start',
-                          marginTop: 6,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: '#fbbf24',
-                            fontSize: 12,
-                            fontWeight: '600',
-                          }}
-                        >
-                          خصم 15% - وفّر{' '}
-                          {(
-                            fieldPricing.remaining -
-                            fieldPricing.discountedRemaining
-                          ).toLocaleString()}{' '}
-                          نقطة
-                        </Text>
-                      </View>
-                    </View>
-                    {purchaseLoading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Ionicons
-                        name="chevron-back"
-                        size={24}
-                        color="#ffffff80"
-                      />
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              )}
-
-            {/* Included Courses List */}
-            {hasMultipleLockedInField && (
-              <View
-                style={{
-                  backgroundColor: '#1a1a3e',
-                  borderRadius: 16,
-                  padding: 16,
-                  marginBottom: 16,
-                }}
-              >
-                <Text
-                  style={{
-                    color: '#9ca3af',
-                    fontSize: 14,
-                    fontWeight: '600',
-                    marginBottom: 12,
-                  }}
-                >
-                  الكورسات المشمولة بالعرض ({lockedFieldCourses.length})
-                </Text>
-                {lockedFieldCourses.map((c) => (
-                  <View
-                    key={c.id}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                      paddingVertical: 8,
-                      borderBottomWidth: 1,
-                      borderBottomColor: '#ffffff10',
-                    }}
-                  >
-                    <Ionicons
-                      name={(c.icon || 'book') as any}
-                      size={18}
-                      color={c.color}
-                    />
-                    <Text style={{ color: '#e2e8f0', fontSize: 14, flex: 1 }}>
-                      {c.title}
-                    </Text>
-                    <Text style={{ color: '#9ca3af', fontSize: 13 }}>
-                      {c.pointsCost} نقطة
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* Current Points */}
-            <View
-              style={{
-                backgroundColor: '#1a1a3e',
-                borderRadius: 16,
-                padding: 16,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <View
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-              >
-                <Ionicons name="diamond" size={20} color="#a78bfa" />
-                <Text style={{ color: '#9ca3af', fontSize: 14 }}>
-                  رصيدك الحالي:
-                </Text>
-                <Text
-                  style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}
-                >
-                  {points.toLocaleString()} نقطة
-                </Text>
-              </View>
-              {!canAffordCourse && (
-                <TouchableOpacity
-                  onPress={() => setShowPointsModal(true)}
-                  style={{
-                    backgroundColor: '#8B5CF620',
-                    borderRadius: 12,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: '#8B5CF6',
-                      fontSize: 13,
-                      fontWeight: '600',
-                    }}
-                  >
-                    شحن نقاط
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </ScrollView>
-
-          {/* Points Modal */}
-          <PointsModal
-            visible={showPointsModal}
-            onClose={() => {
-              setShowPointsModal(false);
-              refreshPoints();
-            }}
-            mode="course"
-            courseId={course.id}
-            courseName={course.title}
-            courseCost={course.pointsCost}
-          />
-        </LinearGradient>
-      </View>
-    );
+    return <LockedCourseScreen course={course} onBack={() => router.back()} />;
   }
 
   // progressPercent يأتي من useHybridProgress مباشرة
@@ -833,26 +386,21 @@ export default function CourseDetailScreen() {
                       const isCompleted = completedLessonIds.includes(
                         lesson.id
                       );
-                      const sortedLessons = [...lessons].sort(
-                        (a, b) => a.order - b.order
-                      );
-                      const isLocked =
-                        index > 0 &&
-                        !completedLessonIds.includes(
-                          sortedLessons[index - 1]?.id
-                        );
+                      const isLocked = isLessonLocked(index);
 
                       return (
-                        <LessonCard
-                          key={lesson.id}
-                          lesson={lesson}
-                          index={index}
-                          isCompleted={isCompleted}
-                          isLocked={isLocked && index !== 0}
-                          onPress={() =>
-                            router.push(`/lesson/${lesson.id}` as any)
-                          }
-                        />
+                        <React.Fragment key={lesson.id}>
+                          {sectionHeaderFor(index)}
+                          <LessonCard
+                            lesson={lesson}
+                            index={index}
+                            isCompleted={isCompleted}
+                            isLocked={isLocked}
+                            onPress={() =>
+                              router.push(`/lesson/${lesson.id}` as any)
+                            }
+                          />
+                        </React.Fragment>
                       );
                     })
                   ) : (
@@ -964,7 +512,7 @@ export default function CourseDetailScreen() {
                       </View>
                       <View>
                         <Text style={webStyles.sidebarStatLabel}>
-                          إجمالي النقاط
+                          إجمالي XP
                         </Text>
                         <Text style={webStyles.sidebarStatValue}>
                           {course.totalXP} XP
@@ -1092,7 +640,7 @@ export default function CourseDetailScreen() {
                         color="#22c55e"
                       />
                       <Text style={webStyles.tipText}>
-                        أجب على الاختبارات لكسب نقاط إضافية
+                        أجب على الاختبارات لكسب XP إضافي
                       </Text>
                     </View>
                   </View>
@@ -1218,23 +766,19 @@ export default function CourseDetailScreen() {
             {lessons.length > 0 ? (
               lessons.map((lesson, index) => {
                 const isCompleted = completedLessonIds.includes(lesson.id);
-                // First lesson is unlocked, rest need previous completion
-                const sortedLessons = [...lessons].sort(
-                  (a, b) => a.order - b.order
-                );
-                const isLocked =
-                  index > 0 &&
-                  !completedLessonIds.includes(sortedLessons[index - 1]?.id);
+                const isLocked = isLessonLocked(index);
 
                 return (
-                  <LessonCard
-                    key={lesson.id}
-                    lesson={lesson}
-                    index={index}
-                    isCompleted={isCompleted}
-                    isLocked={isLocked && index !== 0}
-                    onPress={() => router.push(`/lesson/${lesson.id}` as any)}
-                  />
+                  <React.Fragment key={lesson.id}>
+                    {sectionHeaderFor(index)}
+                    <LessonCard
+                      lesson={lesson}
+                      index={index}
+                      isCompleted={isCompleted}
+                      isLocked={isLocked}
+                      onPress={() => router.push(`/lesson/${lesson.id}` as any)}
+                    />
+                  </React.Fragment>
                 );
               })
             ) : (
@@ -1324,6 +868,15 @@ export default function CourseDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  lessonSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 18,
+    marginBottom: 10,
+  },
+  lessonSectionLine: { flex: 1, height: 1, backgroundColor: 'rgba(168, 85, 247, 0.35)' },
+  lessonSectionText: { color: '#c4b5fd', fontSize: 14, fontWeight: '700', textAlign: 'center' },
   container: {
     flex: 1,
     backgroundColor: '#0f0f1e',

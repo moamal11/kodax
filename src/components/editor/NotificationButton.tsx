@@ -43,6 +43,7 @@ export interface Notification {
     | 'course'
     | 'streak'
     | 'xp'
+    // أنواع قديمة من نظام الدفع الملغى — لعرض السجل القديم فقط
     | 'purchase'
     | 'payment_approved'
     | 'payment_rejected';

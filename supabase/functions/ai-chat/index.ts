@@ -1,249 +1,147 @@
 // ========================================
-// Supabase Edge Function: AI Chat (Optimized Smart v2)
-// Runtime: Deno
-// ✨ التحديثات: نموذج ذكي + max_tokens كبيرة + دعم modes
+// Supabase Edge Function: AI Chat
+// Runtime: Deno — المنطق في core.ts (قابل للاختبار محلياً)
+// - المستخدم من JWT فقط. بياناته وإعدادات التطبيق تُقرأ بصلاحياته هو (RLS).
+// - مفتاح الخدمة يُستخدم فقط لحجز/إرجاع حصة Gemini والـcache العام (دوال service_role فقط).
+// - مفتاح Gemini في Secrets فقط (GEMINI_API_KEY).
+// - أخطاء Gemini تُعاد بحالة غير 200 حتى لا يعرضها التطبيق كإجابة أو يخزّنها.
 // ========================================
 
 // @ts-ignore: Deno runtime
 import { corsHeaders } from '../_shared/cors.ts';
+// @ts-ignore: Deno runtime
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { handleChat, CACHE_TTL_HOURS } from './core.ts';
+import { mergeLiveConfig, type LiveConfig } from './kodax-facts.ts';
+import type { QuotaState, UserSnapshot } from './smart.ts';
 
-// ========================================
-// تصنيف السؤال والمحتوى
-// ========================================
-function classifyQuestion(
-  message: string,
-  mode?: string
-): 'simple' | 'advanced' | 'explanation' {
-  const lowerMessage = message.toLowerCase();
-  const wordCount = message.split(/\s+/).length;
-
-  // إذا كان mode خاص بالشروحات، استخدم النموذج الأقوى مباشرة
-  if (
-    mode === 'challenge-explain' ||
-    mode === 'lesson-explain' ||
-    mode === 'explain' ||
-    mode === 'fix'
-  ) {
-    return 'explanation';
-  }
-
-  // كشف الكود (أي شيء بين backticks أو يحتوي على أسطر متعددة من code-like syntax)
-  const hasCode =
-    /```[\s\S]*```/.test(message) ||
-    /`[^`]+`/.test(message) ||
-    /(function|def|class|const|let|var|import|from|public|private)\s+\w+/i.test(
-      message
-    );
-
-  const advancedKeywords = [
-    'معمارية',
-    'architecture',
-    'design pattern',
-    'security',
-    'أمن',
-    'تصميم نظام',
-    'microservices',
-    'scale',
-    'استراتيجية',
-    'مراجعة شاملة',
-    'منهج',
-    'كورس',
-    'اشرح',
-    'explain',
-    'شرح',
-    'review',
-    'راجع',
-    'تحدي',
-    'challenge',
-    'debug',
-    'خطأ',
-    'error',
-    'fix',
-    'solution',
-    'حل',
-  ];
-
-  // الأسئلة الطويلة أو التي تحتوي على كود = advanced
-  if (wordCount > 80 || hasCode) return 'advanced';
-  if (advancedKeywords.some((kw) => lowerMessage.includes(kw)))
-    return 'advanced';
-
-  return 'simple';
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
-// ========================================
-// اختيار النموذج والإعدادات (ذكي ومرن)
-// ========================================
-function getModelConfig(complexity: 'simple' | 'advanced' | 'explanation') {
-  if (complexity === 'explanation') {
-    // شروحات التحديات والدروس - نموذج قوي مع tokens كثيرة
-    return { model: 'gpt-4o', maxTokens: 3500, temperature: 0.7 };
-  } else if (complexity === 'advanced') {
-    // أسئلة متقدمة، مراجعة كود، debugging - نموذج قوي
-    return { model: 'gpt-4o', maxTokens: 2500, temperature: 0.8 };
-  } else {
-    // أسئلة بسيطة - نموذج اقتصادي
-    return { model: 'gpt-4o-mini', maxTokens: 600, temperature: 0.7 };
-  }
+// @ts-ignore: Deno runtime
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
+// @ts-ignore: Deno runtime
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+// @ts-ignore: Deno runtime
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+
+// الإعدادات الحية تتغير نادراً: تُحفظ في ذاكرة النسخة 5 دقائق
+let liveCache: { at: number; value: LiveConfig } | null = null;
+
+// deno-lint-ignore no-explicit-any
+async function loadLiveConfig(client: any): Promise<LiveConfig> {
+  if (liveCache && Date.now() - liveCache.at < 5 * 60_000) return liveCache.value;
+  const [{ data: cfg }, { data: catalog }] = await Promise.all([
+    client.from('coin_config').select('key, value'),
+    client.from('course_coin_catalog').select('course_id, unlock_cost').eq('is_active', true),
+  ]);
+  const raw: Record<string, unknown> = {};
+  for (const row of cfg ?? []) raw[row.key] = row.value;
+  const prices: Record<string, number> = {};
+  for (const row of catalog ?? []) prices[row.course_id] = row.unlock_cost;
+  const value = mergeLiveConfig({ ...raw, prices });
+  liveCache = { at: Date.now(), value };
+  return value;
 }
 
-// ========================================
-// System Prompt (ودّي، عملي، محترف)
-// ========================================
-function getSystemPrompt(
-  complexity: 'simple' | 'advanced' | 'explanation',
-  mode?: string
-): string {
-  let prompt = `أنت مساعد ذكاء اصطناعي في تطبيق Kodax التعليمي التقني.
-مطور التطبيق: مؤمل من العراق
-
-قواعد أساسية:
-- تحدث اللهجة العراقية بطريقة ودية ومباشرة
-- لا تذكر أي تفاصيل تقنية عن البنية التحتية أو APIs
-- لا تقل "لا يمكنني" أو "خارج النطاق"
-- استخدم الرموز التعبيرية بحكمة
-- كن تعليمياً وعملياً وداعماً`;
-
-  if (complexity === 'explanation') {
-    prompt += `
-
-**شرح تفصيلي مطلوب:**
-- اشرح بعمق وبشكل كامل
-- اكتب الكود كاملاً بدون اختصارات
-- استخدم \`\`\`language للأكواد مع اسم اللغة
-- نظم الشرح بعناوين وأقسام واضحة
-- أعط أمثلة عملية كاملة
-- وضّح كل سطر من الكود المهم
-- لا تختصر الكود - اكتبه كاملاً!
-- استخدم syntax highlighting بشكل صحيح`;
-  } else if (complexity === 'advanced') {
-    prompt += `
-
-**سؤال متقدم:**
-- قدم تحليلاً عميقاً ومنظماً
-- استخدم عناوين فرعية وأمثلة متقدمة
-- إذا كتبت كود، اكتبه كاملاً داخل \`\`\`language
-- وضّح best practices والأخطاء الشائعة`;
-  } else {
-    prompt += '\n\n**سؤال بسيط:** أجب في 2-4 أسطر، مثال واحد إذا لزم الأمر.';
-  }
-
-  prompt +=
-    '\n\nاستخدم لغة ودية جداً، وكأنك تتحدث إلى زميل مطور. تأكد من كتابة الكود كاملاً بدون اختصارات.';
-
-  return prompt;
-}
-
-// ========================================
-// استدعاء OpenAI API مع إدارة الأخطاء
-// ========================================
-async function callOpenAI(
-  message: string,
-  context: string | undefined,
-  mode: string | undefined,
-  apiKey: string
-): Promise<{ text: string; tokensUsed: number }> {
-  const complexity = classifyQuestion(message, mode);
-  const config = getModelConfig(complexity);
-  const systemPrompt = getSystemPrompt(complexity, mode);
-
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    ...(context ? [{ role: 'system', content: `Context: ${context}` }] : []),
-    { role: 'user', content: message },
-  ];
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages,
-        max_tokens: config.maxTokens,
-        temperature: config.temperature,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[OpenAI Error]', {
-        status: response.status,
-        body: errorText,
-      });
-
-      if (response.status === 429)
-        return {
-          text: '⚠️ تجاوز الحد المسموح من الذكاء الاصطناعي، يرجى المحاولة لاحقاً.',
-          tokensUsed: 0,
-        };
-      return {
-        text: `⚠️ حدث خطأ من مزود الذكاء الاصطناعي (${response.status})`,
-        tokensUsed: 0,
-      };
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    const totalTokens = data.usage?.total_tokens || 0;
-    return {
-      text: content || '⚠️ لم يصلنا رد من الذكاء الاصطناعي.',
-      tokensUsed: totalTokens,
-    };
-  } catch (err) {
-    console.error('[OpenAI Fetch Error]', err);
-    return {
-      text: '⚠️ حدث خطأ في الاتصال بمزود الذكاء الاصطناعي.',
-      tokensUsed: 0,
-    };
-  }
-}
-
-// ========================================
-// Edge Function Handler
-// ========================================
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
-
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
-  const { message, userId, context, mode } = await req.json();
-  if (!message || typeof message !== 'string') {
-    return new Response(JSON.stringify({ error: 'Invalid message' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+  // عميل باسم المستخدم: كل قراءات بياناته تمر عبر RLS
+  const authHeader = req.headers.get('Authorization') || '';
+  const supabase = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonResponse({ error: 'Invalid body' }, 400);
   }
 
-  const apiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: 'Service configuration error' }),
+  try {
+    const r = await handleChat(
       {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+        getUser: async () => {
+          const { data } = await supabase.auth.getUser();
+          return data.user ? { id: data.user.id } : null;
+        },
+        reserveQuota: async (userId) => {
+          const { data, error } = await admin.rpc('ai_quota_reserve', { p_user: userId });
+          if (error) throw error;
+          return { allowed: data?.allowed === true, code: data?.code, quota: data?.quota ?? null };
+        },
+        releaseQuota: async (userId) => {
+          const { data } = await admin.rpc('ai_quota_release', { p_user: userId });
+          return (data as QuotaState) ?? null;
+        },
+        getQuota: async () => {
+          const { data } = await supabase.rpc('ai_get_quota');
+          return data?.success ? (data as QuotaState) : null;
+        },
+        getLiveConfig: () => loadLiveConfig(supabase),
+        isSolutionUnlocked: async (userId, challengeId) => {
+          const { data, error } = await admin.rpc('challenge_solution_unlocked', {
+            p_user_id: userId,
+            p_challenge_id: challengeId,
+          });
+          return !error && data === true;
+        },
+        getUserSnapshot: async (userId): Promise<UserSnapshot | null> => {
+          const [profile, points, unlocked, lessons, challenges, quota] = await Promise.all([
+            supabase.from('profiles').select('xp, level, streak_days').eq('id', userId).maybeSingle(),
+            supabase.from('user_points').select('total_points').eq('user_id', userId).maybeSingle(),
+            supabase.from('user_unlocked_courses').select('course_id').eq('user_id', userId),
+            supabase.from('user_lesson_progress').select('id', { count: 'exact', head: true })
+              .eq('user_id', userId).eq('completed', true).neq('course_id', 'challenges'),
+            supabase.from('user_lesson_progress').select('id', { count: 'exact', head: true })
+              .eq('user_id', userId).eq('completed', true).eq('course_id', 'challenges'),
+            supabase.rpc('ai_get_quota'),
+          ]);
+          if (profile.error) return null;
+          const xp = profile.data?.xp ?? 0;
+          return {
+            xp,
+            // نفس معادلة السيرفر (kodax_level) والتطبيق: max(1, floor(sqrt(xp/100)))
+            level: Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / 100))),
+            streak: profile.data?.streak_days ?? 0,
+            coins: points.data?.total_points ?? 0,
+            unlockedCourses: (unlocked.data ?? []).map((r: { course_id: string }) => r.course_id),
+            completedLessons: lessons.count ?? 0,
+            completedChallenges: challenges.count ?? 0,
+            quota: quota.data?.success ? (quota.data as QuotaState) : null,
+          };
+        },
+        cacheGet: async (key) => {
+          const { data } = await admin.rpc('ai_cache_get', { p_key: key });
+          return typeof data === 'string' ? data : null;
+        },
+        cachePut: async (key, reply, model, version) => {
+          await admin.rpc('ai_cache_put', { p_key: key, p_reply: reply, p_model: model, p_version: version, p_ttl_hours: CACHE_TTL_HOURS });
+        },
+        // @ts-ignore: Deno runtime
+        apiKey: Deno.env.get('GEMINI_API_KEY'),
+        models: {
+          // @ts-ignore: Deno runtime
+          model: Deno.env.get('GEMINI_MODEL') || undefined,
+          // @ts-ignore: Deno runtime
+          lite: Deno.env.get('GEMINI_MODEL_LITE') || undefined,
+        },
+      },
+      body
     );
+    return jsonResponse(r.body, r.status);
+  } catch (e) {
+    console.error('[ai-chat] failed:', e instanceof Error ? e.message : e);
+    return jsonResponse({ error: 'ai_unavailable', message: 'حدث خطأ في السيرفر. أعد المحاولة بعد قليل.' }, 500);
   }
-
-  const { text: reply, tokensUsed } = await callOpenAI(
-    message,
-    context,
-    mode,
-    apiKey
-  );
-  return new Response(JSON.stringify({ reply, tokensUsed }), {
-    status: 200,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
 });

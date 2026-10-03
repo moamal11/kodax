@@ -3,10 +3,15 @@ eas build --platform android --local
 cd android
 .\gradlew clean
 
+
+
 npx expo export
 npx expo run:android --variant release
 
-
+cd android
+gradlew assembleRelease
 
 npx expo export --platform web
 npx serve dist
+
+eas build --platform android --profile preview --clear-cache

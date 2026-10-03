@@ -34,9 +34,9 @@ export interface BadgeCheckContext {
   hardChallengesCompleted: number;
   challengesWithoutHints: number;
   challengeStreak: number;
-  isPremium: boolean;
+  lifetimeCoins: number;
   unlockedCourses: number;
-  hasPurchased: boolean;
+  hasUnlockedWithCoins: boolean;
   isComeback: boolean;
   hasCourse100Percent: boolean;
 }
@@ -356,11 +356,11 @@ class BadgeService {
       case 'comeback_streak':
         return context.isComeback;
 
-      case 'first_purchase':
-        return context.hasPurchased;
+      case 'first_coin_unlock':
+        return context.hasUnlockedWithCoins;
 
-      case 'premium_subscriber':
-        return context.isPremium;
+      case 'coins_earned':
+        return context.lifetimeCoins >= badge.conditionValue;
 
       case 'courses_unlocked':
         return context.unlockedCourses >= badge.conditionValue;
@@ -472,13 +472,12 @@ class BadgeService {
         current = context.isComeback ? 1 : 0;
         target = 1;
         break;
-      case 'first_purchase':
-        current = context.hasPurchased ? 1 : 0;
+      case 'first_coin_unlock':
+        current = context.hasUnlockedWithCoins ? 1 : 0;
         target = 1;
         break;
-      case 'premium_subscriber':
-        current = context.isPremium ? 1 : 0;
-        target = 1;
+      case 'coins_earned':
+        current = context.lifetimeCoins;
         break;
       default:
         return 0;

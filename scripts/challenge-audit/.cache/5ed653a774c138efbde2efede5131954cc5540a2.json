@@ -1,0 +1,1 @@
+{"success":false,"error":"prog.cc: In function 'int sumToN(int)':\nprog.cc:3:43: error: expected ';' before '}' token\n    3 | int sumToN(int n) { return n * (n + 1) / 2 }\n      |                                           ^~\n      |                                           ;\n"}

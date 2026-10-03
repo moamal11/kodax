@@ -12,27 +12,10 @@ export * from './gamification';
 // Editor Components
 export * from './editor';
 
-// Subscription Components
-export { SubscriptionModal } from './subscription/SubscriptionModal';
-export { LockedFeatureOverlay } from './subscription/LockedFeatureOverlay';
-export { default as PointsModal } from './subscription/PointsModal';
-export {
-  default as LockedCourseOverlay,
-  CourseCardLockBadge,
-} from './subscription/LockedCourseOverlay';
-
-// Points Components
-export {
-  default as PointsDisplay,
-  PointsBadge,
-  PointsCost,
-} from './ui/PointsDisplay';
-
-// Daily Reward
-export {
-  default as DailyReward,
-  DailyRewardBadge,
-} from './gamification/DailyReward';
+// Coins Components (نظام الكوينات المجاني)
+export { CoinIcon, COIN_COLORS } from './coins/CoinIcon';
+export { CoinBalance } from './coins/CoinBalance';
+export { default as UnlockWithCoinsModal } from './coins/UnlockWithCoinsModal';
 
 // Navigation Components
 export { FuturisticTabBar } from './navigation/FuturisticTabBar';

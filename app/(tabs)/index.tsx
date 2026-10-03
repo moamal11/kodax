@@ -38,6 +38,7 @@ import { useResponsiveLayout } from '@/hooks';
 import { useAuth } from '../_layout';
 import { NotificationButton } from '@/components/editor/NotificationButton';
 import { MessagesButton } from '@/components/ui';
+import { CoinBalance } from '@/components/coins/CoinBalance';
 // ===== نظام Hybrid: الكورسات من البيانات المحلية، الإحصائيات من Supabase =====
 import {
   ALL_COURSES,
@@ -45,6 +46,7 @@ import {
   ALL_LESSONS,
 } from '@/constants/courseData';
 import { useUserStats } from '@/hooks/useHybridProgress';
+import { coinService } from '@/services/coinService';
 // removed: useApp import (authVersion is now in useAuth)
 
 const { width } = Dimensions.get('window');
@@ -167,18 +169,23 @@ interface LeaderboardUser {
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [topUsers, setTopUsers] = useState<LeaderboardUser[]>([]);
-  const { user, fullName } = useAuth();
+  const { user, userId, fullName } = useAuth();
   const router = useRouter();
   const { contentPaddingTop, contentPaddingBottom, isLargeScreen, isWeb } =
     useResponsiveLayout();
   const { authVersion } = useAuth();
+
+  // DAU/الاحتفاظ: فتح التطبيق مرة يومياً (السيرفر يتجاهل التكرار في نفس اليوم)
+  useEffect(() => {
+    if (userId) coinService.track('app_open');
+  }, [userId]);
 
   // ===== نظام Hybrid: إحصائيات من Supabase، كورسات من البيانات المحلية =====
   const {
     stats,
     isLoading: statsLoading,
     refresh: refreshStats,
-  } = useUserStats(user?.id);
+  } = useUserStats(userId);
 
   // الكورسات والتحديات من البيانات المحلية (سرعة)
   const courses = ALL_COURSES;
@@ -256,7 +263,7 @@ export default function HomeScreen() {
       }
     };
     fetchTopUsers();
-  }, [user?.id, authVersion]);
+  }, [userId, authVersion]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -267,8 +274,20 @@ export default function HomeScreen() {
   }, [refreshStats]);
 
   const userName = useMemo(
-    () => fullName || user?.email?.split('@')[0] || 'مستخدم',
-    [fullName, user?.email]
+    () =>
+      fullName ||
+      user?.user_metadata?.full_name ||
+      user?.user_metadata?.name ||
+      user?.user_metadata?.display_name ||
+      user?.email?.split('@')[0] ||
+      'مستخدم',
+    [
+      fullName,
+      user?.email,
+      user?.user_metadata?.display_name,
+      user?.user_metadata?.full_name,
+      user?.user_metadata?.name,
+    ]
   );
 
   // Stable navigation callbacks
@@ -367,9 +386,10 @@ export default function HomeScreen() {
                     </View>
                   </View>
                   <View style={styles.headerButtons}>
-                    <MessagesButton userId={user?.id || ''} />
+                    <CoinBalance size="small" />
+                    <MessagesButton userId={userId || ''} />
                     <NotificationButton
-                      userId={user?.id || ''}
+                      userId={userId || ''}
                       onNotificationPress={handleNotificationPress}
                     />
                   </View>
@@ -744,9 +764,10 @@ export default function HomeScreen() {
                   </View>
                 </View>
                 <View style={styles.headerButtons}>
-                  <MessagesButton userId={user?.id || ''} />
+                  <CoinBalance size="small" />
+                  <MessagesButton userId={userId || ''} />
                   <NotificationButton
-                    userId={user?.id || ''}
+                    userId={userId || ''}
                     onNotificationPress={handleNotificationPress}
                   />
                 </View>

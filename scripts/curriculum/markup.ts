@@ -1,0 +1,11 @@
+import { ALL_LESSONS } from '../../src/constants/courseData';
+const count = (re: RegExp) => ALL_LESSONS.filter((l) => re.test(l.content || '')).length;
+console.log('lessons total', ALL_LESSONS.length);
+console.log('fenced code ```', count(/```/));
+console.log('bold **', count(/\*\*[^*]+\*\*/));
+console.log('inline `code`', count(/(^|[^`])`[^`\n]+`/m));
+console.log('tables |---|', count(/^\s*\|.*\|\s*$/m));
+console.log('blockquote >', count(/^>\s/m));
+console.log('#### h4', count(/^####\s/m));
+console.log('indented bullets', count(/^\s+[-*]\s/m));
+console.log('* bullets', count(/^\*\s/m));

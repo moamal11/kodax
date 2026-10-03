@@ -25,10 +25,10 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { XPBar } from '@/components/gamification/XPBar';
 import { useAuth } from '../_layout';
 import { calculateLevel } from '@/lib/utils';
-import { usePoints } from '@/contexts/PointsContext';
-import PointsModal from '@/components/subscription/PointsModal';
+import { useCoins } from '@/contexts/CoinsContext';
 
-import DailyReward from '@/components/gamification/DailyReward';
+import DailyRewardCard from '@/components/coins/DailyRewardCard';
+import { CoinIcon } from '@/components/coins/CoinIcon';
 import { useResponsiveLayout } from '@/hooks';
 import { useFocusEffect, useRouter } from 'expo-router';
 // ===== نظام Hybrid: الإحصائيات من Supabase =====
@@ -132,21 +132,6 @@ const webStyles = {
     fontWeight: '800',
     color: '#fff',
     marginBottom: 8,
-  } as TextStyle,
-  premiumTagWeb: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 12,
-  } as ViewStyle,
-  premiumTagText: {
-    color: '#fbbf24',
-    fontSize: 13,
-    fontWeight: '600',
   } as TextStyle,
   xpContainerWeb: {
     width: '100%',
@@ -305,18 +290,15 @@ const webStyles = {
 };
 
 export default function ProfileScreen() {
-  const { user, isLoading: authLoading, signOut } = useAuth();
-  const router = useRouter();
   const {
-    points,
-    lifetimePoints,
-    isPremium,
-    premiumDaysRemaining,
-    unlockedCourses,
-    PREMIUM_COST,
-    purchasePoints,
-  } = usePoints();
-  const [showPointsModal, setShowPointsModal] = useState(false);
+    user,
+    userId,
+    fullName: authFullName,
+    isLoading: authLoading,
+    signOut,
+  } = useAuth();
+  const router = useRouter();
+  const { balance: coins, unlockedCourses } = useCoins();
   const [showBadgeModal, setShowBadgeModal] = useState(false);
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -347,7 +329,7 @@ export default function ProfileScreen() {
     stats,
     isLoading: statsLoading,
     refresh: refreshStats,
-  } = useUserStats(user?.id);
+  } = useUserStats(userId);
 
   // Safety timeout — don't let profile stay stuck in loading forever
   // Same pattern as home page (8 second max)
@@ -367,11 +349,23 @@ export default function ProfileScreen() {
   // Badges - بيانات حقيقية من نظام الشارات
   const { earnedBadgeIds, earnedCount, totalCount, refreshBadges } =
     useBadges();
+
+  // جلب بيانات الملف الشخصي والمتابعة
+  const loadProfileData = useCallback(async () => {
+    if (!userId) return;
+    const { data } = await getProfile(userId);
+    if (data) {
+      setProfileData(data);
+      setFollowersCount(data.followers_count || 0);
+      setFollowingCount(data.following_count || 0);
+    }
+  }, [userId]);
+
   // ===== جلب التحديات المكتملة بنفس طريقة صفحة التحديات =====
   const loadChallengesProgress = useCallback(async () => {
-    if (!user?.id) return;
+    if (!userId) return;
 
-    await hybridSyncService.setUser(user.id);
+    await hybridSyncService.setUser(userId);
     // جلب كل الدروس المكتملة (التحديات تُعامل كدروس)
     const completed = await hybridSyncService.fetchAllCompletedLessons();
     // تصفية التحديات فقط
@@ -379,7 +373,7 @@ export default function ProfileScreen() {
       ALL_CHALLENGES.some((ch) => ch.id === id)
     );
     setCompletedChallenges(completedChallengeIds);
-  }, [user?.id]);
+  }, [userId]);
 
   // تحميل التحديات المكتملة
   useEffect(() => {
@@ -389,25 +383,20 @@ export default function ProfileScreen() {
   // تحديث الإحصائيات عند العودة لصفحة البروفايل
   useFocusEffect(
     useCallback(() => {
-      if (user?.id) {
+      if (userId) {
         refreshStats();
         loadChallengesProgress();
         refreshBadges();
         loadProfileData();
       }
-    }, [user?.id, refreshStats, loadChallengesProgress, refreshBadges])
+    }, [
+      userId,
+      refreshStats,
+      loadChallengesProgress,
+      refreshBadges,
+      loadProfileData,
+    ])
   );
-
-  // جلب بيانات الملف الشخصي والمتابعة
-  const loadProfileData = useCallback(async () => {
-    if (!user?.id) return;
-    const { data } = await getProfile(user.id);
-    if (data) {
-      setProfileData(data);
-      setFollowersCount(data.followers_count || 0);
-      setFollowingCount(data.following_count || 0);
-    }
-  }, [user?.id]);
 
   useEffect(() => {
     loadProfileData();
@@ -501,11 +490,16 @@ export default function ProfileScreen() {
     [earnedBadgeIds]
   );
 
-  // Handler for purchasing points
-
+  const metadataName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.user_metadata?.display_name ||
+    '';
   const userName =
     profileData?.full_name ||
     profileData?.username ||
+    authFullName ||
+    metadataName ||
     user?.email?.split('@')[0] ||
     'مستخدم';
   const userEmail = user?.email || 'غير محدد';
@@ -630,12 +624,6 @@ export default function ProfileScreen() {
                         />
                         <Text style={styles.email}>{userEmail}</Text>
                       </View>
-                      {isPremium && (
-                        <View style={webStyles.premiumTagWeb}>
-                          <Ionicons name="diamond" size={14} color="#fbbf24" />
-                          <Text style={webStyles.premiumTagText}>Premium</Text>
-                        </View>
-                      )}
                     </View>
 
                     {/* Follow Stats + Edit Button - Web */}
@@ -745,9 +733,9 @@ export default function ProfileScreen() {
                         <Ionicons name="diamond" size={22} color="#a78bfa" />
                       </View>
                       <Text style={webStyles.quickStatValueWeb}>
-                        {points.toLocaleString()}
+                        {coins.toLocaleString()}
                       </Text>
-                      <Text style={webStyles.quickStatLabelWeb}>نقطة</Text>
+                      <Text style={webStyles.quickStatLabelWeb}>كوين</Text>
                     </GlassCard>
                     <GlassCard style={webStyles.quickStatCardWeb}>
                       <View
@@ -934,9 +922,7 @@ export default function ProfileScreen() {
                         >
                           <Ionicons name="diamond" size={18} color="#a78bfa" />
                         </View>
-                        <Text style={styles.sectionTitle}>
-                          النقاط والاشتراك
-                        </Text>
+                        <Text style={styles.sectionTitle}>الكوينات</Text>
                       </View>
                     </View>
                     <GlassCard style={webStyles.pointsCardWeb}>
@@ -950,32 +936,28 @@ export default function ProfileScreen() {
                         <View style={webStyles.pointsHeaderWeb}>
                           <View style={styles.pointsInfo}>
                             <View style={webStyles.pointsIconContainerWeb}>
-                              <Ionicons
-                                name="diamond"
-                                size={36}
-                                color="#a78bfa"
-                              />
+                              <CoinIcon size={36} />
                             </View>
                             <View>
                               <Text style={styles.pointsLabel}>
-                                نقاطك الحالية
+                                رصيدك من الكوينات
                               </Text>
                               <Text style={webStyles.pointsValueWeb}>
-                                {points.toLocaleString()}
+                                {coins.toLocaleString()}
                               </Text>
                             </View>
                           </View>
                           <TouchableOpacity
-                            onPress={() => router.push('/payment' as any)}
+                            onPress={() => router.push('/rewards' as any)}
                             style={webStyles.buyPointsButtonWeb}
                           >
                             <LinearGradient
                               colors={['#8b5cf6', '#6366f1']}
                               style={webStyles.buyPointsGradientWeb}
                             >
-                              <Ionicons name="add" size={18} color="#fff" />
+                              <Ionicons name="gift" size={18} color="#fff" />
                               <Text style={webStyles.buyPointsTextWeb}>
-                                شراء نقاط
+                                اجمع الكوينات
                               </Text>
                             </LinearGradient>
                           </TouchableOpacity>
@@ -985,7 +967,7 @@ export default function ProfileScreen() {
                   </Animated.View>
                   <Animated.View entering={FadeInDown.delay(200).springify()}>
                     <View style={webStyles.dailyRewardContainerWeb}>
-                      <DailyReward />
+                      <DailyRewardCard />
                     </View>
                   </Animated.View>
                   <Animated.View entering={FadeInDown.delay(250).springify()}>
@@ -1098,9 +1080,7 @@ export default function ProfileScreen() {
                         >
                           <Ionicons name="diamond" size={18} color="#a78bfa" />
                         </View>
-                        <Text style={styles.sectionTitle}>
-                          النقاط والاشتراك
-                        </Text>
+                        <Text style={styles.sectionTitle}>الكوينات</Text>
                       </View>
                     </View>
                     <GlassCard style={webStyles.pointsCardWeb}>
@@ -1114,32 +1094,28 @@ export default function ProfileScreen() {
                         <View style={webStyles.pointsHeaderWeb}>
                           <View style={styles.pointsInfo}>
                             <View style={webStyles.pointsIconContainerWeb}>
-                              <Ionicons
-                                name="diamond"
-                                size={36}
-                                color="#a78bfa"
-                              />
+                              <CoinIcon size={36} />
                             </View>
                             <View>
                               <Text style={styles.pointsLabel}>
-                                نقاطك الحالية
+                                رصيدك من الكوينات
                               </Text>
                               <Text style={webStyles.pointsValueWeb}>
-                                {points.toLocaleString()}
+                                {coins.toLocaleString()}
                               </Text>
                             </View>
                           </View>
                           <TouchableOpacity
-                            onPress={() => router.push('/payment' as any)}
+                            onPress={() => router.push('/rewards' as any)}
                             style={webStyles.buyPointsButtonWeb}
                           >
                             <LinearGradient
                               colors={['#8b5cf6', '#6366f1']}
                               style={webStyles.buyPointsGradientWeb}
                             >
-                              <Ionicons name="add" size={18} color="#fff" />
+                              <Ionicons name="gift" size={18} color="#fff" />
                               <Text style={webStyles.buyPointsTextWeb}>
-                                شراء نقاط
+                                اجمع الكوينات
                               </Text>
                             </LinearGradient>
                           </TouchableOpacity>
@@ -1151,7 +1127,7 @@ export default function ProfileScreen() {
                   {/* Daily Reward - Web */}
                   <Animated.View entering={FadeInDown.delay(200).springify()}>
                     <View style={webStyles.dailyRewardContainerWeb}>
-                      <DailyReward />
+                      <DailyRewardCard />
                     </View>
                   </Animated.View>
 
@@ -1269,9 +1245,9 @@ export default function ProfileScreen() {
                           <Ionicons name="diamond" size={22} color="#a78bfa" />
                         </View>
                         <Text style={webStyles.quickStatValueWeb}>
-                          {points.toLocaleString()}
+                          {coins.toLocaleString()}
                         </Text>
-                        <Text style={webStyles.quickStatLabelWeb}>نقطة</Text>
+                        <Text style={webStyles.quickStatLabelWeb}>كوين</Text>
                       </GlassCard>
                       <GlassCard style={webStyles.quickStatCardWeb}>
                         <View
@@ -1519,11 +1495,6 @@ export default function ProfileScreen() {
                           <Text style={styles.levelText}>{level}</Text>
                         </LinearGradient>
                       </View>
-                      {isPremium && (
-                        <View style={styles.premiumBadgeSmall}>
-                          <Ionicons name="diamond" size={12} color="#fbbf24" />
-                        </View>
-                      )}
                     </View>
                   </View>
 
@@ -1643,9 +1614,9 @@ export default function ProfileScreen() {
                         <Ionicons name="diamond" size={18} color="#a78bfa" />
                       </View>
                       <Text style={styles.quickStatValue}>
-                        {points.toLocaleString()}
+                        {coins.toLocaleString()}
                       </Text>
-                      <Text style={styles.quickStatLabel}>نقطة</Text>
+                      <Text style={styles.quickStatLabel}>كوين</Text>
                     </TouchableOpacity>
 
                     <View style={styles.quickStatDivider} />
@@ -1722,12 +1693,12 @@ export default function ProfileScreen() {
               </GlassCard>
             </Animated.View>
 
-            {/* Points & Premium Section */}
+            {/* Coins Section */}
             <Animated.View entering={FadeInDown.delay(150).springify()}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <Ionicons name="diamond" size={22} color="#a78bfa" />
-                  <Text style={styles.sectionTitle}>النقاط والاشتراك</Text>
+                  <Text style={styles.sectionTitle}>الكوينات</Text>
                 </View>
               </View>
 
@@ -1743,25 +1714,27 @@ export default function ProfileScreen() {
                   <View style={styles.pointsHeader}>
                     <View style={styles.pointsInfo}>
                       <View style={styles.pointsIconContainer}>
-                        <Ionicons name="diamond" size={32} color="#a78bfa" />
+                        <CoinIcon size={32} />
                       </View>
                       <View>
-                        <Text style={styles.pointsLabel}>نقاطك الحالية</Text>
+                        <Text style={styles.pointsLabel}>
+                          رصيدك من الكوينات
+                        </Text>
                         <Text style={styles.pointsValue}>
-                          {points.toLocaleString()}
+                          {coins.toLocaleString()}
                         </Text>
                       </View>
                     </View>
                     <TouchableOpacity
-                      onPress={() => router.push('/payment' as any)}
+                      onPress={() => router.push('/rewards' as any)}
                       style={styles.buyPointsButton}
                     >
                       <LinearGradient
                         colors={['#8b5cf6', '#6366f1']}
                         style={styles.buyPointsGradient}
                       >
-                        <Ionicons name="add" size={16} color="#fff" />
-                        <Text style={styles.buyPointsText}>شراء</Text>
+                        <Ionicons name="gift" size={16} color="#fff" />
+                        <Text style={styles.buyPointsText}>اجمع</Text>
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
@@ -1777,89 +1750,9 @@ export default function ProfileScreen() {
                 </LinearGradient>
               </GlassCard>
 
-              {/* Premium Status */}
-              <GlassCard style={styles.premiumCard}>
-                <LinearGradient
-                  colors={
-                    isPremium
-                      ? ['rgba(139, 92, 246, 0.2)', 'rgba(59, 130, 246, 0.1)']
-                      : ['rgba(55, 65, 81, 0.2)', 'rgba(31, 41, 55, 0.1)']
-                  }
-                  style={styles.premiumGradient}
-                >
-                  <View style={styles.premiumHeader}>
-                    <View style={styles.premiumInfo}>
-                      <View
-                        style={[
-                          styles.premiumIconContainer,
-                          isPremium && styles.premiumIconActive,
-                        ]}
-                      >
-                        <Ionicons
-                          name="diamond"
-                          size={28}
-                          color={isPremium ? '#A78BFA' : '#6B7280'}
-                        />
-                      </View>
-                      <View>
-                        <Text style={styles.premiumLabel}>الاشتراك المميز</Text>
-                        <Text
-                          style={[
-                            styles.premiumStatus,
-                            isPremium && styles.premiumStatusActive,
-                          ]}
-                        >
-                          {isPremium
-                            ? `مفعّل - ${premiumDaysRemaining} يوم متبقي`
-                            : 'غير مفعّل'}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {!isPremium && (
-                      <TouchableOpacity
-                        onPress={() => setShowPointsModal(true)}
-                        style={styles.subscribeBadge}
-                      >
-                        <LinearGradient
-                          colors={['#8B5CF6', '#3B82F6']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.subscribeGradient}
-                        >
-                          <Ionicons name="star" size={14} color="#F59E0B" />
-                          <Text style={styles.subscribeText}>
-                            {PREMIUM_COST.toLocaleString()}
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  {!isPremium && (
-                    <View style={styles.premiumFeatures}>
-                      {['مساعد AI', 'مراجعة كود', 'تحديات حصرية'].map(
-                        (feature, i) => (
-                          <View key={i} style={styles.premiumFeature}>
-                            <Ionicons
-                              name="checkmark-circle"
-                              size={14}
-                              color="#A78BFA"
-                            />
-                            <Text style={styles.premiumFeatureText}>
-                              {feature}
-                            </Text>
-                          </View>
-                        )
-                      )}
-                    </View>
-                  )}
-                </LinearGradient>
-              </GlassCard>
-
               {/* Daily Reward */}
               <View style={styles.dailyRewardContainer}>
-                <DailyReward />
+                <DailyRewardCard />
               </View>
             </Animated.View>
 
@@ -2124,13 +2017,6 @@ export default function ProfileScreen() {
         )}
       </ScrollView>
 
-      {/* Points Modal */}
-      <PointsModal
-        visible={showPointsModal}
-        onClose={() => setShowPointsModal(false)}
-        mode="subscription"
-      />
-
       {/* Profile Edit Modal */}
       <ProfileEditModal
         visible={showProfileEdit}
@@ -2385,19 +2271,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fff',
   },
-  premiumBadgeSmall: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(251, 191, 36, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#0f0f1e',
-  },
   userInfoSection: {
     alignItems: 'center',
     marginBottom: 16,
@@ -2646,7 +2519,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9ca3af',
   },
-  // Points & Premium Styles
+  // Coins Styles
   pointsCard: {
     marginBottom: 16,
   },
@@ -2724,79 +2597,6 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     marginHorizontal: 16,
-  },
-  premiumCard: {
-    marginBottom: 16,
-  },
-  premiumGradient: {
-    padding: 20,
-    borderRadius: 16,
-  },
-  premiumHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  premiumInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    flex: 1,
-  },
-  premiumIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(107, 114, 128, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  premiumIconActive: {
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-  },
-  premiumLabel: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  premiumStatus: {
-    color: '#6B7280',
-    fontSize: 13,
-  },
-  premiumStatusActive: {
-    color: '#A78BFA',
-  },
-  subscribeBadge: {
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  subscribeGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 4,
-  },
-  subscribeText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  premiumFeatures: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 16,
-    gap: 12,
-  },
-  premiumFeature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  premiumFeatureText: {
-    color: '#9CA3AF',
-    fontSize: 12,
   },
   dailyRewardContainer: {
     marginBottom: 16,

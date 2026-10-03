@@ -28,9 +28,9 @@ import { useAuth } from './_layout';
 import { useResponsiveLayout } from '@/hooks';
 // ===== نظام Hybrid: التقدم من Supabase =====
 import { hybridSyncService } from '@/services/hybridSyncService';
-import { usePoints } from '@/contexts/PointsContext';
-import PointsModal from '@/components/subscription/PointsModal';
-import PointsDisplay from '@/components/ui/PointsDisplay';
+import { useCoins } from '@/contexts/CoinsContext';
+import { CoinBalance } from '@/components/coins/CoinBalance';
+import { CoinIcon } from '@/components/coins/CoinIcon';
 import { useCertificate } from '@/hooks/useCertificate';
 import CertificateProgressCard from '@/components/certificate/CertificateProgressCard';
 
@@ -206,7 +206,7 @@ const CourseCard = React.memo(
       advanced: 'متقدم',
     };
 
-    // التحقق من حالة القفل - إذا كانت مجانية أو مفتوحة بالنقاط
+    // التحقق من حالة القفل - إذا كانت مجانية أو مفتوحة بالكوينات
     const isActuallyLocked =
       course.isLocked && course.pointsCost > 0 && !isCourseUnlocked;
 
@@ -253,12 +253,12 @@ const CourseCard = React.memo(
               </View>
             )}
 
-            {/* Lock Overlay with Points Cost */}
+            {/* Lock Overlay with Coin Cost */}
             {isActuallyLocked && (
               <View style={styles.lockOverlay}>
                 <Ionicons name="lock-closed" size={20} color="#6b7280" />
                 <View style={styles.pointsCostBadge}>
-                  <Ionicons name="diamond" size={12} color="#60A5FA" />
+                  <CoinIcon size={12} />
                   <Text style={styles.pointsCostText}>{course.pointsCost}</Text>
                 </View>
               </View>
@@ -373,7 +373,7 @@ const CourseCard = React.memo(
 
 export default function LearnScreen() {
   const { user, fullName } = useAuth();
-  const { isCourseUnlocked, points, refreshPoints } = usePoints();
+  const { isCourseUnlocked } = useCoins();
   const { isLargeScreen, isWeb, contentPaddingTop, contentPaddingBottom } =
     useResponsiveLayout();
   const [selectedField, setSelectedField] = useState<string>('web-dev');
@@ -381,8 +381,6 @@ export default function LearnScreen() {
   const [courseProgress, setCourseProgress] = useState<Record<string, number>>(
     {}
   );
-  const [showPointsModal, setShowPointsModal] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
   const courses = getCoursesByField(selectedField);
   const selectedFieldData = PROGRAMMING_FIELDS.find(
@@ -398,18 +396,10 @@ export default function LearnScreen() {
     isProgressLoading: false,
   });
 
-  // Handle locked course press
+  // الدورة المقفلة: صفحة الدورة تعرض المحتوى + معاينة مجانية + الفتح بالكوينات
   const handleLockedCoursePress = useCallback((course: Course) => {
-    setSelectedCourse(course);
-    setShowPointsModal(true);
+    router.push(`/course/${course.id}` as any);
   }, []);
-
-  // Handle modal close
-  const handleModalClose = () => {
-    setShowPointsModal(false);
-    setSelectedCourse(null);
-    refreshPoints();
-  };
 
   // ===== جلب التقدم من Supabase =====
   const loadProgress = useCallback(async () => {
@@ -660,13 +650,7 @@ export default function LearnScreen() {
                       الدورات المتاحة
                     </Text>
                     <View style={styles.headerActions}>
-                      <PointsDisplay
-                        onPress={() => {
-                          setSelectedCourse(null);
-                          setShowPointsModal(true);
-                        }}
-                        size="small"
-                      />
+                      <CoinBalance size="small" />
                     </View>
                   </View>
                   {courses.length > 0 ? (
@@ -771,7 +755,7 @@ export default function LearnScreen() {
                       >
                         <Ionicons name="gift" size={14} color="#10b981" />
                         <Text style={styles.discountBadgeText}>
-                          شراء جميع دورات المجال بخصم 15%
+                          افتح كل دورات المسار بالكوينات ووفّر 15%
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -890,7 +874,7 @@ export default function LearnScreen() {
                     >
                       <Ionicons name="gift" size={14} color="#10b981" />
                       <Text style={styles.discountBadgeText}>
-                        شراء جميع دورات المجال بخصم 15%
+                        افتح كل دورات المسار بالكوينات ووفّر 15%
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -922,13 +906,7 @@ export default function LearnScreen() {
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>الدورات المتاحة</Text>
                   <View style={styles.headerActions}>
-                    <PointsDisplay
-                      onPress={() => {
-                        setSelectedCourse(null);
-                        setShowPointsModal(true);
-                      }}
-                      size="small"
-                    />
+                    <CoinBalance size="small" />
                   </View>
                 </View>
                 {courses.length > 0 ? (
@@ -982,18 +960,6 @@ export default function LearnScreen() {
           <View style={{ height: 100 }} />
         </ScrollView>
       </LinearGradient>
-
-      {/* Points Modal */}
-      {showPointsModal && (
-        <PointsModal
-          visible={showPointsModal}
-          onClose={handleModalClose}
-          mode={selectedCourse ? 'course' : 'subscription'}
-          courseId={selectedCourse?.id}
-          courseName={selectedCourse?.title}
-          courseCost={selectedCourse?.pointsCost}
-        />
-      )}
     </View>
   );
 }

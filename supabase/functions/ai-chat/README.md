@@ -1,252 +1,109 @@
-# 🚀 Supabase Edge Function: AI Chat
+# Supabase Edge Function: AI Chat (Google Gemini)
 
-## 📁 البنية
+مساعد الذكاء الاصطناعي في Kodax. التطبيق يستدعي هذه الدالة فقط، والدالة تستدعي Gemini على السيرفر.
+
+## البنية
 
 ```
-supabase/
-  functions/
-    _shared/
-      cors.ts              # CORS headers مشتركة
-    ai-chat/
-      index.ts             # Edge Function الرئيسية
+supabase/functions/ai-chat/
+  index.ts                 Deno.serve + Supabase (JWT، الحصة، الـcache، الإعدادات الحية)
+  core.ts                  المسار: Smart Response ← Cache ← الحصة ← Retrieval ← Gemini
+  smart.ts                 الردود الفورية المحلية (بدون Gemini ولا حصة) — القرار والثقة
+  understand.ts            فهم السؤال محلياً: تحويله إلى إطار معنى (مفاهيم/أفعال/نوع سؤال)
+  lexicon.ts               قاموس المعاني: عراقي/فصحى/إنجليزي → معنى واحد (بيانات فقط)
+  knowledge.ts             بحث BM25 في معرفة Kodax وبناء السياق المرتبط بالسؤال فقط
+  knowledge.generated.ts   مولَّد من المنهج (لا يُعدَّل يدوياً)
+  kodax-facts.ts           معلومات التطبيق الثابتة + الأسئلة الشائعة (أرقامها من coin_config)
+  smart-glossary.ts        قاموس مفاهيم البرمجة
+  text.ts                  تطبيع العربية والتقطيع
 ```
 
----
+### مسار كل رسالة
+1. **Smart Response:** رد محلي فوري للأسئلة الشائعة، التحيات، تعريف المفاهيم، وأسئلة الدورات والدروس والتحديات بالاسم. لا يستدعي Gemini ولا يُحسب من الحصة. يشمل بيانات المستخدم الحية (XP، الرصيد، الحصة) بصلاحياته هو، وهذه لا تُخزَّن أبداً.
+2. **Cache:** الأسئلة العامة فقط (أول رسالة، وضع عام، بلا كود، بلا بيانات شخصية، بلا أسعار أو إعدادات متغيرة). لا يُحسب من الحصة. المفتاح يتضمن إصدار المعرفة، فإضافة درس تُلغي الإجابات القديمة.
+3. **الحصة:** `ai_quota_reserve` قبل Gemini، و`ai_quota_release` إذا فشل Gemini.
+4. **Retrieval:** أقرب مقتطفات من الدروس وأمثلتها والتحديات والدورات وحقائق التطبيق (حتى 6000 حرف)، وليس كل المحتوى.
+5. **Gemini:** آخر 10 رسائل من المحادثة، حتى لا يرحّب ويعيد المقدمات في كل رسالة.
+6. **تنظيف الرد:** حذف المقدمات الفارغة والترحيب المتكرر، وحجب أي رد يكشف التعليمات الداخلية.
 
-## 🔧 الإعداد
-
-### 1️⃣ تثبيت Supabase CLI
+### بعد إضافة أو تعديل درس أو دورة أو تحدٍ
 
 ```bash
-npm install -g supabase
+npm run ai:knowledge
 ```
 
-### 2️⃣ تسجيل الدخول
+ثم انشر الدالة. اختبار `smart-response.test.ts` يفشل إذا كانت المعرفة قديمة.
+أسماء الدورات والدروس والتحديات الجديدة تُفهم تلقائياً من المنهج (بدون إضافة مرادفات يدوياً).
+
+### فهم السؤال (Smart Response)
+1. `understand.ts` يحوّل السؤال إلى إطار: "شلون اجمع كوينز؟" و"how can i get coins" و"منين احصل عملات" ← `a:how c:coins v:earn`.
+   يعالج: حروف اللهجة (گ چ)، الإطالة (هلووو)، البادئات واللواحق (والكوينز، كويناتي)، الأخطاء الإملائية القريبة، وكتابة أسماء التقنيات بالعربي (بايثون ↔ python).
+2. `smart.ts` يقارن الإطار بأنماط كل سؤال شائع (F-score موزون بندرة الكلمة) مع شروط صارمة: نفس المفاهيم، لا أفعال متعارضة، وفارق واضح عن ثاني أقرب رد.
+3. الثقة ≥ 0.78 ← رد فوري. أقل من ذلك أو طلب شرح/مثال/كود/مقارنة/رأي/حساب، أو متابعة لمحادثة ← Gemini (لا تخمين).
+4. لإضافة صياغة جديدة: أضف الكلمة إلى `lexicon.ts` (إن كانت معنى جديداً) أو نمطاً إلى `kodax-facts.ts`، ثم:
 
 ```bash
-supabase login
+npx tsx scripts/challenge-audit/smart-eval.ts
+npx tsx scripts/challenge-audit/smart-understanding.test.ts
 ```
 
-### 3️⃣ ربط المشروع
+لا تخفّض العتبة: `smart-eval.ts` يطبع منحنى العتبة (عند 0.70 وأقل تبدأ أسئلة الشرح بالتسرب إلى الرد المحلي).
+
+### الإعدادات (بدون نشر كود)
+صف `ai_quota` في `coin_config`:
+- `daily_limit`: الحد الأساسي لكل مستخدم يومياً.
+- `ad_bonus`: الزيادة لكل مجموعة إعلانات.
+- `ads_per_bonus`: عدد الإعلانات في المجموعة.
+- `max_ad_bonuses_per_day`: أقصى عدد زيادات يومياً.
+- `global_daily_limit`: سقف المشروع كله يومياً.
+- `global_timezone`: منطقة يوم السقف العام.
+
+## الأمان
+- المفتاح في Supabase Secrets فقط (`GEMINI_API_KEY`). لا يوضع في التطبيق ولا في `.env` ولا في Git.
+- المفتاح يُرسل لـ Google في ترويسة `x-goog-api-key` فقط، وليس في الرابط.
+- المستخدم يُعرف من JWT فقط، وحصة Gemini اليومية تُفرض على السيرفر (`ai_quota_reserve`، للـ service_role فقط).
+- أخطاء Gemini تُعاد بحالة غير 200، فلا يعرضها التطبيق كإجابة.
+
+## النماذج
+| نوع السؤال | النموذج الافتراضي | التفكير |
+|---|---|---|
+| بسيط، تلميح | `gemini-3.5-flash-lite` | minimal |
+| متقدم، شرح، إصلاح، حل | `gemini-3.8-flash` | low |
+
+يمكن تغييرها بدون تعديل الكود: `GEMINI_MODEL` و `GEMINI_MODEL_LITE` في Secrets.
+
+## الإعداد والنشر
 
 ```bash
-n
+npx supabase secrets set GEMINI_API_KEY=<المفتاح> --project-ref krtulodnhmfuoxjqajwl
 ```
-
-### 4️⃣ إضافة API Key كـ Secret
 
 ```bash
-supabase secrets set OPENAI_API_KEY=sk-proj-YOUR_ACTUAL_KEY_HERE
+npx supabase functions deploy ai-chat --project-ref krtulodnhmfuoxjqajwl --use-api --no-verify-jwt
 ```
 
-### 5️⃣ Deploy
+بعد التأكد أن الدالة تعمل، احذف المفتاح القديم:
 
 ```bash
-# Deploy الـ function
-supabase functions deploy ai-chat
-
-# أو deploy جميع Functions
-supabase functions deploy
+npx supabase secrets unset OPENAI_API_KEY --project-ref krtulodnhmfuoxjqajwl
 ```
 
----
-
-## 📡 الاستخدام
-
-### **Endpoint URL:**
+## الطلب والرد
 
 ```
-https://YOUR_PROJECT_REF.supabase.co/functions/v1/ai-chat
+POST /functions/v1/ai-chat
+Authorization: Bearer <access token>
+{ "message": "...", "context": "...", "mode": "challenge-hint" }
 ```
 
-### **Request:**
+- النجاح (200): `{ "reply": "...", "source": "smart|cache|gemini", "quota": { "used": 3, "limit": 10, ... } }`
+- الطلب: `{ "message": "...", "mode": "general", "history": [{ "role": "user|assistant", "content": "..." }] }`
+- السقف العام (503): `{ "error": "ai_busy", "message": "..." }`
+- الحد اليومي (429): `{ "error": "quota_exceeded", "message": "..." }`
+- تعطل المزود (502 أو 503): `{ "error": "ai_unavailable", "reason": "...", "message": "..." }`
+
+## الاختبار المحلي (بدون مفتاح، Gemini وهمي)
 
 ```bash
-curl -X POST \
-  https://krtulodnhmfuoxjqajwl.supabase.co/functions/v1/ai-chat \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_SUPABASE_ANON_KEY" \
-  -d '{
-    "message": "ما هو React؟",
-    "userId": "user-123",
-    "context": "مبتدئ في البرمجة"
-  }'
+npx tsx scripts/challenge-audit/ai-chat-core.test.ts
 ```
-
-### **Response:**
-
-```json
-{
-  "reply": "React مكتبة JavaScript لبناء واجهات تفاعلية. يستخدم Components قابلة لإعادة الاستخدام.\n\nمثال:\nfunction App() {\n  return <h1>Hello World</h1>;\n}"
-}
-```
-
----
-
-## 🧪 أمثلة الاستخدام
-
-### **مثال 1: سؤال بسيط**
-
-**Request:**
-
-```json
-{
-  "message": "ما هو useState؟"
-}
-```
-
-**Response:**
-
-```json
-{
-  "reply": "useState هو Hook في React يسمح لك بإضافة state للمكونات.\n\nمثال:\nconst [count, setCount] = useState(0)\n\nيمكنك تغيير count باستخدام setCount(1)"
-}
-```
-
-**النموذج المستخدم داخلياً:** `gpt-3.5-turbo` ✅
-
----
-
-### **مثال 2: سؤال متقدم**
-
-**Request:**
-
-```json
-{
-  "message": "صمم معمارية microservices لتطبيق تعليمي يخدم 100K مستخدم",
-  "context": "استخدم Supabase و React Native"
-}
-```
-
-**Response:**
-
-```json
-{
-  "reply": "**المعمارية المقترحة:**\n\n**1. Frontend:**\n- React Native + Expo\n- State: Zustand\n- Cache: React Query\n\n**2. Backend:**\n- Supabase (PostgreSQL + Edge Functions)\n- Realtime subscriptions\n- RLS للأمان\n\n**3. Services:**\n- Auth: Supabase Auth\n- Storage: Supabase Storage\n- AI: Edge Function منفصلة\n\n**4. Scalability:**\n- CDN للـ assets\n- Database indexes\n- Connection pooling\n- Read replicas عند 50K+ users\n\n**5. التكلفة المتوقعة:**\n~$200/شهر لـ 100K users"
-}
-```
-
-**النموذج المستخدم داخلياً:** `gpt-4o` ✅
-
----
-
-## 🔍 كيف يعمل التصنيف؟
-
-النظام يصنف السؤال **داخلياً فقط** (المستخدم لا يعرف):
-
-```javascript
-// سؤال بسيط → gpt-3.5-turbo
-- أقل من 100 كلمة
-- لا يحتوي كلمات متقدمة
-- أسئلة تعريفية
-
-// سؤال متقدم → gpt-4o
-- أكثر من 100 كلمة
-- يحتوي: معمارية، security، design pattern، إلخ
-- تحليل شامل أو مراجعة
-```
-
----
-
-## 🐛 استكشاف الأخطاء
-
-### **خطأ: "Service configuration error"**
-
-**السبب:** OPENAI_API_KEY غير مُعد
-
-**الحل:**
-
-```bash
-supabase secrets set OPENAI_API_KEY=sk-proj-...
-supabase functions deploy ai-chat
-```
-
----
-
-### **خطأ: "Method not allowed"**
-
-**السبب:** تستخدم GET بدلاً من POST
-
-**الحل:** استخدم POST فقط
-
----
-
-### **خطأ: "Invalid message"**
-
-**السبب:** لم ترسل `message` في الـ body
-
-**الحل:**
-
-```json
-{
-  "message": "سؤالك هنا"
-}
-```
-
----
-
-## 📊 اختبار محلي
-
-```bash
-# شغّل locally
-supabase functions serve ai-chat --env-file ./supabase/.env.local
-
-# اختبر
-curl -X POST \
-  http://localhost:54321/functions/v1/ai-chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "ما هو React؟"}'
-```
-
----
-
-## 🔐 الأمان
-
-### ✅ **ما تم تطبيقه:**
-
-1. API Key في Secrets (ليس في الكود)
-2. CORS headers محددة
-3. Method validation
-4. Input validation
-5. Error handling نظيف
-
-### ⚠️ **نصائح إضافية:**
-
-1. أضف Rate Limiting
-2. استخدم Supabase Auth للتحقق من المستخدمين
-3. راقب Usage في OpenAI Dashboard
-
----
-
-## 💰 التكلفة
-
-```
-توقعات لـ 1000 طلب/شهر:
-━━━━━━━━━━━━━━━━━━━━━━━━
-700 بسيط (gpt-3.5-turbo)  → $1.05
-300 متقدم (gpt-4o)        → $4.50
-━━━━━━━━━━━━━━━━━━━━━━━━
-الإجمالي: ~$5.55/شهر
-```
-
----
-
-## 📚 الملفات
-
-1. ✅ `supabase/functions/ai-chat/index.ts` - Edge Function
-2. ✅ `supabase/functions/_shared/cors.ts` - CORS
-3. ✅ هذا الملف - التعليمات
-
----
-
-## 🎉 جاهز!
-
-الـ Edge Function الآن جاهزة ومُحسّنة للعمل! 🚀
-
-**Next Steps:**
-
-1. Deploy: `supabase functions deploy ai-chat`
-2. Test في التطبيق
-3. راقب Logs: `supabase functions logs ai-chat`
-
-**Happy Coding! 💻✨**

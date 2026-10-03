@@ -1,0 +1,1 @@
+{"success":false,"error":"prog.cc: In function 'int main()':\nprog.cc:26:16: error: 'solution' was not declared in this scope\n   26 |     __kx_print(solution(10)); cout << endl;\n      |                ^~~~~~~~\n"}

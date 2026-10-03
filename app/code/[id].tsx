@@ -51,7 +51,6 @@ import {
   getComments,
   addComment,
   incrementViews,
-  deleteSnippet,
   updateSnippet,
   createSnippet,
   getSnippetCounts,
@@ -62,6 +61,7 @@ import { checkIsFollowing } from '@/services/followService';
 import { executeCode } from '@/services/codeExecution';
 import FollowButton from '@/components/ui/FollowButton';
 import UserAvatar from '@/components/ui/UserAvatar';
+import SnippetModerationSheet from '@/components/editor/SnippetModerationSheet';
 
 // ==================== Constants ====================
 
@@ -256,12 +256,12 @@ export default function CodeDetailsScreen() {
   const [sendingComment, setSendingComment] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
 
   // Project mode
   const [activeProjectTab, setActiveProjectTab] = useState<ProjectTab>('html');
   const [showWebPreview, setShowWebPreview] = useState(false);
+  const [showModeration, setShowModeration] = useState(false);
   const [showRunOutput, setShowRunOutput] = useState(false);
   const [runOutput, setRunOutput] = useState('');
 
@@ -424,16 +424,6 @@ export default function CodeDetailsScreen() {
 
     setSendingComment(false);
   }, [user?.id, id, newComment, snippet]);
-
-  const handleDelete = useCallback(async () => {
-    if (!id) return;
-    setDeleting(true);
-    const { success } = await deleteSnippet(id);
-    if (success) {
-      router.back();
-    }
-    setDeleting(false);
-  }, [id]);
 
   // Run code
   const handleRun = useCallback(async () => {
@@ -745,21 +735,19 @@ export default function CodeDetailsScreen() {
                       color={copied ? '#10b981' : '#d1d5db'}
                     />
                   </TouchableOpacity>
-                  {isOwner && (
+                  {user?.id && (
                     <TouchableOpacity
                       style={styles.headerBtn}
-                      onPress={handleDelete}
-                      disabled={deleting}
+                      onPress={() => setShowModeration(true)}
+                      accessibilityLabel={
+                        isOwner ? 'خيارات النشر والحذف' : 'إبلاغ أو حظر'
+                      }
                     >
-                      {deleting ? (
-                        <ActivityIndicator size="small" color="#ef4444" />
-                      ) : (
-                        <Ionicons
-                          name="trash-outline"
-                          size={20}
-                          color="#ef4444"
-                        />
-                      )}
+                      <Ionicons
+                        name="ellipsis-vertical"
+                        size={20}
+                        color="#d1d5db"
+                      />
                     </TouchableOpacity>
                   )}
                 </>
@@ -773,6 +761,23 @@ export default function CodeDetailsScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
+            {isOwner && (snippet as any).is_hidden && (
+              <View style={styles.hiddenBanner}>
+                <Ionicons name="eye-off" size={16} color="#fbbf24" />
+                <Text style={styles.hiddenBannerText}>
+                  هذا المحتوى مخفي عن الآخرين بسبب بلاغات، وبانتظار المراجعة.
+                </Text>
+              </View>
+            )}
+            {isOwner && !snippet.is_public && (
+              <View style={styles.hiddenBanner}>
+                <Ionicons name="lock-closed" size={16} color="#93c5fd" />
+                <Text style={[styles.hiddenBannerText, { color: '#bfdbfe' }]}>
+                  هذا الكود خاص بك (غير منشور).
+                </Text>
+              </View>
+            )}
+
             {/* ===== Author Info ===== */}
             <Animated.View
               entering={FadeInDown.delay(50).duration(300)}
@@ -1293,9 +1298,16 @@ export default function CodeDetailsScreen() {
               >
                 <Ionicons name="close" size={22} color="#d1d5db" />
               </TouchableOpacity>
-              <Text style={styles.previewTitle}>
-                معاينة {isProject ? 'المشروع' : 'الكود'}
-              </Text>
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={styles.previewTitle}>
+                  معاينة {isProject ? 'المشروع' : 'الكود'}
+                </Text>
+                {!isOwner && (
+                  <Text style={styles.ugcWarning}>
+                    محتوى من مستخدم — لا تُدخل كلمات مرور أو بيانات شخصية
+                  </Text>
+                )}
+              </View>
               <TouchableOpacity
                 style={styles.headerBtn}
                 onPress={() => {
@@ -1423,6 +1435,20 @@ export default function CodeDetailsScreen() {
             </View>
           </View>
         </Modal>
+        <SnippetModerationSheet
+          visible={showModeration}
+          onClose={() => setShowModeration(false)}
+          snippetId={snippet.id}
+          authorId={snippet.user_id}
+          authorName={authorName}
+          isOwner={isOwner}
+          isPublic={snippet.is_public}
+          onDeleted={() => router.back()}
+          onVisibilityChanged={(pub) =>
+            setSnippet({ ...snippet, is_public: pub })
+          }
+          onBlocked={() => router.back()}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -1431,6 +1457,26 @@ export default function CodeDetailsScreen() {
 // ==================== Styles ====================
 
 const styles = StyleSheet.create({
+  hiddenBanner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(251,191,36,0.08)',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+  },
+  hiddenBannerText: {
+    color: '#fde68a',
+    fontSize: 13,
+    flex: 1,
+    textAlign: 'right',
+  },
+  ugcWarning: {
+    color: '#fbbf24',
+    fontSize: 11,
+    marginTop: 2,
+  },
   flex: { flex: 1 },
   safeArea: {
     flex: 1,

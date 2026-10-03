@@ -108,15 +108,6 @@ export interface CourseProgress {
   last_completed_lesson_id?: string;
 }
 
-export interface UserPoints {
-  user_id: string;
-  total_points: number;
-  purchased_points: number;
-  earned_points: number;
-  spent_points: number;
-  premium_expires_at?: string;
-}
-
 // ===== خدمة Supabase الرئيسية =====
 class SupabaseService {
   private realtimeChannel: RealtimeChannel | null = null;
@@ -338,8 +329,7 @@ class SupabaseService {
       return { success: false, error: error.message };
     }
 
-    // تحديث XP المستخدم
-    await this.updateUserXP(xpEarned);
+    // XP يُمنح على السيرفر عند حفظ الإكمال (trg_ulp_award_lesson_xp)
 
     return { success: true };
   }
@@ -441,22 +431,6 @@ class SupabaseService {
     return data;
   }
 
-  // تحديث XP المستخدم
-  async updateUserXP(xpAmount: number): Promise<boolean> {
-    if (!this.userId) return false;
-
-    const { error } = await supabase.rpc('update_user_xp', {
-      user_id: this.userId,
-      xp_amount: xpAmount,
-    });
-
-    if (error) {
-      return false;
-    }
-
-    return true;
-  }
-
   // ===== إحصائيات المستخدم =====
   async getUserStats(): Promise<{
     totalXP: number;
@@ -537,124 +511,7 @@ class SupabaseService {
     return true;
   }
 
-  // فتح كورس
-  async unlockCourse(courseId: string, pointsCost: number): Promise<boolean> {
-    if (!this.userId) return false;
-
-    // خصم النقاط أولاً
-    const pointsDeducted = await this.deductPoints(
-      pointsCost,
-      `فتح كورس: ${courseId}`
-    );
-    if (!pointsDeducted) return false;
-
-    // إضافة إلى الكورسات المفتوحة
-    const { error } = await supabase.from('user_unlocked_courses').insert({
-      user_id: this.userId,
-      course_id: courseId,
-      unlocked_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      return false;
-    }
-
-    return true;
-  }
-
-  // ===== إدارة النقاط =====
-
-  // جلب نقاط المستخدم
-  async getUserPoints(): Promise<UserPoints | null> {
-    if (!this.userId) return null;
-
-    const { data, error } = await supabase
-      .from('user_points')
-      .select('*')
-      .eq('user_id', this.userId)
-      .single();
-
-    if (error) {
-      // إنشاء سجل جديد إذا لم يوجد
-      if (error.code === 'PGRST116') {
-        const { data: newData, error: insertError } = await supabase
-          .from('user_points')
-          .insert({
-            user_id: this.userId,
-            total_points: 0,
-            purchased_points: 0,
-            earned_points: 0,
-            spent_points: 0,
-          })
-          .select()
-          .single();
-
-        if (insertError) return null;
-        return newData;
-      }
-      return null;
-    }
-
-    return data;
-  }
-
-  // إضافة نقاط
-  async addPoints(amount: number, reason: string): Promise<boolean> {
-    if (!this.userId) return false;
-
-    const points = await this.getUserPoints();
-    if (!points) return false;
-
-    const { error } = await supabase
-      .from('user_points')
-      .update({
-        total_points: points.total_points + amount,
-        earned_points: points.earned_points + amount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', this.userId);
-
-    if (error) return false;
-
-    // تسجيل المعاملة
-    await supabase.from('point_transactions').insert({
-      user_id: this.userId,
-      type: 'earned',
-      amount,
-      reason,
-    });
-
-    return true;
-  }
-
-  // خصم نقاط
-  async deductPoints(amount: number, reason: string): Promise<boolean> {
-    if (!this.userId) return false;
-
-    const points = await this.getUserPoints();
-    if (!points || points.total_points < amount) return false;
-
-    const { error } = await supabase
-      .from('user_points')
-      .update({
-        total_points: points.total_points - amount,
-        spent_points: points.spent_points + amount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', this.userId);
-
-    if (error) return false;
-
-    // تسجيل المعاملة
-    await supabase.from('point_transactions').insert({
-      user_id: this.userId,
-      type: 'spent',
-      amount,
-      reason,
-    });
-
-    return true;
-  }
+  // ملاحظة: فتح الدورات وكل عمليات الكوينات تتم عبر coinService (RPC على السيرفر).
 
   // ===== Leaderboard =====
   async getLeaderboard(limit: number = 10): Promise<UserProfile[]> {

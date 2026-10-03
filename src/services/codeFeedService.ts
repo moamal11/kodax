@@ -27,6 +27,7 @@ export interface FeedSnippet {
   comments_count: number;
   views_count: number;
   is_public: boolean;
+  is_hidden?: boolean;
   created_at: string;
   updated_at: string;
   profiles: {
@@ -54,11 +55,7 @@ export interface FeedOptions {
   language?: string;
   search?: string;
   sortBy?:
-    | 'recent'
-    | 'popular'
-    | 'most_liked'
-    | 'most_viewed'
-    | 'most_commented';
+    'recent' | 'popular' | 'most_liked' | 'most_viewed' | 'most_commented';
   page?: number;
   limit?: number;
   userId?: string;
@@ -134,6 +131,12 @@ export async function getPublicSnippets(
     // إضافة ترتيب ثانوي بتاريخ الإنشاء
     if (sortBy !== 'recent') {
       query = query.order('created_at', { ascending: false });
+    }
+
+    // إخفاء أكواد المستخدمين المحظورين
+    const blocked = await getBlockedUserIds();
+    if (blocked.length > 0) {
+      query = query.not('user_id', 'in', `(${blocked.join(',')})`);
     }
 
     // تطبيق pagination
@@ -640,5 +643,149 @@ export async function deleteSnippet(
       success: false,
       error: error instanceof Error ? error.message : 'فشل حذف الكود',
     };
+  }
+}
+
+// ==================== Moderation (UGC) ====================
+
+export type ReportReason =
+  'spam' | 'phishing' | 'malicious' | 'offensive' | 'copyright' | 'other';
+
+export const REPORT_REASONS: Array<{ id: ReportReason; label: string }> = [
+  { id: 'phishing', label: 'صفحة احتيال / سرقة بيانات' },
+  { id: 'malicious', label: 'كود ضار' },
+  { id: 'offensive', label: 'محتوى مسيء أو غير لائق' },
+  { id: 'spam', label: 'سبام أو إعلانات' },
+  { id: 'copyright', label: 'انتهاك حقوق' },
+  { id: 'other', label: 'سبب آخر' },
+];
+
+/**
+ * الإبلاغ عن كود/مشروع منشور. البلاغات المتكررة تخفي المحتوى تلقائياً
+ * لحين مراجعته (على السيرفر).
+ */
+export async function reportSnippet(
+  snippetId: string,
+  reason: ReportReason,
+  details?: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const { data, error } = await supabase.rpc('report_snippet', {
+      p_snippet_id: snippetId,
+      p_reason: reason,
+      p_details: details ?? null,
+    });
+    if (error) throw error;
+    if (data?.success) {
+      return {
+        success: true,
+        message: data.duplicate
+          ? 'أبلغت عن هذا المحتوى مسبقاً. شكراً لك.'
+          : 'تم استلام البلاغ. شكراً لمساعدتك في حماية المجتمع.',
+      };
+    }
+    return {
+      success: false,
+      message:
+        data?.code === 'own_content'
+          ? 'لا يمكنك الإبلاغ عن محتواك.'
+          : 'تعذّر إرسال البلاغ. حاول لاحقاً.',
+    };
+  } catch (error) {
+    console.error('reportSnippet error:', error);
+    return { success: false, message: 'تعذّر إرسال البلاغ. تحقق من الاتصال.' };
+  }
+}
+
+let blockedCache: { userId: string; ids: string[]; at: number } | null = null;
+
+/** معرفات المستخدمين الذين حظرهم المستخدم الحالي */
+export async function getBlockedUserIds(force = false): Promise<string[]> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return [];
+    if (
+      !force &&
+      blockedCache &&
+      blockedCache.userId === uid &&
+      Date.now() - blockedCache.at < 60_000
+    ) {
+      return blockedCache.ids;
+    }
+    const { data, error } = await supabase
+      .from('user_blocks')
+      .select('blocked_id')
+      .eq('blocker_id', uid);
+    if (error) return blockedCache?.ids ?? [];
+    const ids = (data || []).map((r: any) => r.blocked_id as string);
+    blockedCache = { userId: uid, ids, at: Date.now() };
+    return ids;
+  } catch {
+    return [];
+  }
+}
+
+export async function blockUser(
+  blockedId: string
+): Promise<{ success: boolean }> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid || uid === blockedId) return { success: false };
+    const { error } = await supabase
+      .from('user_blocks')
+      .upsert({ blocker_id: uid, blocked_id: blockedId });
+    if (error) throw error;
+    blockedCache = null;
+    return { success: true };
+  } catch (error) {
+    console.error('blockUser error:', error);
+    return { success: false };
+  }
+}
+
+export async function unblockUser(
+  blockedId: string
+): Promise<{ success: boolean }> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return { success: false };
+    const { error } = await supabase
+      .from('user_blocks')
+      .delete()
+      .eq('blocker_id', uid)
+      .eq('blocked_id', blockedId);
+    if (error) throw error;
+    blockedCache = null;
+    return { success: true };
+  } catch (error) {
+    console.error('unblockUser error:', error);
+    return { success: false };
+  }
+}
+
+/** نشر / إلغاء نشر كود يملكه المستخدم */
+export async function setSnippetPublic(
+  snippetId: string,
+  isPublic: boolean
+): Promise<{ success: boolean }> {
+  try {
+    const { error } = await supabase
+      .from('code_snippets')
+      .update({ is_public: isPublic, updated_at: new Date().toISOString() })
+      .eq('id', snippetId);
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('setSnippetPublic error:', error);
+    return { success: false };
   }
 }

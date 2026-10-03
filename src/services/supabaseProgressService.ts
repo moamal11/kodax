@@ -109,11 +109,7 @@ class SupabaseProgressService {
           return { success: true }; // نجاح محلي
         }
 
-        // تحديث XP في profiles
-        await supabase.rpc('update_user_xp', {
-          user_id: this.userId,
-          xp_amount: xpEarned,
-        });
+        // XP يُمنح على السيرفر عند حفظ الإكمال (trg_ulp_award_lesson_xp)
 
         return { success: true };
       } catch (err) {

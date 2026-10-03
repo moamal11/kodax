@@ -6,7 +6,7 @@
  * تكشف beforeinstallprompt للـ PWA على أندرويد
  * تصميم احترافي متوافق مع هوية KODAX
  *
- * زر التحميل يجلب رابط آخر إصدار تلقائياً من جدول app_updates في Supabase
+ * زر Android يفتح صفحة Kodax على Google Play فقط (لا توجد روابط APK مباشرة).
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
@@ -20,18 +20,16 @@ import {
   Linking,
   Platform,
   Image,
-  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Fallback URL if no update found in database
-const FALLBACK_DOWNLOAD_URL =
+// Kodax على Google Play — المصدر الوحيد لتحميل تطبيق Android
+const PLAY_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.kodax.app';
 
 // === Platform detection for web ===
@@ -126,42 +124,6 @@ export default function DownloadPage() {
   const deferredPromptRef = useRef<any>(null);
   const [canInstallPWA, setCanInstallPWA] = useState(false);
 
-  // Dynamic download info from app_updates table
-  const [downloadUrl, setDownloadUrl] = useState<string>(FALLBACK_DOWNLOAD_URL);
-  const [latestVersion, setLatestVersion] = useState<string | null>(null);
-  const [releaseNotes, setReleaseNotes] = useState<string | null>(null);
-  const [isLoadingUpdate, setIsLoadingUpdate] = useState(true);
-
-  // ===== Fetch latest update from database =====
-  useEffect(() => {
-    const fetchLatestUpdate = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('app_updates')
-          .select('version, download_url, release_notes, build_number')
-          .eq('is_active', true)
-          .or('platform.eq.android,platform.eq.all')
-          .order('build_number', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (!error && data) {
-          if (data.download_url) {
-            setDownloadUrl(data.download_url);
-          }
-          setLatestVersion(data.version);
-          setReleaseNotes(data.release_notes);
-        }
-      } catch (_e) {
-        // Use fallback URL
-      } finally {
-        setIsLoadingUpdate(false);
-      }
-    };
-
-    fetchLatestUpdate();
-  }, []);
-
   // ===== حماية: الموبايل لا يجب أن يرى هذه الصفحة =====
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -244,42 +206,26 @@ export default function DownloadPage() {
               <Ionicons name="logo-android" size={40} color="#22c55e" />
               <Text style={styles.platformTitle}>Android</Text>
               <Text style={styles.platformDesc}>
-                حمّل التطبيق APK واستمتع بتجربة أصلية كاملة
+                حمّل Kodax مجاناً من Google Play واستمتع بتجربة أصلية كاملة
               </Text>
-
-              {latestVersion && (
-                <View style={styles.versionBadge}>
-                  <Ionicons name="sparkles" size={14} color="#22c55e" />
-                  <Text style={styles.versionText}>
-                    الإصدار {latestVersion}
-                  </Text>
-                </View>
-              )}
-
-              {releaseNotes && (
-                <Text style={styles.releaseNotes}>{releaseNotes}</Text>
-              )}
 
               <TouchableOpacity
                 style={styles.primaryBtn}
-                onPress={() => Linking.openURL(downloadUrl)}
+                onPress={() => Linking.openURL(PLAY_STORE_URL)}
                 activeOpacity={0.8}
-                disabled={isLoadingUpdate}
               >
                 <LinearGradient
                   colors={['#22c55e', '#16a34a']}
                   style={styles.primaryBtnGradient}
                 >
-                  {isLoadingUpdate ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Ionicons name="download" size={20} color="#fff" />
-                      <Text style={styles.primaryBtnText}>
-                        تحميل {latestVersion ? `v${latestVersion}` : ''}
-                      </Text>
-                    </>
-                  )}
+                  <Ionicons
+                    name="logo-google-playstore"
+                    size={20}
+                    color="#fff"
+                  />
+                  <Text style={styles.primaryBtnText}>
+                    احصل عليه من Google Play
+                  </Text>
                 </LinearGradient>
               </TouchableOpacity>
 

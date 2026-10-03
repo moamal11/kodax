@@ -431,7 +431,7 @@ ListView.builder(
   itemCount: items.length,
   itemBuilder: (context, index) {
     return ListTile(
-      leading: CircleAvatar(child: Text('\$\{index + 1}')),
+      leading: CircleAvatar(child: Text('\$\\{index + 1}')),
       title: Text(items[index].title),
       subtitle: Text(items[index].subtitle),
       trailing: Icon(Icons.arrow_forward_ios),

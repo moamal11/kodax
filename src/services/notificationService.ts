@@ -45,6 +45,7 @@ export type NotificationType =
   | 'course'
   | 'streak'
   | 'xp'
+  // أنواع قديمة (نظام الدفع أُلغي) — تبقى فقط لعرض الإشعارات القديمة في السجل
   | 'purchase'
   | 'payment_approved'
   | 'payment_rejected'
@@ -381,37 +382,6 @@ class NotificationService {
     );
   }
 
-  /** إشعار موافقة طلب الدفع */
-  async notifyPaymentApproved(
-    orderId: string,
-    points: number,
-    adminNote?: string
-  ): Promise<AppNotification> {
-    return this.createNotification(
-      'payment_approved',
-      `✅ تمت الموافقة على طلبك!`,
-      adminNote
-        ? `تم إضافة ${points.toLocaleString()} نقطة إلى رصيدك. ${adminNote}`
-        : `تم إضافة ${points.toLocaleString()} نقطة إلى رصيدك. شكراً لك!`,
-      { orderId, points, adminNote, navigateTo: '/payment/orders' }
-    );
-  }
-
-  /** إشعار رفض طلب الدفع */
-  async notifyPaymentRejected(
-    orderId: string,
-    adminNote?: string
-  ): Promise<AppNotification> {
-    return this.createNotification(
-      'payment_rejected',
-      `❌ تم رفض طلب الدفع`,
-      adminNote
-        ? `السبب: ${adminNote}. يرجى التواصل مع الدعم للمزيد من المعلومات.`
-        : `للأسف تم رفض طلب الدفع الخاص بك. يرجى التواصل مع الدعم.`,
-      { orderId, adminNote, navigateTo: '/payment/orders' }
-    );
-  }
-
   // ===== الحصول على الإشعارات =====
   async getNotifications(): Promise<AppNotification[]> {
     await this.initialize();
@@ -619,7 +589,7 @@ class NotificationService {
     if (this.realtimeChannel) {
       supabase.removeChannel(this.realtimeChannel);
       this.realtimeChannel = null;
-      console.log('🔕 Unsubscribed from realtime notifications');
+      
     }
   }
 
@@ -632,7 +602,7 @@ class NotificationService {
     this.notifications = [];
     this.initialized = false;
     this.userId = null;
-    console.log('🧹 NotificationService: State reset');
+   
   }
 }
 

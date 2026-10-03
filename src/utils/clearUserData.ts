@@ -16,7 +16,7 @@ export async function clearAllKodaxData(): Promise<void> {
   try {
     const allKeys = await AsyncStorage.getAllKeys();
     const kodaxKeys = allKeys.filter(
-      (key) => key.startsWith('@kodax_') || key.startsWith('kodax_')
+      (key: string) => key.startsWith('@kodax_') || key.startsWith('kodax_')
     );
 
     if (kodaxKeys.length > 0) {
@@ -47,7 +47,7 @@ async function clearKnownKeys(): Promise<void> {
     '@kodax_completed_challenges',
     '@kodax_user_xp',
     '@kodax_user_streak',
-    // databaseService
+    // legacy: databaseService (removed)
     '@kodax_user_profile',
     '@kodax_user_points',
     '@kodax_unlocked_courses',
@@ -56,7 +56,7 @@ async function clearKnownKeys(): Promise<void> {
     // supabaseProgressService
     '@kodax_db_completed_lessons',
     '@kodax_pending_sync',
-    // pointsService
+    // legacy: old local points cache (paid points system, removed)
     '@kodax_points_data',
     // hybridSyncService
     '@kodax_user_level',

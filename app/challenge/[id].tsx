@@ -46,14 +46,22 @@ import {
 } from '@/constants/courseData';
 import CustomModal, { useCustomModal } from '@/components/ui/CustomModal';
 import { useAuth } from '../_layout';
-import { useSubscription } from '@/contexts/SubscriptionContext';
-import { usePoints } from '@/contexts/PointsContext';
+import { useCoins } from '@/contexts/CoinsContext';
 import { hybridSyncService } from '@/services/hybridSyncService';
 import {
   validateChallenge,
   quickValidate,
 } from '@/services/challengeValidator';
+import { loadChallengeDraft, saveChallengeDraft } from '@/services/challengeDraft';
+import { submitChallengeSolution } from '@/services/challengeSubmissionService';
+import {
+  ChallengeResults,
+  ChallengeRequirements,
+  type ChallengeRunSummary,
+} from '@/components/challenge/ChallengeResults';
 import { ExplainWithAI } from '@/components/ai';
+import SolutionReveal, { type ChallengeAttemptState } from '@/components/challenge/SolutionReveal';
+import { coinService } from '@/services/coinService';
 import { badgeService } from '@/services/badgeService';
 import { notificationService } from '@/services/notificationService';
 import { progressService } from '@/services/progressService';
@@ -100,8 +108,7 @@ const { width: SW, height: SH } = Dimensions.get('window');
 export default function ChallengeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { isSubscribed, openSubscriptionModal } = useSubscription();
-  const { isPremium, unlockedCourses } = usePoints();
+  const { unlockedCourses, refresh: refreshCoins } = useCoins();
   const { checkBadges } = useBadges();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -118,8 +125,16 @@ export default function ChallengeScreen() {
   const [testResults, setTestResults] = useState<
     { passed: boolean; message: string }[] | null
   >(null);
+  // النتيجة الكاملة لآخر تشغيل (للعرض المفصل ولمساعد الذكاء)
+  const [runSummary, setRunSummary] = useState<ChallengeRunSummary | null>(null);
+  // الكود الذي أنتج آخر نتيجة — إذا تغيّر الكود لا تُستخدم النتيجة القديمة (للذكاء أو كأنها حالية)
+  const [runCode, setRunCode] = useState<string | null>(null);
+  // لا نعرض المحرر قبل تحميل المسودة حتى لا يكتب الكود الابتدائي فوقها
+  const [draftLoaded, setDraftLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isAlreadyCompleted, setIsAlreadyCompleted] = useState(false);
+  // حالة المحاولات من السيرفر: مستوى التلميح وأهلية إظهار الحل
+  const [attemptState, setAttemptState] = useState<ChallengeAttemptState | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const { showModal, hideModal, ModalComponent } = useCustomModal();
 
@@ -130,6 +145,9 @@ export default function ChallengeScreen() {
         await hybridSyncService.setUser(user.id);
         const completed = await hybridSyncService.checkLessonCompleted(id);
         setIsAlreadyCompleted(!!completed);
+        const st = await coinService.challengeAttemptState(id);
+        if (st.success) setAttemptState(st as ChallengeAttemptState);
+        coinService.track('challenge_opened', { challenge_id: id });
       }
     };
     checkCompleted();
@@ -174,14 +192,41 @@ export default function ChallengeScreen() {
   const isLocked = useMemo(() => {
     if (!challenge) return false;
     if (accessType === 'free') return false;
-    if (accessType === 'premium') return !isPremium && !isSubscribed;
     if (accessType === 'course-required') {
       const reqCourseId = getChallengeRequiredCourseId(challenge);
       if (!reqCourseId) return false;
       return !isCourseAccessible(reqCourseId, unlockedCourses);
     }
     return false;
-  }, [challenge, accessType, isPremium, isSubscribed, unlockedCourses]);
+  }, [challenge, accessType, unlockedCourses]);
+
+  // Initialize code with starter code
+  // (يجب أن يكون قبل أي return مبكر حتى لا يتغير ترتيب الـ hooks)
+  // (مع استعادة مسودة المستخدم المحفوظة إن وجدت)
+  useEffect(() => {
+    if (!challenge) return;
+    let cancelled = false;
+    setDraftLoaded(false);
+    loadChallengeDraft(user?.id, challenge.id).then((draft) => {
+      if (cancelled) return;
+      setCode(draft ?? challenge.starterCode ?? '');
+      setDraftLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [challenge?.id, user?.id]);
+
+  // حفظ المسودة تلقائياً بعد التوقف عن الكتابة
+  useEffect(() => {
+    if (!challenge || !draftLoaded) return;
+    const t = setTimeout(() => {
+      saveChallengeDraft(user?.id, challenge.id, code, challenge.starterCode ?? '');
+    }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, draftLoaded]);
 
   if (!challenge) {
     return (
@@ -226,14 +271,23 @@ export default function ChallengeScreen() {
                 paddingHorizontal: 24,
               }}
             >
-              {accessType === 'premium'
-                ? 'يتطلب اشتراك Premium للوصول إلى هذا التحدي'
-                : reqCourseTitle
-                  ? `أكمل دورة "${reqCourseTitle}" لفتح هذا التحدي`
-                  : 'أكمل المتطلبات اللازمة لفتح هذا التحدي'}
+              {reqCourseTitle
+                ? `هذا التحدي جزء من دورة "${reqCourseTitle}"، ويُفتح مجاناً عندما تصل لهذه الدورة في مسارك.`
+                : 'أكمل المتطلبات اللازمة لفتح هذا التحدي'}
             </Text>
+            {reqCourseId && (
+              <TouchableOpacity
+                style={[
+                  styles.backButton,
+                  { marginTop: 20, backgroundColor: '#7c3aed' },
+                ]}
+                onPress={() => router.replace(`/course/${reqCourseId}` as any)}
+              >
+                <Text style={styles.backButtonText}>عرض الدورة</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={[styles.backButton, { marginTop: 20 }]}
+              style={[styles.backButton, { marginTop: 12 }]}
               onPress={() => router.back()}
             >
               <Text style={styles.backButtonText}>رجوع</Text>
@@ -244,12 +298,41 @@ export default function ChallengeScreen() {
     );
   }
 
-  // Initialize code with starter code
-  React.useEffect(() => {
-    if (challenge.starterCode && !code) {
-      setCode(challenge.starterCode);
-    }
-  }, [challenge.starterCode]);
+  const visibleTestCases = challenge.testCases.filter((tc) => !tc.hidden);
+  const hiddenTestCount = challenge.testCases.length - visibleTestCases.length;
+  const validateOptions = {
+    checks: challenge.checks,
+    entryFunction: challenge.entryFunction,
+    validation: challenge.validation,
+    prelude: challenge.prelude,
+  };
+
+  // التحقق من كود يقترحه مساعد الذكاء بنفس اختبارات التحدي
+  const verifyAICode = async (candidate: string): Promise<ChallengeRunSummary> => {
+    const r = await validateChallenge(
+      candidate,
+      challenge.starterCode,
+      challenge.language,
+      challenge.testCases,
+      validateOptions
+    );
+    return {
+      results: r.results,
+      passedTests: r.passedTests,
+      totalTests: r.totalTests,
+      allPassed: r.allPassed,
+      serviceError: r.serviceError,
+      mode: r.mode,
+    };
+  };
+
+  // استبدال كود المحرر بعد موافقة المستخدم (من مساعد الذكاء)
+  const applyCodeToEditor = (newCode: string) => {
+    setCode(newCode);
+    mobileEditorRef.current?.setCodeExternal(newCode);
+    setRunSummary(null);
+    setTestResults(null);
+  };
 
   const difficultyColors = {
     easy: '#22c55e',
@@ -286,21 +369,16 @@ export default function ChallengeScreen() {
     setIsRunning(true);
     setOutput(null);
     setTestResults(null);
+    setRunSummary(null);
 
     try {
-      // Format test cases for validator
-      const formattedTestCases = challenge.testCases.map((tc) => ({
-        input: tc.input,
-        expectedOutput: tc.expectedOutput,
-        description: tc.description,
-      }));
-
-      // Run real validation
+      // كل الاختبارات (الظاهرة والمخفية) + المتطلبات البنيوية
       const validationResult = await validateChallenge(
         code,
         challenge.starterCode,
         challenge.language,
-        formattedTestCases
+        challenge.testCases,
+        validateOptions
       );
 
       // Convert results to display format
@@ -310,6 +388,15 @@ export default function ChallengeScreen() {
       }));
 
       setTestResults(results);
+      setRunCode(code);
+      setRunSummary({
+        results: validationResult.results,
+        passedTests: validationResult.passedTests,
+        totalTests: validationResult.totalTests,
+        allPassed: validationResult.allPassed,
+        serviceError: validationResult.serviceError,
+        mode: validationResult.mode,
+      });
 
       // Show summary
       if (validationResult.allPassed) {
@@ -325,105 +412,137 @@ export default function ChallengeScreen() {
         setOutput(
           `[تحذير] ${validationResult.passedTests}/${validationResult.totalTests} اختبارات ناجحة`
         );
+        if (user?.id && !validationResult.serviceError) {
+          coinService
+            .recordChallengeAttempt(challenge.id, validationResult.passedTests, validationResult.totalTests)
+            .then((st) => st.success && applyAttemptState(st as ChallengeAttemptState));
+        }
       }
     } catch (error) {
-      setTestResults([
-        {
-          passed: false,
-          message: 'حدث خطأ أثناء التحقق من الكود',
-        },
-      ]);
+      const failure = {
+        passed: false,
+        message: 'حدث خطأ غير متوقع أثناء التحقق — كودك محفوظ، حاول مرة أخرى',
+      };
+      setTestResults([failure]);
+      setRunSummary({
+        results: [{ ...failure, kind: 'service_error' }],
+        passedTests: 0,
+        totalTests: 1,
+        allPassed: false,
+        serviceError: true,
+      });
     } finally {
       setIsRunning(false);
     }
   };
 
-  // Auto-submit when all tests pass - skips the test re-check
-  const handleAutoSubmit = async () => {
+  // حفظ الإكمال: السيرفر يعيد تشغيل الاختبارات (المخفية أيضاً) ويسجّل الإكمال
+  // ويمنح XP والكوينات مرة واحدة. العميل لا يكتب الإكمال بنفسه.
+  const saveVerifiedCompletion = async () => {
+    if (!challenge) return;
+    if (!user?.id) {
+      showModal({
+        type: 'success',
+        title: 'أحسنت!',
+        message: 'حللت التحدي! سجّل الدخول ليُحفظ إكمالك وتحصل على XP والكوينات.',
+        buttons: [{ text: 'حسناً', onPress: () => hideModal(), style: 'primary' }],
+      });
+      return;
+    }
+
     setIsSaving(true);
-    let isFirstTime = !isAlreadyCompleted;
+    let submission: Awaited<ReturnType<typeof submitChallengeSolution>>;
     try {
-      if (user?.id && challenge) {
-        await hybridSyncService.setUser(user.id);
-        const result = await hybridSyncService.saveLessonComplete(
-          challenge.id,
-          'challenges',
-          challenge.points
-        );
-        if (result?.alreadyCompleted) {
-          isFirstTime = false;
-        }
-        setIsAlreadyCompleted(true);
-
-        if (isFirstTime) {
-          await progressService.completeChallenge(
-            challenge.id,
-            challenge.points,
-            code,
-            currentHint
-          );
-        }
-
-        if (isFirstTime && challenge) {
-          try {
-            await badgeService.incrementChallengeStreak();
-            if (currentHint === 0 && !showHints) {
-              await badgeService.incrementNoHintCount();
-            }
-            if (challenge.difficulty === 'hard') {
-              await badgeService.incrementHardChallengeCount();
-            }
-            await notificationService.notifyChallengeCompleted(
-              challenge.id,
-              challenge.points
-            );
-            await checkBadges();
-          } catch (e) {
-            // Error in badge check
-          }
-        }
-      }
-    } catch (error) {
-      // Error saving challenge progress
+      submission = await submitChallengeSolution(challenge.id, code);
     } finally {
       setIsSaving(false);
     }
 
-    if (isFirstTime) {
+    if (!submission.ok) {
       showModal({
-        type: 'success',
-        title: 'أحسنت!',
-        message: 'لقد حللت التحدي بنجاح!',
-        xpReward: challenge?.points,
+        type: 'warning',
+        title: 'لم يُحفظ الإكمال بعد',
+        message: submission.message,
         buttons: [
-          {
-            text: 'التحدي التالي',
-            onPress: () => {
-              hideModal();
-              router.back();
-            },
-            style: 'primary',
-          },
+          { text: 'إعادة الإرسال', onPress: () => { hideModal(); saveVerifiedCompletion(); }, style: 'primary' },
+          { text: 'لاحقاً', onPress: () => hideModal() },
         ],
       });
-    } else {
-      showModal({
-        type: 'success',
-        title: 'تم الحل مجدداً',
-        message: 'لقد حللت هذا التحدي من قبل. لا يتم منح XP مرة أخرى.',
-        buttons: [
-          {
-            text: 'التحدي التالي',
-            onPress: () => {
-              hideModal();
-              router.back();
-            },
-            style: 'primary',
-          },
-        ],
-      });
+      return;
     }
+
+    if (!submission.verified) {
+      if (submission.attempts) applyAttemptState(submission.attempts);
+      // نتيجة السيرفر هي المعتمدة — نعرضها بدل النتيجة المحلية
+      setTestResults(submission.results.map((r) => ({ passed: r.passed, message: r.message })));
+      setRunCode(code);
+      setRunSummary({
+        results: submission.results,
+        passedTests: submission.passedTests,
+        totalTests: submission.totalTests,
+        allPassed: false,
+        mode: submission.mode,
+      });
+      showModal({
+        type: 'warning',
+        title: 'لم يجتز التحقق النهائي',
+        message: `التحقق على السيرفر: ${submission.passedTests}/${submission.totalTests} اختبارات ناجحة. راجع النتائج ثم أعد المحاولة.`,
+        buttons: [{ text: 'حسناً', onPress: () => hideModal(), style: 'primary' }],
+      });
+      return;
+    }
+
+    const isFirstTime = submission.completion.firstTime;
+    const coinsEarned =
+      submission.coins?.success && !submission.coins.duplicate ? submission.coins.reward ?? 0 : 0;
+    setIsAlreadyCompleted(true);
+    if (coinsEarned > 0) refreshCoins().catch(() => {});
+
+    if (isFirstTime) {
+      try {
+        // سجل محلي للشارات (لا يؤثر على السيرفر)
+        await progressService.completeChallenge(challenge.id, challenge.points, code, currentHint);
+        await badgeService.incrementChallengeStreak();
+        if (currentHint === 0 && !showHints) {
+          await badgeService.incrementNoHintCount();
+        }
+        if (challenge.difficulty === 'hard') {
+          await badgeService.incrementHardChallengeCount();
+        }
+        await notificationService.notifyChallengeCompleted(challenge.id, challenge.points);
+        await checkBadges();
+      } catch (e) {
+        // Error in badge check
+      }
+    }
+
+    showModal(
+      isFirstTime
+        ? {
+            type: 'success',
+            title: 'أحسنت!',
+            message:
+              coinsEarned > 0
+                ? `لقد حللت التحدي بنجاح! +${coinsEarned} كوين`
+                : 'لقد حللت التحدي بنجاح!',
+            xpReward: submission.completion.xpAwarded || undefined,
+            buttons: [
+              { text: 'التحدي التالي', onPress: () => { hideModal(); router.back(); }, style: 'primary' },
+            ],
+          }
+        : {
+            type: 'success',
+            title: 'تم الحل مجدداً',
+            message: 'لقد حللت هذا التحدي من قبل. لا يتم منح XP مرة أخرى.',
+            buttons: [
+              { text: 'التحدي التالي', onPress: () => { hideModal(); router.back(); }, style: 'primary' },
+            ],
+          }
+    );
   };
+
+  // Auto-submit when all tests pass locally (the server re-checks everything)
+  const handleAutoSubmit = () => saveVerifiedCompletion();
 
   const handleSubmit = async () => {
     if (!testResults || testResults.some((r) => !r.passed)) {
@@ -437,100 +556,16 @@ export default function ChallengeScreen() {
       });
       return;
     }
+    await saveVerifiedCompletion();
+  };
 
-    // ===== حفظ التقدم في Supabase =====
-    setIsSaving(true);
-    let isFirstTime = !isAlreadyCompleted;
-    try {
-      if (user?.id && challenge) {
-        await hybridSyncService.setUser(user.id);
-        const result = await hybridSyncService.saveLessonComplete(
-          challenge.id,
-          'challenges',
-          challenge.points
-        );
-        // التحقق من الإكمال المسبق من الخادم
-        if (result?.alreadyCompleted) {
-          isFirstTime = false;
-        }
-        // تحديث الحالة المحلية
-        setIsAlreadyCompleted(true);
-
-        // ===== حفظ التحدي في progressService المحلي =====
-        // هذا ضروري لكي تعمل شارات التحديات بشكل صحيح
-        if (isFirstTime) {
-          await progressService.completeChallenge(
-            challenge.id,
-            challenge.points,
-            code,
-            currentHint
-          );
-        }
-
-        // ===== تتبع الشارات =====
-        if (isFirstTime && challenge) {
-          try {
-            // تحديث عدادات الشارات
-            await badgeService.incrementChallengeStreak();
-            if (currentHint === 0 && !showHints) {
-              await badgeService.incrementNoHintCount();
-            }
-            if (challenge.difficulty === 'hard') {
-              await badgeService.incrementHardChallengeCount();
-            }
-            // إشعار التحدي
-            await notificationService.notifyChallengeCompleted(
-              challenge.id,
-              challenge.points
-            );
-            // فحص الشارات
-            await checkBadges();
-          } catch (e) {
-            // Error in badge check
-          }
-        }
-      }
-    } catch (error) {
-      // Error saving challenge progress
-    } finally {
-      setIsSaving(false);
-    }
-
-    if (isFirstTime) {
-      // أول مرة يحل التحدي → يعرض XP و Animation
-      showModal({
-        type: 'success',
-        title: 'أحسنت!',
-        message: 'لقد حللت التحدي بنجاح!',
-        xpReward: challenge?.points,
-        buttons: [
-          {
-            text: 'التحدي التالي',
-            onPress: () => {
-              hideModal();
-              router.back();
-            },
-            style: 'primary',
-          },
-        ],
-      });
-    } else {
-      // إعادة حل التحدي → بدون XP وبدون Animation
-      showModal({
-        type: 'success',
-        title: 'تم الحل مجدداً',
-        message: 'لقد حللت هذا التحدي من قبل. لا يتم منح XP مرة أخرى.',
-        buttons: [
-          {
-            text: 'التحدي التالي',
-            onPress: () => {
-              hideModal();
-              router.back();
-            },
-            style: 'primary',
-          },
-        ],
-      });
+  // المحاولة الأولى: ملاحظات فقط. الثانية: تلميح. الثالثة: تلميح أقوى. بلا أي عقوبة أو إعلان.
+  const applyAttemptState = (st: ChallengeAttemptState) => {
+    setAttemptState(st);
+    const level = Math.min(st.hint_level ?? 0, challenge.hints.length);
+    if (level > 0) {
+      setShowHints(true);
+      setCurrentHint((h) => Math.max(h, level - 1));
     }
   };
 
@@ -690,7 +725,9 @@ export default function ChallengeScreen() {
                       </TouchableOpacity>
                     </View>
 
-                    {Platform.OS === 'web' && CodeMirrorEditor ? (
+                    {!draftLoaded ? (
+                      <View style={{ minHeight: 400 }} />
+                    ) : Platform.OS === 'web' && CodeMirrorEditor ? (
                       <View style={{ minHeight: 400 }}>
                         <CodeMirrorEditor
                           code={code}
@@ -719,34 +756,9 @@ export default function ChallengeScreen() {
                 </Animated.View>
 
                 {/* Test Results */}
-                {testResults && (
+                {runSummary && (
                   <Animated.View entering={FadeIn}>
-                    <View style={webStyles.resultsCardWeb}>
-                      <Text style={webStyles.resultsTitleWeb}>
-                        نتائج الاختبارات
-                      </Text>
-                      {testResults.map((result, index) => (
-                        <View key={index} style={webStyles.resultItemWeb}>
-                          <Ionicons
-                            name={
-                              result.passed
-                                ? 'checkmark-circle'
-                                : 'close-circle'
-                            }
-                            size={22}
-                            color={result.passed ? '#22c55e' : '#ef4444'}
-                          />
-                          <Text
-                            style={[
-                              webStyles.resultTextWeb,
-                              { color: result.passed ? '#22c55e' : '#ef4444' },
-                            ]}
-                          >
-                            {result.message}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
+                    <ChallengeResults summary={runSummary} stale={runCode !== null && runCode !== code} />
                   </Animated.View>
                 )}
 
@@ -842,14 +854,21 @@ export default function ChallengeScreen() {
                   </View>
                 </Animated.View>
 
-                {/* Test Cases */}
-                {challenge.testCases && challenge.testCases.length > 0 && (
+                {/* المتطلبات (للتحديات التي تُفحص بقراءة الكود) */}
+                {!!challenge.checks?.length && (
+                  <Animated.View entering={FadeInDown.delay(200).springify()}>
+                    <ChallengeRequirements checks={challenge.checks} />
+                  </Animated.View>
+                )}
+
+                {/* Test Cases — الظاهرة فقط؛ المخفية لا تُعرض */}
+                {visibleTestCases.length > 0 && (
                   <Animated.View entering={FadeInDown.delay(200).springify()}>
                     <View style={webStyles.testCasesCard}>
                       <Text style={webStyles.testCasesTitle}>
                         حالات الاختبار
                       </Text>
-                      {challenge.testCases
+                      {visibleTestCases
                         .slice(0, 3)
                         .map((testCase, index) => (
                           <View key={index} style={webStyles.testCaseItem}>
@@ -870,6 +889,11 @@ export default function ChallengeScreen() {
                             </Text>
                           </View>
                         ))}
+                      {hiddenTestCount > 0 && (
+                        <Text style={[webStyles.testCaseLabel, { marginTop: 8 }]}>
+                          + {hiddenTestCount} اختبارات مخفية تتحقق من حالات أخرى
+                        </Text>
+                      )}
                     </View>
                   </Animated.View>
                 )}
@@ -890,14 +914,23 @@ export default function ChallengeScreen() {
                       challengeDescription={challenge.description}
                       starterCode={challenge.starterCode}
                       language={challenge.language}
-                      isSubscribed={isSubscribed}
-                      onSubscribePress={openSubscriptionModal}
                       testCases={challenge.testCases}
                       hints={challenge.hints}
-                      solution={challenge.solution}
                       userCode={code}
+                      requirements={challenge.checks?.map((c) => c.message)}
+                      lastRun={runSummary && runCode === code ? runSummary : null}
+                      verifyCode={verifyAICode}
+                      onApplyCode={applyCodeToEditor}
                     />
                   </Animated.View>
+                  <SolutionReveal
+                    challengeId={challenge.id}
+                    language={challenge.language}
+                    isCompleted={isAlreadyCompleted}
+                    attemptState={attemptState}
+                    onAttemptState={setAttemptState}
+                    onApplyCode={applyCodeToEditor}
+                  />
                 </Animated.View>
 
                 {/* Tips */}
@@ -1102,6 +1135,11 @@ export default function ChallengeScreen() {
               </Animated.View>
             )}
 
+            {/* المتطلبات (للتحديات التي تُفحص بقراءة الكود) */}
+            {!!challenge.checks?.length && (
+              <ChallengeRequirements checks={challenge.checks} />
+            )}
+
             {/* Code Editor */}
             <Animated.View entering={FadeInDown.delay(200).springify()}>
               <View
@@ -1146,10 +1184,10 @@ export default function ChallengeScreen() {
 
                 {/* محرر الكود — MobileWebEditor على الموبايل، CodeMirror/TextInput على الويب */}
                 <View style={{ height: 300 }}>
-                  {Platform.OS !== 'web' && MobileWebEditor ? (
+                  {!draftLoaded ? null : Platform.OS !== 'web' && MobileWebEditor ? (
                     <MobileWebEditor
                       ref={mobileEditorRef}
-                      initialCode={challenge.starterCode || ''}
+                      initialCode={code || challenge.starterCode || ''}
                       language={getCMLanguage(challenge.language)}
                       onChange={setCode}
                     />
@@ -1185,26 +1223,9 @@ export default function ChallengeScreen() {
             </Animated.View>
 
             {/* Test Results */}
-            {testResults && (
-              <Animated.View entering={FadeIn} style={styles.resultsCard}>
-                <Text style={styles.resultsTitle}>نتائج الاختبارات</Text>
-                {testResults.map((result, index) => (
-                  <View key={index} style={styles.resultItem}>
-                    <Ionicons
-                      name={result.passed ? 'checkmark-circle' : 'close-circle'}
-                      size={20}
-                      color={result.passed ? '#22c55e' : '#ef4444'}
-                    />
-                    <Text
-                      style={[
-                        styles.resultText,
-                        { color: result.passed ? '#22c55e' : '#ef4444' },
-                      ]}
-                    >
-                      {result.message}
-                    </Text>
-                  </View>
-                ))}
+            {runSummary && (
+              <Animated.View entering={FadeIn}>
+                <ChallengeResults summary={runSummary} stale={runCode !== null && runCode !== code} />
               </Animated.View>
             )}
             {/* زر شرح بالذكاء - Mobile */}
@@ -1215,14 +1236,23 @@ export default function ChallengeScreen() {
                 challengeDescription={challenge.description}
                 starterCode={challenge.starterCode}
                 language={challenge.language}
-                isSubscribed={isSubscribed}
-                onSubscribePress={openSubscriptionModal}
                 testCases={challenge.testCases}
                 hints={challenge.hints}
-                solution={challenge.solution}
                 userCode={code}
+                requirements={challenge.checks?.map((c) => c.message)}
+                lastRun={runSummary && runCode === code ? runSummary : null}
+                verifyCode={verifyAICode}
+                onApplyCode={applyCodeToEditor}
               />
             </Animated.View>
+            <SolutionReveal
+              challengeId={challenge.id}
+              language={challenge.language}
+              isCompleted={isAlreadyCompleted}
+              attemptState={attemptState}
+              onAttemptState={setAttemptState}
+              onApplyCode={applyCodeToEditor}
+            />
             {/* Action Buttons */}
             <Animated.View
               entering={FadeInDown.delay(300).springify()}

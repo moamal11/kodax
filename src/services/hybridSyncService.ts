@@ -12,6 +12,7 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { calculateLevel } from '@/lib/utils';
 import AsyncStorage from '@/lib/platformStorage';
 
 // ===== أنواع البيانات =====
@@ -22,7 +23,33 @@ export interface ProgressData {
   xpEarned: number;
   score?: number;
   completedAt: string;
+  /** فهرس الإجابة بالترتيب الأصلي للخيارات (السيرفر يتحقق منها) */
+  quizAnswer?: number | null;
 }
+
+/** نتيجة إكمال درس من السيرفر (progress_complete_lesson) */
+export interface LessonCompleteResult {
+  success: boolean;
+  error?: string;
+  code?: string;
+  alreadyCompleted?: boolean;
+  xpAwarded?: number;
+  queued?: boolean;
+  server?: Record<string, any>;
+}
+
+/** الإكمال الموثّق فقط يُحتسب (الصفوف القديمة قبل عمود verified تُعامل كموثّقة) */
+const isVerified = (row: { verified?: boolean | null }) => row.verified !== false;
+
+const LESSON_ERRORS: Record<string, string> = {
+  wrong_answer: 'الإجابة غير صحيحة. راجع الدرس وحاول مرة أخرى — بدون أي خصم.',
+  quiz_required: 'أجب عن سؤال الاختبار أولاً.',
+  previous_required: 'أكمل الدرس السابق أولاً.',
+  course_locked: 'هذه الدورة تُفتح بعد التقدم في الدورة السابقة من نفس المسار.',
+  unknown_lesson: 'هذا الدرس غير متاح حالياً.',
+  too_fast: 'خذ وقتك في قراءة الدرس، ثم حاول مرة أخرى.',
+  not_authenticated: 'سجّل الدخول لحفظ تقدمك.',
+};
 
 export interface CourseProgressSummary {
   courseId: string;
@@ -123,81 +150,70 @@ class HybridSyncService {
     lessonId: string,
     courseId: string,
     xpEarned: number,
-    score?: number
-  ): Promise<{ success: boolean; error?: string; alreadyCompleted?: boolean }> {
+    score?: number,
+    quizAnswer?: number | null
+  ): Promise<LessonCompleteResult> {
     if (!this.userId) {
       return { success: false, error: 'المستخدم غير مسجل' };
     }
-
-    // التحقق من صحة البيانات
     if (!lessonId || !courseId) {
-      console.error('Invalid data: missing lessonId or courseId', {
-        lessonId,
-        courseId,
-      });
       return { success: false, error: 'بيانات غير صحيحة' };
     }
-
-    // التحقق من إكمال الدرس من قبل
-    const existingProgress = await this.checkLessonCompleted(lessonId);
-    if (existingProgress) {
-      return { success: true, alreadyCompleted: true };
+    // إكمال التحديات يُسجَّل على السيرفر فقط بعد تشغيل الاختبارات (verify-challenge)
+    if (courseId === 'challenges') {
+      return { success: false, error: 'challenge completion is recorded by the server' };
     }
 
-    const completedAt = new Date().toISOString();
-
-    const payload = {
-      user_id: this.userId,
-      lesson_id: lessonId,
-      course_id: courseId,
-      completed: true,
-      xp_earned: xpEarned,
-      score,
-      completed_at: completedAt,
-      updated_at: completedAt,
-    };
-
-    console.log('[HybridSync] Saving lesson progress:', payload);
-
-    // 1. إرسال إلى Supabase أولاً
-    const { error } = await supabase
-      .from('user_lesson_progress')
-      .upsert(payload, { onConflict: 'user_id,lesson_id' });
+    // الإكمال يُوثَّق على السيرفر: وجود الدرس، الوصول، الدرس السابق، إجابة الاختبار، والفاصل الزمني.
+    // XP والسلسلة والأهداف ومكافأة الدورة تُمنح هناك فقط (مرة واحدة).
+    const call = () =>
+      supabase.rpc('progress_complete_lesson', {
+        p_lesson_id: lessonId,
+        p_quiz_answer: quizAnswer ?? null,
+      });
+    let { data, error } = await call();
+    if (!error && data?.code === 'too_fast' && Number(data.retry_after) <= 20) {
+      await new Promise((res) => setTimeout(res, (Number(data.retry_after) + 1) * 1000));
+      ({ data, error } = await call());
+    }
 
     if (error) {
-      console.error('[HybridSync] Supabase save error:', error);
-      // حفظ محلي للمحاولة لاحقاً
+      // انقطاع الاتصال: يُحفظ محلياً ويُرسل لاحقاً (بنفس الإجابة)
+      console.warn('[HybridSync] complete lesson failed, queued:', error.message);
       await this.queueForSync({
         lessonId,
         courseId,
         completed: true,
         xpEarned,
         score,
-        completedAt,
+        completedAt: new Date().toISOString(),
+        quizAnswer: quizAnswer ?? null,
       });
-      return { success: false, error: error.message };
+      return { success: false, queued: true, error: 'تعذّر الاتصال. سنحفظ تقدمك تلقائياً عند عودة الإنترنت.' };
+    }
+    if (!data?.success) {
+      const code: string = data?.code ?? 'unknown';
+      return { success: false, code, error: LESSON_ERRORS[code] ?? 'تعذّر حفظ التقدم، حاول مرة أخرى.', server: data };
+    }
+    if (data.already_completed) {
+      await this.markCompletedLocally(courseId, lessonId);
+      return { success: true, alreadyCompleted: true, xpAwarded: 0, server: data };
     }
 
-    console.log('[HybridSync] Lesson saved successfully');
+    await this.markCompletedLocally(courseId, lessonId);
+    return { success: true, xpAwarded: Number(data.xp_awarded) || 0, server: data };
+  }
 
-    // 2. تحديث XP المستخدم
-    await this.updateUserXP(xpEarned);
-
-    // 3. تحديث الكاش المحلي بعد نجاح الحفظ
+  /** تحديث الكاش المحلي والذاكرة بعد توثيق السيرفر للإكمال */
+  private async markCompletedLocally(courseId: string, lessonId: string): Promise<void> {
     await this.updateLocalCache(courseId, lessonId);
-
-    // 4. تحديث الكاش في الذاكرة
     const cached = this.progressCache.get(courseId);
     if (cached && !cached.completedLessons.includes(lessonId)) {
       cached.completedLessons.push(lessonId);
       cached.completedCount = cached.completedLessons.length;
-      cached.progressPercent = Math.round(
-        (cached.completedCount / cached.totalLessons) * 100
-      );
+      cached.progressPercent = Math.round((cached.completedCount / Math.max(1, cached.totalLessons)) * 100);
       cached.lastCompletedLessonId = lessonId;
     }
-
-    return { success: true };
   }
 
   /**
@@ -217,9 +233,9 @@ class HybridSyncService {
     if (this.isOnline) {
       try {
         // جلب الدروس المكتملة لهذا الكورس
-        const { data, error } = await supabase
+        const { data: rows, error } = await supabase
           .from('user_lesson_progress')
-          .select('lesson_id, completed_at')
+          .select('*')
           .eq('user_id', this.userId)
           .eq('course_id', courseId)
           .eq('completed', true)
@@ -230,7 +246,9 @@ class HybridSyncService {
           return this.getCachedProgress(courseId, totalLessons);
         }
 
-        const completedLessons = data?.map((d) => d.lesson_id) || [];
+        // الإكمال الموثّق على السيرفر فقط (ما تكتبه نسخة قديمة من التطبيق بعد التحديث لا يُحتسب)
+        const data = (rows ?? []).filter(isVerified);
+        const completedLessons = data.map((d) => d.lesson_id);
         const completedCount = completedLessons.length;
         const lastLesson = data?.[0];
 
@@ -279,12 +297,12 @@ class HybridSyncService {
     if (this.isOnline) {
       const { data, error } = await supabase
         .from('user_lesson_progress')
-        .select('lesson_id')
+        .select('*')
         .eq('user_id', this.userId)
         .eq('completed', true);
 
       if (!error && data) {
-        return data.map((d) => d.lesson_id);
+        return data.filter(isVerified).map((d) => d.lesson_id);
       }
     }
 
@@ -305,13 +323,13 @@ class HybridSyncService {
     if (this.isOnline) {
       const { data, error } = await supabase
         .from('user_lesson_progress')
-        .select('lesson_id')
+        .select('*')
         .eq('user_id', this.userId)
         .eq('completed', true)
         .neq('course_id', 'challenges');
 
       if (!error && data) {
-        return data.map((d) => d.lesson_id);
+        return data.filter(isVerified).map((d) => d.lesson_id);
       }
     }
 
@@ -362,12 +380,12 @@ class HybridSyncService {
     // جلب من Supabase
     const { data, error } = await supabase
       .from('user_lesson_progress')
-      .select('completed')
+      .select('*')
       .eq('user_id', this.userId)
       .eq('lesson_id', lessonId)
       .single();
 
-    return !error && data?.completed === true;
+    return !error && data?.completed === true && isVerified(data);
   }
 
   // ================================================================
@@ -395,20 +413,16 @@ class HybridSyncService {
     await this.checkConnection();
 
     if (this.isOnline) {
-      const { data, error } = await supabase
-        .from('user_unlocked_courses')
-        .select('id, unlocked_at')
-        .eq('user_id', this.userId)
-        .eq('course_id', courseId)
-        .single();
-
-      const isUnlocked = !error && !!data;
+      // الدورة متاحة بالتقدم في المسار أو بالفتح المبكر — السيرفر يحسب ذلك (coins_get_state.unlocked_courses)
+      const { data, error } = await supabase.rpc('coins_get_state');
+      const isUnlocked =
+        !error && Array.isArray(data?.unlocked_courses) && data.unlocked_courses.includes(courseId);
 
       // تخزين في الكاش
       this.unlockCache.set(courseId, {
         courseId,
         isUnlocked,
-        unlockedAt: data?.unlocked_at,
+        unlockedAt: undefined,
         unlockedSections: [],
       });
 
@@ -423,53 +437,14 @@ class HybridSyncService {
   }
 
   /**
-   * فتح كورس - يُرسل إلى Supabase فوراً
+   * إبطال كاش الفتح بعد فتح دورة بالكوينات (الفتح نفسه يتم على السيرفر
+   * عبر coinService.unlockCourse — هذه الخدمة لا تكتب أي رصيد).
    */
-  async unlockCourse(
-    courseId: string,
-    pointsCost: number
-  ): Promise<{ success: boolean; error?: string }> {
-    if (!this.userId) {
-      return { success: false, error: 'المستخدم غير مسجل' };
-    }
-
-    // التحقق من النقاط
-    const hasPoints = await this.hasEnoughPoints(pointsCost);
-    if (!hasPoints) {
-      return { success: false, error: 'نقاط غير كافية' };
-    }
-
-    // خصم النقاط
-    const deducted = await this.deductPoints(
-      pointsCost,
-      `فتح كورس: ${courseId}`
+  invalidateUnlock(courseId: string): void {
+    this.unlockCache.delete(courseId);
+    AsyncStorage.removeItem(`${CACHE_KEYS.UNLOCKED_PREFIX}${courseId}`).catch(
+      () => {}
     );
-    if (!deducted.success) {
-      return { success: false, error: 'فشل في خصم النقاط' };
-    }
-
-    // إضافة إلى الكورسات المفتوحة
-    const { error } = await supabase.from('user_unlocked_courses').insert({
-      user_id: this.userId,
-      course_id: courseId,
-      unlocked_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      // إرجاع النقاط
-      await this.addPoints(pointsCost, 'إرجاع - فشل فتح الكورس');
-      return { success: false, error: error.message };
-    }
-
-    // تحديث الكاش
-    this.unlockCache.set(courseId, {
-      courseId,
-      isUnlocked: true,
-      unlockedAt: new Date().toISOString(),
-      unlockedSections: [],
-    });
-
-    return { success: true };
   }
 
   /**
@@ -508,24 +483,8 @@ class HybridSyncService {
   }
 
   // ================================================================
-  // ==================== إدارة XP والنقاط ========================
+  // ==================== إدارة XP ================================
   // ================================================================
-
-  /**
-   * تحديث XP المستخدم
-   */
-  private async updateUserXP(xpAmount: number): Promise<void> {
-    if (!this.userId) return;
-
-    const { error } = await supabase.rpc('update_user_xp', {
-      user_id: this.userId,
-      xp_amount: xpAmount,
-    });
-
-    if (error) {
-      console.error('Error updating XP:', error);
-    }
-  }
 
   /**
    * جلب XP الحالي للمستخدم
@@ -549,18 +508,26 @@ class HybridSyncService {
       };
     }
 
+    // السلسلة الموحّدة على السيرفر: تسوية الأيام الفائتة (تجميد/انقطاع) قبل القراءة — لا تضيف نشاطاً
+    await supabase.rpc('update_user_streak', { p_user_id: this.userId }).then(
+      () => undefined,
+      () => undefined
+    );
     const { data, error } = await supabase
       .from('profiles')
       .select('xp, level, streak_days')
       .eq('id', this.userId)
       .single();
 
-    // جلب last_active_date من user_stats
-    const { data: statsData } = await supabase
-      .from('user_stats')
-      .select('last_active_date')
+    // آخر يوم نشاط موثّق (بتوقيت بغداد) من السلسلة الموحّدة، ثم user_stats القديم احتياطاً
+    const { data: streakRow } = await supabase
+      .from('user_streaks')
+      .select('last_active_day')
       .eq('user_id', this.userId)
-      .single();
+      .maybeSingle();
+    const { data: statsData } = streakRow
+      ? { data: null }
+      : await supabase.from('user_stats').select('last_active_date').eq('user_id', this.userId).single();
 
     // جلب عدد الدروس المكتملة
     const { count: lessonCount } = await supabase
@@ -589,346 +556,12 @@ class HybridSyncService {
 
     return {
       xp: data.xp || 0,
-      level: data.level || 1,
+      level: calculateLevel(data.xp || 0),
       streak: data.streak_days || 0,
       completedLessons: lessonCount || 0,
       completedChallenges: challengeCount || 0,
-      lastActiveDate: statsData?.last_active_date || null,
+      lastActiveDate: streakRow?.last_active_day || statsData?.last_active_date || null,
     };
-  }
-
-  /**
-   * التحقق من النقاط الكافية
-   */
-  private async hasEnoughPoints(amount: number): Promise<boolean> {
-    if (!this.userId) return false;
-
-    const { data, error } = await supabase
-      .from('user_points')
-      .select('total_points')
-      .eq('user_id', this.userId)
-      .single();
-
-    return !error && data && data.total_points >= amount;
-  }
-
-  /**
-   * خصم نقاط
-   */
-  async deductPoints(
-    amount: number,
-    reason: string
-  ): Promise<{ success: boolean; error?: string }> {
-    if (!this.userId) {
-      return { success: false, error: 'المستخدم غير مسجل' };
-    }
-
-    // جلب النقاط الحالية
-    const { data: currentPoints, error: fetchError } = await supabase
-      .from('user_points')
-      .select('total_points, spent_points')
-      .eq('user_id', this.userId)
-      .single();
-
-    if (fetchError || !currentPoints) {
-      return { success: false, error: 'فشل في جلب النقاط' };
-    }
-
-    if (currentPoints.total_points < amount) {
-      return { success: false, error: 'نقاط غير كافية' };
-    }
-
-    // تحديث النقاط
-    const { error: updateError } = await supabase
-      .from('user_points')
-      .update({
-        total_points: currentPoints.total_points - amount,
-        spent_points: (currentPoints.spent_points || 0) + amount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', this.userId);
-
-    if (updateError) {
-      return { success: false, error: updateError.message };
-    }
-
-    // تسجيل المعاملة
-    await supabase.from('point_transactions').insert({
-      user_id: this.userId,
-      type: 'spent',
-      amount,
-      reason,
-    });
-
-    return { success: true };
-  }
-
-  /**
-   * إضافة نقاط
-   */
-  async addPoints(amount: number, reason: string): Promise<boolean> {
-    if (!this.userId) return false;
-
-    // جلب النقاط الحالية
-    const { data: currentPoints } = await supabase
-      .from('user_points')
-      .select('total_points, earned_points')
-      .eq('user_id', this.userId)
-      .single();
-
-    if (!currentPoints) {
-      // إنشاء سجل جديد
-      await supabase.from('user_points').insert({
-        user_id: this.userId,
-        total_points: amount,
-        earned_points: amount,
-        spent_points: 0,
-        purchased_points: 0,
-      });
-    } else {
-      // تحديث السجل الموجود
-      await supabase
-        .from('user_points')
-        .update({
-          total_points: currentPoints.total_points + amount,
-          earned_points: (currentPoints.earned_points || 0) + amount,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', this.userId);
-    }
-
-    // تسجيل المعاملة
-    await supabase.from('point_transactions').insert({
-      user_id: this.userId,
-      type: 'earned',
-      amount,
-      reason,
-    });
-
-    return true;
-  }
-
-  // ================================================================
-  // ==================== إدارة النقاط الكاملة =====================
-  // ================================================================
-
-  /**
-   * جلب بيانات النقاط الكاملة من Supabase
-   */
-  async getFullPointsData(): Promise<{
-    totalPoints: number;
-    earnedPoints: number;
-    purchasedPoints: number;
-    spentPoints: number;
-    storeCredits: number;
-  }> {
-    if (!this.userId) {
-      return {
-        totalPoints: 0,
-        earnedPoints: 0,
-        purchasedPoints: 0,
-        spentPoints: 0,
-        storeCredits: 0,
-      };
-    }
-
-    const { data, error } = await supabase
-      .from('user_points')
-      .select('total_points, earned_points, purchased_points, spent_points')
-      .eq('user_id', this.userId)
-      .single();
-
-    if (error || !data) {
-      // إنشاء سجل جديد إذا لم يكن موجوداً
-      if (error?.code === 'PGRST116') {
-        await supabase.from('user_points').insert({
-          user_id: this.userId,
-          total_points: 0,
-          earned_points: 0,
-          purchased_points: 0,
-          spent_points: 0,
-        });
-      }
-      return {
-        totalPoints: 0,
-        earnedPoints: 0,
-        purchasedPoints: 0,
-        spentPoints: 0,
-        storeCredits: 0,
-      };
-    }
-
-    return {
-      totalPoints: data.total_points || 0,
-      earnedPoints: data.earned_points || 0,
-      purchasedPoints: data.purchased_points || 0,
-      spentPoints: data.spent_points || 0,
-      storeCredits: data.total_points || 0, // Store credits = total available points
-    };
-  }
-
-  /**
-   * جلب جميع الكورسات المفتوحة من Supabase
-   */
-  async getAllUnlockedCourses(): Promise<string[]> {
-    if (!this.userId) return [];
-
-    const { data, error } = await supabase
-      .from('user_unlocked_courses')
-      .select('course_id')
-      .eq('user_id', this.userId);
-
-    if (error || !data) return [];
-    return data.map((d) => d.course_id);
-  }
-
-  /**
-   * جلب جميع الأقسام المفتوحة من Supabase
-   */
-  async getAllUnlockedSections(): Promise<string[]> {
-    if (!this.userId) return [];
-
-    const { data, error } = await supabase
-      .from('user_unlocked_sections')
-      .select('section_id')
-      .eq('user_id', this.userId);
-
-    if (error || !data) return [];
-    return data.map((d) => d.section_id);
-  }
-
-  // ================================================================
-  // ==================== إدارة الاشتراك المميز ====================
-  // ================================================================
-
-  /**
-   * جلب حالة الاشتراك المميز من Supabase
-   */
-  async getPremiumStatus(): Promise<{
-    isPremium: boolean;
-    expiresAt: string | null;
-    daysRemaining: number;
-  }> {
-    if (!this.userId) {
-      return { isPremium: false, expiresAt: null, daysRemaining: 0 };
-    }
-
-    const { data, error } = await supabase
-      .from('user_subscriptions')
-      .select('expires_at, is_active')
-      .eq('user_id', this.userId)
-      .eq('is_active', true)
-      .order('expires_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error || !data) {
-      return { isPremium: false, expiresAt: null, daysRemaining: 0 };
-    }
-
-    const expiresAt = data.expires_at;
-    const now = new Date();
-    const expiry = new Date(expiresAt);
-    const isPremium = expiry > now;
-    const daysRemaining = isPremium
-      ? Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      : 0;
-
-    return {
-      isPremium,
-      expiresAt: isPremium ? expiresAt : null,
-      daysRemaining,
-    };
-  }
-
-  /**
-   * شراء اشتراك مميز بالنقاط
-   */
-  async purchasePremium(
-    cost: number
-  ): Promise<{ success: boolean; error?: string }> {
-    if (!this.userId) {
-      return { success: false, error: 'المستخدم غير مسجل' };
-    }
-
-    // خصم النقاط
-    const deducted = await this.deductPoints(cost, 'شراء اشتراك مميز');
-    if (!deducted.success) {
-      return { success: false, error: deducted.error };
-    }
-
-    // إضافة الاشتراك
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30); // 30 يوم
-
-    const { error } = await supabase.from('user_subscriptions').insert({
-      user_id: this.userId,
-      type: 'premium',
-      is_active: true,
-      plan_id: 'ab51ad31-2d54-4b55-a975-483ccc31913f2', // معرف الخطة المميزة
-      started_at: new Date().toISOString(),
-      expires_at: expiresAt.toISOString(),
-    });
-
-    if (error) {
-      // إرجاع النقاط
-      await this.addPoints(cost, 'إرجاع - فشل شراء الاشتراك');
-      return { success: false, error: error.message };
-    }
-
-    return { success: true };
-  }
-
-  /**
-   * شراء نقاط (تحديث الرصيد بعد الدفع)
-   */
-  async purchasePoints(
-    amount: number,
-    packageId: string
-  ): Promise<{ success: boolean; error?: string }> {
-    if (!this.userId) {
-      return { success: false, error: 'المستخدم غير مسجل' };
-    }
-
-    // جلب النقاط الحالية
-    const { data: currentPoints } = await supabase
-      .from('user_points')
-      .select('total_points, purchased_points')
-      .eq('user_id', this.userId)
-      .single();
-
-    if (!currentPoints) {
-      // إنشاء سجل جديد
-      const { error } = await supabase.from('user_points').insert({
-        user_id: this.userId,
-        total_points: amount,
-        earned_points: 0,
-        purchased_points: amount,
-        spent_points: 0,
-      });
-      if (error) return { success: false, error: error.message };
-    } else {
-      // تحديث السجل الموجود
-      const { error } = await supabase
-        .from('user_points')
-        .update({
-          total_points: currentPoints.total_points + amount,
-          purchased_points: (currentPoints.purchased_points || 0) + amount,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', this.userId);
-      if (error) return { success: false, error: error.message };
-    }
-
-    // تسجيل عملية الشراء
-    await supabase.from('point_transactions').insert({
-      user_id: this.userId,
-      type: 'purchased',
-      amount,
-      reason: `شراء باقة: ${packageId}`,
-    });
-
-    return { success: true };
   }
 
   // ================================================================
@@ -999,7 +632,7 @@ class HybridSyncService {
     try {
       const { data, error } = await supabase
         .from('user_lesson_progress')
-        .select('id')
+        .select('*')
         .eq('user_id', this.userId)
         .eq('lesson_id', lessonId)
         .eq('completed', true)
@@ -1010,7 +643,7 @@ class HybridSyncService {
         return false;
       }
 
-      return data && data.length > 0;
+      return !!data && data.filter(isVerified).length > 0;
     } catch (error) {
       console.error('Exception checking lesson completion:', error);
       return false;
@@ -1033,14 +666,18 @@ class HybridSyncService {
         console.warn('Skipping invalid pending item:', item);
         continue;
       }
+      // عناصر تحديات قديمة في قائمة الانتظار: لم تعد تُكتب من العميل
+      if (item.courseId === 'challenges') continue;
 
       const result = await this.saveLessonComplete(
         item.lessonId,
         item.courseId,
         item.xpEarned,
-        item.score
+        item.score,
+        item.quizAnswer ?? null
       );
-      if (!result.success && !result.alreadyCompleted) {
+      // يُعاد فقط ما فشل بسبب الاتصال؛ رفض السيرفر (إجابة/ترتيب) لا يُكرَّر بلا نهاية
+      if (!result.success && result.queued) {
         failed.push(item);
       }
     }

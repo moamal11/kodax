@@ -274,7 +274,7 @@ CREATE TRIGGER before_insert_ai_tracking
 
 COMMENT ON TABLE ai_usage_tracking IS 'تتبع استخدام نظام الذكاء الاصطناعي لإدارة التكاليف وتحسين الأداء';
 COMMENT ON COLUMN ai_usage_tracking.complexity IS 'مستوى صعوبة السؤال: simple, moderate, advanced';
-COMMENT ON COLUMN ai_usage_tracking.model IS 'اسم النموذج المستخدم: gpt-3.5-turbo, gpt-4o-mini, gpt-4o';
+COMMENT ON COLUMN ai_usage_tracking.model IS 'اسم النموذج المستخدم (Gemini): gemini-3.5-flash-lite, gemini-3.8-flash';
 COMMENT ON COLUMN ai_usage_tracking.tokens_used IS 'عدد الـ tokens المستخدمة في الطلب';
 COMMENT ON COLUMN ai_usage_tracking.estimated_cost_usd IS 'التكلفة التقديرية بالدولار (محسوبة تلقائياً)';
 
@@ -286,11 +286,11 @@ COMMENT ON COLUMN ai_usage_tracking.estimated_cost_usd IS 'التكلفة الت
 -- إضافة بيانات تجريبية (للتطوير فقط)
 INSERT INTO ai_usage_tracking (user_id, complexity, model, mode, tokens_used, response_time_ms, question_length)
 VALUES
-  (auth.uid(), 'simple', 'gpt-3.5-turbo', 'general', 250, 1200, 15),
-  (auth.uid(), 'simple', 'gpt-3.5-turbo', 'explain', 300, 1100, 20),
-  (auth.uid(), 'moderate', 'gpt-4o-mini', 'fix', 650, 1800, 45),
-  (auth.uid(), 'moderate', 'gpt-4o-mini', 'optimize', 700, 1900, 50),
-  (auth.uid(), 'advanced', 'gpt-4o', 'general', 1500, 2500, 120);
+  (auth.uid(), 'simple', 'gemini-3.5-flash-lite', 'general', 250, 1200, 15),
+  (auth.uid(), 'simple', 'gemini-3.5-flash-lite', 'explain', 300, 1100, 20),
+  (auth.uid(), 'moderate', 'gemini-3.8-flash', 'fix', 650, 1800, 45),
+  (auth.uid(), 'moderate', 'gemini-3.8-flash', 'optimize', 700, 1900, 50),
+  (auth.uid(), 'advanced', 'gemini-3.8-flash', 'general', 1500, 2500, 120);
 */
 
 -- ========================================

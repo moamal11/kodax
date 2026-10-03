@@ -1,7 +1,8 @@
 /**
- * UpdateModal - مربع حوار التحديث الذكي
- * يدعم تحميل APK داخل التطبيق مع شريط تقدم حقيقي
- * بعد التحميل يظهر زر "تثبيت الآن" بدون فتح المتصفح
+ * UpdateModal - مربع حوار التحديث
+ * 1. يحاول تحديث OTA عبر expo-updates (تحديثات JavaScript).
+ * 2. إذا كان التحديث يحتاج نسخة جديدة من التطبيق → يفتح صفحة التطبيق في
+ *    Google Play. لا يوجد أي تحميل أو تثبيت APK من داخل التطبيق.
  * إذا force_update=true: لا يمكن تجاوزه
  * إذا force_update=false: يمكن تخطيه
  * يعمل على Android/iOS فقط
@@ -27,11 +28,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   AppUpdate,
-  DownloadState,
   applyOTAUpdate,
-  downloadAPK,
-  installAPK,
-  cleanupDownloadedAPKs,
+  openStoreListing,
 } from '@/services/updateService';
 
 interface UpdateModalProps {
@@ -42,6 +40,8 @@ interface UpdateModalProps {
   onDismiss: () => void;
 }
 
+type UpdateState = 'idle' | 'updating' | 'store' | 'error';
+
 export default function UpdateModal({
   visible,
   update,
@@ -49,112 +49,46 @@ export default function UpdateModal({
   isForced,
   onDismiss,
 }: UpdateModalProps) {
-  const [downloadState, setDownloadState] = useState<DownloadState>('idle');
+  const [state, setState] = useState<UpdateState>('idle');
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
-  const [downloadedUri, setDownloadedUri] = useState<string | null>(null);
 
   // إعادة ضبط الحالة عند الإغلاق
   useEffect(() => {
     if (!visible) {
-      // تأخير قصير لمنع وميض الواجهة
       const t = setTimeout(() => {
-        setDownloadState('idle');
+        setState('idle');
         setProgress(0);
         setError('');
-        setDownloadedUri(null);
       }, 300);
       return () => clearTimeout(t);
     }
   }, [visible]);
 
-  // 1. بدء التحديث: محاولة OTA أولاً، ثم تحميل APK
   const handleUpdate = useCallback(async () => {
     if (!update) return;
-
     setError('');
     setProgress(0);
 
-    try {
-      // === المرحلة 1: محاولة تحديث OTA ===
-      setDownloadState('downloading');
-      const otaSuccess = await applyOTAUpdate((p) => setProgress(p));
+    // === المرحلة 1: تحديث OTA ===
+    setState('updating');
+    const otaSuccess = await applyOTAUpdate((p) => setProgress(p));
+    if (otaSuccess) return; // التطبيق سيعيد التشغيل تلقائياً
 
-      if (otaSuccess) {
-        // OTA نجح — التطبيق سيعيد التشغيل تلقائياً
-        return;
-      }
-
-      // === المرحلة 2: تحميل APK داخل التطبيق (Android) ===
-      if (Platform.OS === 'android' && update.download_url) {
-        setProgress(0);
-        const uri = await downloadAPK(
-          update.download_url,
-          update.version,
-          (p) => setProgress(p),
-          (state) => setDownloadState(state)
-        );
-        if (uri) {
-          setDownloadedUri(uri);
-          setDownloadState('downloaded');
-        } else {
-          setError('فشل تحميل التحديث. تأكد من اتصالك بالإنترنت.');
-          setDownloadState('error');
-        }
-      } else {
-        setError('لا يتوفر تحديث حالياً. حاول لاحقاً.');
-        setDownloadState('error');
-      }
-    } catch (e: any) {
-      console.error('❌ Update error:', e);
-      setError(e?.message || 'حدث خطأ أثناء تحميل التحديث. حاول مرة أخرى.');
-      setDownloadState('error');
+    // === المرحلة 2: نسخة جديدة من المتجر ===
+    const opened = await openStoreListing();
+    if (opened) {
+      setState('store');
+      if (!isForced) onDismiss();
+    } else {
+      setError('تعذّر فتح المتجر. حدّث Kodax من Google Play.');
+      setState('error');
     }
-  }, [update]);
-
-  // 2. تثبيت APK المُحمّل
-  const handleInstall = useCallback(async () => {
-    if (!downloadedUri) return;
-
-    try {
-      setDownloadState('installing');
-      setError('');
-      await installAPK(downloadedUri);
-      // بعد فتح المُثبّت — لا نفعل شيء إضافي
-      // المُثبّت الأصلي سيتولى الأمر
-    } catch (e: any) {
-      console.error('❌ Install error:', e);
-      setError(
-        e?.message ||
-          'فشل تثبيت التحديث. فعّل "التثبيت من مصادر غير معروفة" في الإعدادات.'
-      );
-      setDownloadState('downloaded'); // يبقى على حالة "مُحمّل" للمحاولة مرة أخرى
-    }
-  }, [downloadedUri]);
-
-  // 3. إعادة المحاولة
-  const handleRetry = useCallback(() => {
-    setError('');
-    setDownloadState('idle');
-    setProgress(0);
-    setDownloadedUri(null);
-  }, []);
+  }, [update, isForced, onDismiss]);
 
   if (!update) return null;
 
-  const isDownloading = downloadState === 'downloading';
-  const isDownloaded = downloadState === 'downloaded';
-  const isInstalling = downloadState === 'installing';
-  const isError = downloadState === 'error';
-  const isIdle = downloadState === 'idle';
-
-  // نص الحالة
-  const getStatusText = () => {
-    if (isDownloading) return `${Math.round(progress)}% جاري التحميل...`;
-    if (isDownloaded) return 'اكتمل التحميل بنجاح!';
-    if (isInstalling) return 'جاري فتح المُثبّت...';
-    return '';
-  };
+  const isUpdating = state === 'updating';
 
   return (
     <Modal
@@ -173,22 +107,12 @@ export default function UpdateModal({
           <View style={styles.iconContainer}>
             <LinearGradient
               colors={
-                isForced
-                  ? ['#ef4444', '#dc2626']
-                  : isDownloaded
-                    ? ['#22c55e', '#16a34a']
-                    : ['#8b5cf6', '#6d28d9']
+                isForced ? ['#ef4444', '#dc2626'] : ['#8b5cf6', '#6d28d9']
               }
               style={styles.iconGradient}
             >
               <Ionicons
-                name={
-                  isForced
-                    ? 'warning'
-                    : isDownloaded
-                      ? 'checkmark-circle'
-                      : 'rocket'
-                }
+                name={isForced ? 'warning' : 'rocket'}
                 size={32}
                 color="#fff"
               />
@@ -197,11 +121,7 @@ export default function UpdateModal({
 
           {/* العنوان */}
           <Text style={styles.title}>
-            {isDownloaded
-              ? 'التحديث جاهز للتثبيت'
-              : isForced
-                ? 'تحديث إجباري متاح'
-                : 'تحديث جديد متاح'}
+            {isForced ? 'تحديث إجباري متاح' : 'تحديث جديد متاح'}
           </Text>
 
           {/* معلومات الإصدار */}
@@ -222,7 +142,7 @@ export default function UpdateModal({
           </View>
 
           {/* ملاحظات الإصدار */}
-          {update.release_notes && isIdle && (
+          {update.release_notes && state === 'idle' && (
             <Animated.View
               entering={FadeIn.delay(200)}
               style={styles.notesContainer}
@@ -240,43 +160,36 @@ export default function UpdateModal({
             </Animated.View>
           )}
 
-          {/* شريط التقدم */}
-          {(isDownloading || isDownloaded) && (
+          {/* شريط التقدم (OTA) */}
+          {isUpdating && (
             <Animated.View
               entering={FadeInUp.springify()}
               style={styles.progressContainer}
             >
               <View style={styles.progressBar}>
                 <LinearGradient
-                  colors={
-                    isDownloaded
-                      ? ['#22c55e', '#16a34a']
-                      : ['#8b5cf6', '#6d28d9']
-                  }
+                  colors={['#8b5cf6', '#6d28d9']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
-                  style={[
-                    styles.progressFill,
-                    { width: `${isDownloaded ? 100 : progress}%` },
-                  ]}
+                  style={[styles.progressFill, { width: `${progress}%` }]}
                 />
               </View>
-              <Text
-                style={[
-                  styles.progressText,
-                  isDownloaded && { color: '#22c55e' },
-                ]}
-              >
-                {getStatusText()}
+              <Text style={styles.progressText}>
+                {`${Math.round(progress)}% جاري التحديث...`}
               </Text>
             </Animated.View>
           )}
 
-          {/* حالة التثبيت */}
-          {isInstalling && (
+          {state === 'store' && (
             <Animated.View entering={FadeIn} style={styles.installingContainer}>
-              <ActivityIndicator color="#8b5cf6" size="small" />
-              <Text style={styles.installingText}>جاري فتح المُثبّت...</Text>
+              <Ionicons
+                name="logo-google-playstore"
+                size={16}
+                color="#8b5cf6"
+              />
+              <Text style={styles.installingText}>
+                أكمل التحديث من Google Play ثم أعد فتح التطبيق
+              </Text>
             </Animated.View>
           )}
 
@@ -290,105 +203,53 @@ export default function UpdateModal({
 
           {/* الأزرار */}
           <View style={styles.buttonsContainer}>
-            {/* حالة idle: زر "تحميل التحديث" */}
-            {isIdle && (
-              <TouchableOpacity
-                style={styles.updateButton}
-                onPress={handleUpdate}
-                activeOpacity={0.8}
+            <TouchableOpacity
+              style={[styles.updateButton, isUpdating && { opacity: 0.7 }]}
+              onPress={handleUpdate}
+              disabled={isUpdating}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={
+                  isUpdating
+                    ? ['#4b5563', '#374151']
+                    : isForced
+                      ? ['#ef4444', '#dc2626']
+                      : ['#8b5cf6', '#6d28d9']
+                }
+                style={styles.updateButtonGradient}
               >
-                <LinearGradient
-                  colors={
-                    isForced ? ['#ef4444', '#dc2626'] : ['#8b5cf6', '#6d28d9']
-                  }
-                  style={styles.updateButtonGradient}
-                >
-                  <Ionicons name="cloud-download" size={20} color="#fff" />
-                  <Text style={styles.updateButtonText}>
-                    {isForced ? 'تحميل التحديث (إجباري)' : 'تحميل التحديث'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-
-            {/* حالة التحميل: شريط التقدم مع زر معطّل */}
-            {isDownloading && (
-              <TouchableOpacity
-                style={[styles.updateButton, { opacity: 0.7 }]}
-                disabled
-                activeOpacity={1}
-              >
-                <LinearGradient
-                  colors={['#4b5563', '#374151']}
-                  style={styles.updateButtonGradient}
-                >
+                {isUpdating ? (
                   <ActivityIndicator color="#fff" size="small" />
-                  <Text style={styles.updateButtonText}>جاري التحميل...</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
+                ) : (
+                  <Ionicons
+                    name={state === 'error' ? 'refresh' : 'cloud-download'}
+                    size={20}
+                    color="#fff"
+                  />
+                )}
+                <Text style={styles.updateButtonText}>
+                  {isUpdating
+                    ? 'جاري التحديث...'
+                    : state === 'error'
+                      ? 'إعادة المحاولة'
+                      : state === 'store'
+                        ? 'فتح Google Play'
+                        : isForced
+                          ? 'تحديث الآن (إجباري)'
+                          : 'تحديث الآن'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
-            {/* حالة مُحمّل: زر "تثبيت الآن" */}
-            {isDownloaded && (
-              <TouchableOpacity
-                style={styles.updateButton}
-                onPress={handleInstall}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#22c55e', '#16a34a']}
-                  style={styles.updateButtonGradient}
-                >
-                  <Ionicons name="download" size={20} color="#fff" />
-                  <Text style={styles.updateButtonText}>تثبيت الآن</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-
-            {/* حالة خطأ: زر إعادة المحاولة */}
-            {isError && (
-              <TouchableOpacity
-                style={styles.updateButton}
-                onPress={handleRetry}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#f59e0b', '#d97706']}
-                  style={styles.updateButtonGradient}
-                >
-                  <Ionicons name="refresh" size={20} color="#fff" />
-                  <Text style={styles.updateButtonText}>إعادة المحاولة</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-
-            {/* حالة التثبيت */}
-            {isInstalling && (
-              <TouchableOpacity
-                style={[styles.updateButton, { opacity: 0.7 }]}
-                disabled
-                activeOpacity={1}
-              >
-                <LinearGradient
-                  colors={['#4b5563', '#374151']}
-                  style={styles.updateButtonGradient}
-                >
-                  <ActivityIndicator color="#fff" size="small" />
-                  <Text style={styles.updateButtonText}>جاري التثبيت...</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-
-            {/* زر تخطي - يظهر فقط إذا التحديث غير إجباري وليس في حالة تحميل */}
-            {!isForced && !isDownloading && !isInstalling && (
+            {/* زر تخطي - فقط إذا التحديث غير إجباري */}
+            {!isForced && !isUpdating && (
               <TouchableOpacity
                 style={styles.skipButton}
                 onPress={onDismiss}
                 activeOpacity={0.7}
               >
-                <Text style={styles.skipButtonText}>
-                  {isDownloaded ? 'لاحقاً' : 'تخطي'}
-                </Text>
+                <Text style={styles.skipButtonText}>تخطي</Text>
               </TouchableOpacity>
             )}
           </View>
