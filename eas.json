@@ -36,6 +36,13 @@
       "env": {
         "EXPO_PUBLIC_ADMOB_USE_TEST_ADS": "false"
       }
+    },
+    "production-apk": {
+      "extends": "production",
+      "environment": "production",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {
