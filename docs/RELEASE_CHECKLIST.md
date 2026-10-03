@@ -30,6 +30,14 @@ Edge Functions: `certificate` (تحقق حقيقي من JWT + حساب على ا
    - Data safety: الحساب (بريد، اسم)، معلومات الملف، المحتوى (أكواد، رسائل خاصة، محادثات المساعد)، النشاط داخل التطبيق، معرّف الجهاز/الإعلانات (AdMob)، رمز الإشعارات؛ مشاركة مع Google (AdMob, Gemini)، Wandbox، JetBrains؛ التشفير أثناء النقل: نعم؛ طلب الحذف: نعم.
    - Ads: نعم (Rewarded فقط). Target audience حسب `LEGAL_MIN_AGE`.
 
+## فحص AAB الإنتاجي (Build 11fa44bd، commit d62f9b2)
+- الحزمة `com.kodax.app`، versionCode 21، versionName 1.2.0، targetSdk 36، موقّع (META-INF RSA)، Hermes.
+- `allowBackup=false`، `usesCleartextTraffic=false`، غير debuggable.
+- الصلاحيات: INTERNET, NETWORK_STATE, VIBRATE, WAKE_LOCK, RECEIVE_BOOT_COMPLETED, POST_NOTIFICATIONS, FCM RECEIVE, AD_ID + AdServices, FOREGROUND_SERVICE (من المكتبات، بلا نوع خدمة)، صلاحيات شارات المشغّلات. **لا** كاميرا/تخزين/وسائط/ميكروفون/تثبيت حزم/نافذة عائمة.
+- Supabase: `krtulodnhmfuoxjqajwl` بمفتاح anon فقط؛ لا service_role ولا مفاتيح OpenAI/Gemini/Google API ولا مفاتيح خاصة.
+- AdMob: App ID الحقيقي في الـManifest، الوحدة المكافأة الحقيقية في الحزمة؛ `EXPO_PUBLIC_ADMOB_USE_TEST_ADS=false` في ملف production (ملفات `.env` المحلية مستثناة من الرفع). معرّفات الاختبار الموجودة هي جدول `TestIds` داخل المكتبة فقط.
+- `localhost:8081/9999` نصوص افتراضية داخل مكتبات Expo/RN (أدوات التطوير)، غير مستخدمة في الإصدار.
+
 ## التحقق اليدوي على جهاز حقيقي (بعد تثبيت AAB/الاختبار الداخلي)
 - [ ] تثبيت نظيف، تسجيل جديد بالبريد، دخول، دخول Google
 - [ ] الملف الشخصي (تعديل، صورة من منتقي الصور بدون طلب صلاحية تخزين)
