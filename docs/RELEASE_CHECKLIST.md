@@ -18,7 +18,7 @@ Edge Functions: `certificate` (تحقق حقيقي من JWT + حساب على ا
 2. **Firebase / FCM للإشعارات على Android:**
    - ✅ `google-services.json` (مشروع Firebase `kodaxapp`، الحزمة `com.kodax.app`) مرفوع في EAS كمتغير ملف `GOOGLE_SERVICES_JSON` (production/preview/development) ومحلياً في الجذر (مستثنى من Git).
    - ⬜ أنشئ مفتاح Service Account من Firebase Console → Project settings → Service accounts → Generate new private key، ثم ارفعه: `eas credentials -p android` → production → Google Service Account → Push Notifications (FCM V1). لا تضفه لـ Git.
-   - ⬜ أعد البناء بعدها.
+   - مفتاح FCM V1 يُستخدم على خوادم Expo فقط، لا يدخل في التطبيق: رفعه لا يتطلب بناءً جديداً. البناء الجديد مطلوب فقط لأن `google-services.json` أُضيف (البناء 21 لا يحتويه).
 3. **بريد التواصل العام** في `src/constants/legal.ts` (`LEGAL_CONTACT_EMAIL`) وفي Play Console، و**تأكيد الحد الأدنى للعمر** (`LEGAL_MIN_AGE`، حالياً 13) بما يطابق "الجمهور المستهدف".
 4. **نشر الموقع** (`kodax.app`) بعد الدفع للمستودع حتى تعمل `/privacy` و`/terms` و`/account-deletion` (Vercel يبني من هذا المستودع).
 5. **AdMob:** بعد قبول التطبيق وظهور `verified_by = 'ssv'` في `ad_reward_sessions` طبّق `supabase/manual/ads_require_ssv.sql` (يوقف اعتماد مكافآت الإعلانات من العميل).
