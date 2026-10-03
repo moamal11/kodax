@@ -91,3 +91,6 @@ kodax-admin/.next/*
 
 # Firebase (FCM) config — via EAS file env GOOGLE_SERVICES_JSON
 google-services.json
+
+# لوحة الإدارة مستودع منفصل (kodax-admin)
+/kodax-admin/
