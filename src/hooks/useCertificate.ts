@@ -455,13 +455,7 @@ export function useCertificate({
           fieldId,
           level,
           fieldName,
-          fieldNameAr,
-          completedLessons.length,
-          totalLessons,
-          completedChallengeIds.length,
-          totalChallenges,
-          LEVEL_REQUIREMENTS[level].min_lessons_percent,
-          LEVEL_REQUIREMENTS[level].min_challenges_percent
+          fieldNameAr
         );
 
         if (isMountedRef.current) {

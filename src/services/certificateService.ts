@@ -157,17 +157,12 @@ class CertificateService {
   }
 
   // ===== Issue Certificate for Field =====
+  // السيرفر يحسب الأهلية والأعداد واسم المجال بنفسه من التقدم الموثّق — لا تُرسل أرقام من التطبيق
   async issueCertificate(
     fieldId: string,
     level: CertificateLevel,
     fieldName: string,
-    fieldNameAr?: string,
-    completedLessons?: number,
-    totalLessons?: number,
-    completedChallenges?: number,
-    totalChallenges?: number,
-    minLessonsPercent?: number,
-    minChallengesPercent?: number
+    fieldNameAr?: string
   ): Promise<IssueCertificateResult> {
     const result = await this.callEdgeFunction({
       action: 'issue',
@@ -175,22 +170,6 @@ class CertificateService {
       level,
       course_title: fieldName,
       course_title_ar: fieldNameAr || fieldName,
-      ...(completedLessons !== undefined && {
-        completed_lessons: completedLessons,
-      }),
-      ...(totalLessons !== undefined && { total_lessons: totalLessons }),
-      ...(completedChallenges !== undefined && {
-        completed_challenges: completedChallenges,
-      }),
-      ...(totalChallenges !== undefined && {
-        total_challenges: totalChallenges,
-      }),
-      ...(minLessonsPercent !== undefined && {
-        min_lessons_percent: minLessonsPercent,
-      }),
-      ...(minChallengesPercent !== undefined && {
-        min_challenges_percent: minChallengesPercent,
-      }),
     });
 
     // Invalidate caches on success

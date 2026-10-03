@@ -139,7 +139,7 @@ export async function processAuthDeepLink(
       throw sessionError;
     }
 
-    console.log('✅ Session established from deep link:', data.user?.email);
+    console.log('✅ Session established from deep link');
 
     // ✅ إنشاء ملف المستخدم فوراً قبل أي restart
     // هذا ضروري لأن triggerAppRestart يقتل ensureProfile في AuthContext

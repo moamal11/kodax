@@ -48,31 +48,7 @@ export async function followUser(
       throw error;
     }
 
-    // إرسال إشعار للمستخدم المتابَع
-    try {
-      // جلب اسم المتابِع
-      const { data: followerProfile } = await supabase
-        .from('profiles')
-        .select('username, full_name')
-        .eq('id', followerId)
-        .single();
-
-      const followerName =
-        followerProfile?.full_name || followerProfile?.username || 'مستخدم';
-
-      // إنشاء إشعار في Supabase مباشرة للمستخدم المستهدف
-      await supabase.from('app_notifications').insert({
-        user_id: followingId,
-        type: 'follow',
-        title: 'متابع جديد',
-        message: `${followerName} بدأ بمتابعتك`,
-        read: false,
-        metadata: { followerId, followerName },
-        created_at: new Date().toISOString(),
-      });
-    } catch (notifError) {
-      console.warn('⚠️ Failed to send follow notification:', notifError);
-    }
+    // إشعار المتابعة (داخل التطبيق + push) يُنشئه السيرفر تلقائياً عبر trigger على follows
 
     return { success: true, error: null };
   } catch (error) {
