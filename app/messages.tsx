@@ -26,6 +26,8 @@ import { useAuth } from './_layout';
 import { useResponsiveLayout } from '@/hooks';
 import { getConversations, Conversation } from '@/services/messageService';
 
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ==================== Helpers ====================
@@ -113,6 +115,7 @@ const ConversationCard = React.memo(
                   numberOfLines={1}
                 >
                   {displayName}
+                  <VerifiedBadge verified={other_user.is_verified} size={14} />
                 </Text>
                 {last_message && (
                   <View style={styles.timestampContainer}>

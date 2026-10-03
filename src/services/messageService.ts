@@ -28,6 +28,7 @@ export interface Conversation {
     full_name: string | null;
     username: string | null;
     avatar_url: string | null;
+    is_verified?: boolean;
   };
   last_message: {
     content: string;
@@ -46,6 +47,7 @@ export interface ConversationDetail {
     full_name: string | null;
     username: string | null;
     avatar_url: string | null;
+    is_verified?: boolean;
   };
   messages: Array<
     Message & {
@@ -54,6 +56,7 @@ export interface ConversationDetail {
         full_name: string | null;
         username: string | null;
         avatar_url: string | null;
+        is_verified?: boolean;
       };
     }
   >;
@@ -141,7 +144,7 @@ export async function getConversations(
         if (otherUserId) {
           const { data } = await supabase
             .from('profiles')
-            .select('id, full_name, username, avatar_url')
+            .select('id, full_name, username, avatar_url, is_verified')
             .eq('id', otherUserId)
             .single();
           otherUser = data;
@@ -223,7 +226,7 @@ export async function getConversationDetail(
     if (otherUserId) {
       const { data } = await supabase
         .from('profiles')
-        .select('id, full_name, username, avatar_url')
+        .select('id, full_name, username, avatar_url, is_verified')
         .eq('id', otherUserId)
         .single();
       otherUser = data;
@@ -235,7 +238,7 @@ export async function getConversationDetail(
       .select(
         `
         *,
-        sender:profiles!messages_sender_id_fkey(id, full_name, username, avatar_url)
+        sender:profiles!messages_sender_id_fkey(id, full_name, username, avatar_url, is_verified)
       `
       )
       .eq('conversation_id', conversationId)
@@ -459,7 +462,7 @@ export function subscribeToMessages(
           if (senderId) {
             const { data } = await supabase
               .from('profiles')
-              .select('id, full_name, username, avatar_url')
+              .select('id, full_name, username, avatar_url, is_verified')
               .eq('id', senderId)
               .single();
             sender = data;
@@ -495,7 +498,7 @@ export function subscribeToMessages(
           if (senderId) {
             const { data } = await supabase
               .from('profiles')
-              .select('id, full_name, username, avatar_url')
+              .select('id, full_name, username, avatar_url, is_verified')
               .eq('id', senderId)
               .single();
             sender = data;

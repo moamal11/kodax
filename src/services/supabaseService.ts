@@ -518,7 +518,7 @@ class SupabaseService {
     const { data, error } = await supabase
       .from('profiles')
       .select(
-        'id, username, full_name, avatar_url, province, xp, level, streak_days'
+        'id, username, full_name, avatar_url, province, xp, level, streak_days, is_verified'
       )
       .order('xp', { ascending: false })
       .limit(limit);

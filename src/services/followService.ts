@@ -177,7 +177,7 @@ export async function getFollowers(
       .select(
         `
         follower_id,
-        profiles:follower_id (id, username, full_name, avatar_url, level)
+        profiles:follower_id (id, username, full_name, avatar_url, level, is_verified)
       `
       )
       .eq('following_id', userId)
@@ -211,7 +211,7 @@ export async function getFollowing(
       .select(
         `
         following_id,
-        profiles:following_id (id, username, full_name, avatar_url, level)
+        profiles:following_id (id, username, full_name, avatar_url, level, is_verified)
       `
       )
       .eq('follower_id', userId)

@@ -63,6 +63,8 @@ import FollowButton from '@/components/ui/FollowButton';
 import UserAvatar from '@/components/ui/UserAvatar';
 import SnippetModerationSheet from '@/components/editor/SnippetModerationSheet';
 
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
+
 // ==================== Constants ====================
 
 const TOKEN_COLORS: Record<TokenType, string> = {
@@ -215,7 +217,10 @@ const CommentItem = React.memo(
               onPress={() => router.push(`/user/${comment.user_id}` as any)}
               activeOpacity={0.7}
             >
-              <Text style={styles.commentAuthor}>{name}</Text>
+              <Text style={styles.commentAuthor}>
+                {name}
+                <VerifiedBadge verified={comment.profiles?.is_verified} size={12} />
+              </Text>
             </TouchableOpacity>
             <Text style={styles.commentTime}>
               {formatTimestamp(comment.created_at)}
@@ -805,6 +810,7 @@ export default function CodeDetailsScreen() {
                   >
                     <Text style={styles.authorName} numberOfLines={1}>
                       {authorName}
+                      <VerifiedBadge verified={snippet.profiles?.is_verified} size={14} />
                     </Text>
                     <View
                       style={[

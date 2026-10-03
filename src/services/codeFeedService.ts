@@ -34,6 +34,7 @@ export interface FeedSnippet {
     username: string;
     full_name: string;
     avatar_url: string | null;
+    is_verified?: boolean;
   } | null;
 }
 
@@ -48,6 +49,7 @@ export interface SnippetComment {
     username: string;
     full_name: string;
     avatar_url: string | null;
+    is_verified?: boolean;
   } | null;
 }
 
@@ -80,7 +82,7 @@ export async function getPublicSnippets(
       .select(
         `
         *,
-        profiles:user_id (username, full_name, avatar_url)
+        profiles:user_id (username, full_name, avatar_url, is_verified)
       `
       )
       .eq('is_public', true);
@@ -168,7 +170,7 @@ export async function getSnippetById(
       .select(
         `
         *,
-        profiles:user_id (username, full_name, avatar_url)
+        profiles:user_id (username, full_name, avatar_url, is_verified)
       `
       )
       .eq('id', id)
@@ -198,7 +200,7 @@ export async function getUserSnippets(
       .select(
         `
         *,
-        profiles:user_id (username, full_name, avatar_url)
+        profiles:user_id (username, full_name, avatar_url, is_verified)
       `
       )
       .eq('user_id', userId)
@@ -425,7 +427,7 @@ export async function getComments(
       .select(
         `
         *,
-        profiles:user_id (username, full_name, avatar_url)
+        profiles:user_id (username, full_name, avatar_url, is_verified)
       `
       )
       .eq('snippet_id', snippetId)
@@ -661,9 +663,48 @@ export const REPORT_REASONS: Array<{ id: ReportReason; label: string }> = [
 ];
 
 /**
- * الإبلاغ عن كود/مشروع منشور. البلاغات المتكررة تخفي المحتوى تلقائياً
- * لحين مراجعته (على السيرفر).
+ * الإبلاغ عن كود/مشروع منشور. بلاغ واحد لا يخفي المحتوى؛ بلاغات من عدة حسابات مؤهلة
+ * تخفيه مؤقتاً لحين مراجعة المشرف (على السيرفر).
  */
+export type UserReportReason = 'spam' | 'harassment' | 'offensive' | 'phishing' | 'impersonation' | 'other';
+
+export const USER_REPORT_REASONS: Array<{ id: UserReportReason; label: string }> = [
+  { id: 'harassment', label: 'تحرش أو تهديد' },
+  { id: 'offensive', label: 'محتوى مسيء أو غير لائق' },
+  { id: 'spam', label: 'رسائل مزعجة أو إعلانات' },
+  { id: 'phishing', label: 'احتيال أو محاولة سرقة بيانات' },
+  { id: 'impersonation', label: 'انتحال شخصية' },
+  { id: 'other', label: 'سبب آخر' },
+];
+
+/** الإبلاغ عن مستخدم أو عن رسالة خاصة منه (للمراجعة اليدوية من المشرف) */
+export async function reportUser(
+  userId: string,
+  reason: UserReportReason,
+  details?: string,
+  messageId?: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const { data, error } = await supabase.rpc('report_user', {
+      p_user: userId,
+      p_reason: reason,
+      p_details: details ?? null,
+      p_message_id: messageId ?? null,
+    });
+    if (error) throw error;
+    if (data?.success) {
+      return {
+        success: true,
+        message: data.duplicate ? 'أبلغت عن هذا مسبقاً. شكراً لك.' : 'تم استلام البلاغ وسيراجعه فريق الإشراف.',
+      };
+    }
+    return { success: false, message: 'تعذّر إرسال البلاغ. حاول لاحقاً.' };
+  } catch (error) {
+    console.error('reportUser error:', error);
+    return { success: false, message: 'تعذّر إرسال البلاغ. تحقق من الاتصال.' };
+  }
+}
+
 export async function reportSnippet(
   snippetId: string,
   reason: ReportReason,

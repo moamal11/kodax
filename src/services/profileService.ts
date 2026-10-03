@@ -22,6 +22,7 @@ export interface ProfileData {
   streak_days: number;
   last_username_change: string | null;
   created_at: string;
+  is_verified?: boolean;
 }
 
 export interface ProfileUpdateData {
@@ -66,7 +67,7 @@ export async function getProfile(
     const { data, error } = await supabase
       .from('profiles')
       .select(
-        'id, username, full_name, avatar_url, province, gender, followers_count, following_count, xp, level, streak_days, last_username_change, created_at'
+        'id, username, full_name, avatar_url, province, gender, followers_count, following_count, xp, level, streak_days, last_username_change, created_at, is_verified'
       )
       .eq('id', userId)
       .single();
@@ -380,7 +381,7 @@ export async function getPublicProfile(userId: string): Promise<{
     const { data, error } = await supabase
       .from('profiles')
       .select(
-        'id, username, full_name, avatar_url, province, gender, followers_count, following_count, xp, level, streak_days, created_at, last_username_change'
+        'id, username, full_name, avatar_url, province, gender, followers_count, following_count, xp, level, streak_days, created_at, last_username_change, is_verified'
       )
       .eq('id', userId)
       .single();

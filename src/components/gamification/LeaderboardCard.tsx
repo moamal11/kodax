@@ -23,6 +23,8 @@ import Animated, {
 import { formatXP } from '@/lib/utils';
 import UserAvatar from '@/components/ui/UserAvatar';
 
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
+
 // Types
 interface LeaderboardUser {
   id: string;
@@ -30,6 +32,7 @@ interface LeaderboardUser {
   avatar?: string;
   xp: number;
   province?: string;
+  verified?: boolean;
 }
 
 interface LeaderboardCardProps {
@@ -155,6 +158,7 @@ export const LeaderboardCard = React.memo(
             <View style={styles.nameRow}>
               <Text style={styles.userName} numberOfLines={1}>
                 {user.name}
+                <VerifiedBadge verified={user.verified} size={13} />
               </Text>
               {user.province && (
                 <View style={styles.provinceTag}>

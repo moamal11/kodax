@@ -38,6 +38,7 @@ import {
   isUserBlocked,
 } from '@/services/codeFeedService';
 import { showAlert } from '@/utils/crossPlatformAlert';
+import ReportUserSheet from '@/components/social/ReportUserSheet';
 import { showToast } from '@/components/ui/Toast';
 import {
   getConversationDetail,
@@ -49,6 +50,8 @@ import {
   ConversationDetail,
   Message,
 } from '@/services/messageService';
+
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -143,13 +146,13 @@ const MessageBubble = React.memo(
 
         <TouchableOpacity
           onLongPress={() => {
-            if (isOwn && !message.is_deleted && onLongPress) {
+            if (!message.is_deleted && onLongPress) {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               onLongPress();
             }
           }}
           activeOpacity={0.7}
-          disabled={!isOwn || message.is_deleted}
+          disabled={message.is_deleted}
         >
           <View
             style={[
@@ -212,6 +215,7 @@ export default function ConversationScreen() {
   const [sending, setSending] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockBusy, setBlockBusy] = useState(false);
+  const [report, setReport] = useState<{ messageId: string | null; preview: string | null } | null>(null);
 
   // Edit/Delete modal state
   const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
@@ -389,6 +393,12 @@ export default function ConversationScreen() {
 
   // Handle message long press
   const handleMessageLongPress = (messageId: string) => {
+    const msg = messages.find((m) => m.id === messageId);
+    if (msg && msg.sender_id !== user?.id) {
+      // رسالة من الطرف الآخر: الإبلاغ عنها
+      setReport({ messageId, preview: msg.content });
+      return;
+    }
     setSelectedMessage(messageId);
     setShowMessageMenu(true);
   };
@@ -470,7 +480,7 @@ export default function ConversationScreen() {
         onLongPress={() => handleMessageLongPress(item.id)}
       />
     ),
-    [user?.id]
+    [user?.id, messages]
   );
 
   const keyExtractor = useCallback((item: (typeof messages)[0]) => item.id, []);
@@ -536,10 +546,20 @@ export default function ConversationScreen() {
               <TouchableOpacity
                 onPress={() => router.push(`/user/${otherUser.id}` as any)}
               >
-                <Text style={styles.headerName}>{displayName}</Text>
+                <Text style={styles.headerName}>
+                  {displayName}
+                  <VerifiedBadge verified={otherUser.is_verified} size={15} />
+                </Text>
               </TouchableOpacity>
             </View>
 
+            <TouchableOpacity
+              style={[styles.backBtn, { marginRight: 8 }]}
+              onPress={() => setReport({ messageId: null, preview: null })}
+              accessibilityLabel="الإبلاغ عن المستخدم"
+            >
+              <Ionicons name="flag-outline" size={19} color="#fbbf24" />
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.backBtn}
               onPress={handleBlockToggle}
@@ -645,6 +665,17 @@ export default function ConversationScreen() {
           </View>
           )}
         </View>
+
+        <ReportUserSheet
+          visible={!!report}
+          onClose={() => setReport(null)}
+          userId={otherUser.id}
+          userName={displayName}
+          messageId={report?.messageId}
+          messagePreview={report?.preview}
+          hideBlock={isBlocked}
+          onBlocked={() => setIsBlocked(true)}
+        />
 
         {/* Message Menu Modal */}
         <Modal

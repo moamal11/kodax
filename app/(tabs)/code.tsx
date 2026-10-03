@@ -48,6 +48,8 @@ import FollowButton from '@/components/ui/FollowButton';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { FilterDropdown } from '@/components/ui/FilterDropdown';
 
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -238,6 +240,7 @@ const SnippetCard = React.memo(
                 <View style={{ flexDirection: 'column' }}>
                   <Text style={styles.authorName} numberOfLines={1}>
                     {authorName}
+                    <VerifiedBadge verified={snippet.profiles?.is_verified} size={13} />
                   </Text>
                   <Text style={styles.timestamp}>
                     {formatTimestamp(snippet.created_at)}

@@ -35,9 +35,12 @@ import {
   isUserBlocked,
 } from '@/services/codeFeedService';
 import { showAlert } from '@/utils/crossPlatformAlert';
+import ReportUserSheet from '@/components/social/ReportUserSheet';
 import { showToast } from '@/components/ui/Toast';
 import { getOrCreateConversation } from '@/services/messageService';
 import FollowButton from '@/components/ui/FollowButton';
+
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -94,6 +97,7 @@ export default function UserProfileScreen() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockBusy, setBlockBusy] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -356,7 +360,10 @@ export default function UserProfileScreen() {
           </View>
 
           {/* Name & Username */}
-          <Text style={styles.displayName}>{displayName}</Text>
+          <Text style={styles.displayName}>
+            {displayName}
+            <VerifiedBadge verified={profile.is_verified} size={20} />
+          </Text>
           {profile.username && (
             <Text style={styles.username}>@{profile.username}</Text>
           )}
@@ -453,6 +460,20 @@ export default function UserProfileScreen() {
                 </LinearGradient>
               </TouchableOpacity>
 
+              <TouchableOpacity
+                style={styles.shareBtn}
+                onPress={() => setReportOpen(true)}
+                activeOpacity={0.7}
+                accessibilityLabel="الإبلاغ عن المستخدم"
+              >
+                <LinearGradient
+                  colors={['#1a1a3e', '#151530']}
+                  style={styles.shareBtnGradient}
+                >
+                  <Ionicons name="flag-outline" size={18} color="#fbbf24" />
+                </LinearGradient>
+              </TouchableOpacity>
+
               {!isBlocked && (
                 <TouchableOpacity
                   style={styles.shareBtn}
@@ -475,6 +496,19 @@ export default function UserProfileScreen() {
               )}
             </View>
           )}
+          {!isOwnProfile && id ? (
+            <ReportUserSheet
+              visible={reportOpen}
+              onClose={() => setReportOpen(false)}
+              userId={id}
+              userName={blockName}
+              hideBlock={isBlocked}
+              onBlocked={() => {
+                setIsBlocked(true);
+                setSnippets([]);
+              }}
+            />
+          ) : null}
           {!isOwnProfile && isBlocked && (
             <View style={styles.blockedBanner}>
               <Ionicons name="ban" size={16} color="#f87171" />

@@ -27,6 +27,8 @@ import { supabaseService } from '@/services/supabaseService';
 import { useAuth } from './_layout';
 import { useResponsiveLayout } from '@/hooks';
 
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
+
 const { width } = Dimensions.get('window');
 
 // محافظات العراق - mapping بين ID والاسم العربي
@@ -74,6 +76,7 @@ interface LeaderboardUser {
   xp: number;
   province?: string;
   level?: number;
+  verified?: boolean;
 }
 
 export default function LeaderboardScreen() {
@@ -100,6 +103,7 @@ export default function LeaderboardScreen() {
         xp: u.xp || 0,
         province: u.province,
         level: u.level,
+        verified: !!u.is_verified,
       }));
 
       // ✅ فلترة حسب المحافظة باستخدام الاسم العربي أو ID
@@ -266,6 +270,7 @@ export default function LeaderboardScreen() {
             numberOfLines={1}
           >
             {top3[1]?.name}
+            <VerifiedBadge verified={top3[1]?.verified} size={12} />
           </Text>
           <Text style={styles.topThreeXP}>
             {top3[1]?.xp.toLocaleString()} XP
@@ -304,6 +309,7 @@ export default function LeaderboardScreen() {
             numberOfLines={1}
           >
             {top3[0]?.name}
+            <VerifiedBadge verified={top3[0]?.verified} size={13} />
           </Text>
           <Text style={[styles.topThreeXP, { color: '#f59e0b' }]}>
             {top3[0]?.xp.toLocaleString()} XP
@@ -335,6 +341,7 @@ export default function LeaderboardScreen() {
             numberOfLines={1}
           >
             {top3[2]?.name}
+            <VerifiedBadge verified={top3[2]?.verified} size={12} />
           </Text>
           <Text style={styles.topThreeXP}>
             {top3[2]?.xp.toLocaleString()} XP
