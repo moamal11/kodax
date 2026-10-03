@@ -89,8 +89,9 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/kodax-light-trans.png",
-          "color": "#8b5cf6"
+          "icon": "./assets/notification-icon.png",
+          "color": "#8b5cf6",
+          "defaultChannel": "default"
         }
       ]
     ],

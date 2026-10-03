@@ -16,10 +16,9 @@ Edge Functions: `certificate` (تحقق حقيقي من JWT + حساب على ا
 ## إجراءات مطلوبة منك (لا يمكن تنفيذها من الكود)
 1. **إلغاء مفتاح OpenAI القديم** (كان في تاريخ Git) من لوحة OpenAI.
 2. **Firebase / FCM للإشعارات على Android:**
-   - أنشئ مشروع Firebase وأضف تطبيق Android بالحزمة `com.kodax.app`، نزّل `google-services.json`.
-   - في EAS: `eas env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --environment production` (لا تضفه لـ Git).
-   - ارفع مفتاح FCM V1 (service account JSON) في: `eas credentials` → Android → Push Notifications.
-   - أعد البناء بعدها.
+   - ✅ `google-services.json` (مشروع Firebase `kodaxapp`، الحزمة `com.kodax.app`) مرفوع في EAS كمتغير ملف `GOOGLE_SERVICES_JSON` (production/preview/development) ومحلياً في الجذر (مستثنى من Git).
+   - ⬜ أنشئ مفتاح Service Account من Firebase Console → Project settings → Service accounts → Generate new private key، ثم ارفعه: `eas credentials -p android` → production → Google Service Account → Push Notifications (FCM V1). لا تضفه لـ Git.
+   - ⬜ أعد البناء بعدها.
 3. **بريد التواصل العام** في `src/constants/legal.ts` (`LEGAL_CONTACT_EMAIL`) وفي Play Console، و**تأكيد الحد الأدنى للعمر** (`LEGAL_MIN_AGE`، حالياً 13) بما يطابق "الجمهور المستهدف".
 4. **نشر الموقع** (`kodax.app`) بعد الدفع للمستودع حتى تعمل `/privacy` و`/terms` و`/account-deletion` (Vercel يبني من هذا المستودع).
 5. **AdMob:** بعد قبول التطبيق وظهور `verified_by = 'ssv'` في `ad_reward_sessions` طبّق `supabase/manual/ads_require_ssv.sql` (يوقف اعتماد مكافآت الإعلانات من العميل).
