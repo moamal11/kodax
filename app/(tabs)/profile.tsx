@@ -902,6 +902,28 @@ export default function ProfileScreen() {
                       <Ionicons name="chevron-back" size={18} color="#4b5563" />
                     </TouchableOpacity>
                     <TouchableOpacity
+                      style={webStyles.settingItemWeb}
+                      activeOpacity={0.7}
+                      onPress={() => router.push('/delete-account' as any)}
+                    >
+                      <View style={styles.settingLeft}>
+                        <View
+                          style={[
+                            styles.settingIconContainer,
+                            { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons
+                            name="trash"
+                            size={18}
+                            color="#ef4444"
+                          />
+                        </View>
+                        <Text style={styles.settingText}>حذف الحساب</Text>
+                      </View>
+                      <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={[
                         webStyles.settingItemWeb,
                         styles.settingItemDanger,
@@ -1445,6 +1467,32 @@ export default function ProfileScreen() {
                             />
                           </View>
                           <Text style={styles.settingText}>عن التطبيق</Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color="#4b5563"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={webStyles.settingItemWeb}
+                        activeOpacity={0.7}
+                        onPress={() => router.push('/delete-account' as any)}
+                      >
+                        <View style={styles.settingLeft}>
+                          <View
+                            style={[
+                              styles.settingIconContainer,
+                              { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
+                            ]}
+                          >
+                            <Ionicons
+                              name="trash"
+                              size={18}
+                              color="#ef4444"
+                            />
+                          </View>
+                          <Text style={styles.settingText}>حذف الحساب</Text>
                         </View>
                         <Ionicons
                           name="chevron-back"
@@ -2040,6 +2088,28 @@ export default function ProfileScreen() {
                       />
                     </View>
                     <Text style={styles.settingText}>عن التطبيق</Text>
+                  </View>
+                  <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.settingItem}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/delete-account' as any)}
+                >
+                  <View style={styles.settingLeft}>
+                    <View
+                      style={[
+                        styles.settingIconContainer,
+                        { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
+                      ]}
+                    >
+                      <Ionicons
+                        name="trash"
+                        size={18}
+                        color="#ef4444"
+                      />
+                    </View>
+                    <Text style={styles.settingText}>حذف الحساب</Text>
                   </View>
                   <Ionicons name="chevron-back" size={18} color="#4b5563" />
                 </TouchableOpacity>
