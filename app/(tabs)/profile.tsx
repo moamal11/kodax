@@ -838,6 +838,28 @@ export default function ProfileScreen() {
                     <TouchableOpacity
                       style={webStyles.settingItemWeb}
                       activeOpacity={0.7}
+                      onPress={() => router.push('/blocked-users' as any)}
+                    >
+                      <View style={styles.settingLeft}>
+                        <View
+                          style={[
+                            styles.settingIconContainer,
+                            { backgroundColor: 'rgba(248, 113, 113, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons
+                            name="ban"
+                            size={18}
+                            color="#f87171"
+                          />
+                        </View>
+                        <Text style={styles.settingText}>المستخدمون المحظورون</Text>
+                      </View>
+                      <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={webStyles.settingItemWeb}
+                      activeOpacity={0.7}
                       onPress={() => router.push('/support' as any)}
                     >
                       <View style={styles.settingLeft}>
@@ -1341,6 +1363,34 @@ export default function ProfileScreen() {
                             <Ionicons name="ribbon" size={18} color="#eab308" />
                           </View>
                           <Text style={styles.settingText}>شهاداتي</Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color="#4b5563"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={webStyles.settingItemWeb}
+                        activeOpacity={0.7}
+                        onPress={() => router.push('/blocked-users' as any)}
+                      >
+                        <View style={styles.settingLeft}>
+                          <View
+                            style={[
+                              styles.settingIconContainer,
+                              { backgroundColor: 'rgba(248, 113, 113, 0.15)' },
+                            ]}
+                          >
+                            <Ionicons
+                              name="ban"
+                              size={18}
+                              color="#f87171"
+                            />
+                          </View>
+                          <Text style={styles.settingText}>
+                            المستخدمون المحظورون
+                          </Text>
                         </View>
                         <Ionicons
                           name="chevron-back"
@@ -1934,6 +1984,24 @@ export default function ProfileScreen() {
                   <Ionicons name="chevron-back" size={18} color="#4b5563" />
                 </TouchableOpacity>
 
+                <TouchableOpacity
+                  style={styles.settingItem}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/blocked-users' as any)}
+                >
+                  <View style={styles.settingLeft}>
+                    <View
+                      style={[
+                        styles.settingIconContainer,
+                        { backgroundColor: 'rgba(248, 113, 113, 0.15)' },
+                      ]}
+                    >
+                      <Ionicons name="ban" size={18} color="#f87171" />
+                    </View>
+                    <Text style={styles.settingText}>المستخدمون المحظورون</Text>
+                  </View>
+                  <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.settingItem}
                   activeOpacity={0.7}

@@ -33,6 +33,13 @@ import * as Haptics from 'expo-haptics';
 import { useAuth } from '../_layout';
 import { useResponsiveLayout } from '@/hooks';
 import {
+  blockUser,
+  unblockUser,
+  isUserBlocked,
+} from '@/services/codeFeedService';
+import { showAlert } from '@/utils/crossPlatformAlert';
+import { showToast } from '@/components/ui/Toast';
+import {
   getConversationDetail,
   sendMessage,
   markMessagesAsRead,
@@ -203,6 +210,8 @@ export default function ConversationScreen() {
   const [loading, setLoading] = useState(true);
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
 
   // Edit/Delete modal state
   const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
@@ -225,6 +234,9 @@ export default function ConversationScreen() {
     if (data) {
       setConversation(data);
       setMessages(data.messages);
+      if (data.other_user?.id) {
+        isUserBlocked(data.other_user.id).then(setIsBlocked);
+      }
       // Mark messages as read
       await markMessagesAsRead(id, user.id);
     }
@@ -290,6 +302,42 @@ export default function ConversationScreen() {
     };
   }, [id, user?.id]);
 
+  // حظر / إلغاء حظر الطرف الآخر (user_blocks)
+  const doToggleBlock = async () => {
+    const otherId = conversation?.other_user?.id;
+    if (!otherId || blockBusy) return;
+    const name = getUserDisplayName(conversation!.other_user);
+    setBlockBusy(true);
+    const res = isBlocked ? await unblockUser(otherId) : await blockUser(otherId);
+    setBlockBusy(false);
+    if (!res.success) {
+      showToast.error(
+        isBlocked ? 'تعذّر إلغاء الحظر. حاول مرة أخرى.' : 'تعذّر الحظر. حاول مرة أخرى.'
+      );
+      return;
+    }
+    setIsBlocked(!isBlocked);
+    showToast.success(isBlocked ? `تم إلغاء حظر ${name}` : `تم حظر ${name}`);
+  };
+  const handleBlockToggle = () => {
+    if (!conversation?.other_user) return;
+    const name = getUserDisplayName(conversation.other_user);
+    showAlert(
+      isBlocked ? `إلغاء حظر ${name}؟` : `حظر ${name}؟`,
+      isBlocked
+        ? 'ستتمكنان من تبادل الرسائل مجدداً.'
+        : 'لن يستطيع مراسلتك ولن تستطيع مراسلته حتى تلغي الحظر. الرسائل السابقة تبقى كما هي.',
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        {
+          text: isBlocked ? 'إلغاء الحظر' : 'حظر',
+          style: 'destructive',
+          onPress: doToggleBlock,
+        },
+      ]
+    );
+  };
+
   // Send message
   const handleSend = async () => {
     if (!messageText.trim() || !id || !user?.id || sending) return;
@@ -305,6 +353,12 @@ export default function ConversationScreen() {
       console.error('Error sending message:', error);
       // Restore message text on error
       setMessageText(content);
+      // الحظر (بأي اتجاه) يُرفض على السيرفر عبر RLS
+      if (error?.code === '42501' || String(error?.message ?? '').includes('row-level security')) {
+        showToast.error('لا يمكن إرسال رسائل إلى هذا المستخدم.');
+      } else {
+        showToast.error('تعذّر إرسال الرسالة. حاول مرة أخرى.');
+      }
     } else if (data) {
       // Optimistically add message to UI immediately
       const newMessage = {
@@ -486,7 +540,22 @@ export default function ConversationScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={{ width: 40 }} />
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={handleBlockToggle}
+              disabled={blockBusy}
+              accessibilityLabel={isBlocked ? 'إلغاء حظر المستخدم' : 'حظر المستخدم'}
+            >
+              {blockBusy ? (
+                <ActivityIndicator size="small" color="#f87171" />
+              ) : (
+                <Ionicons
+                  name={isBlocked ? 'ban' : 'ban-outline'}
+                  size={20}
+                  color="#f87171"
+                />
+              )}
+            </TouchableOpacity>
           </Animated.View>
 
           {/* Messages List */}
@@ -515,6 +584,21 @@ export default function ConversationScreen() {
           />
 
           {/* Input Area */}
+          {isBlocked ? (
+            <View style={styles.blockedBar}>
+              <Text style={styles.blockedBarText}>
+                لقد حظرت {displayName}. لا يمكنكما تبادل الرسائل.
+              </Text>
+              <TouchableOpacity
+                style={styles.blockedBarBtn}
+                onPress={handleBlockToggle}
+                disabled={blockBusy}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.blockedBarBtnText}>إلغاء الحظر</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
           <View style={styles.inputContainer}>
             <TouchableOpacity
               style={[
@@ -559,6 +643,7 @@ export default function ConversationScreen() {
               textAlign="right"
             />
           </View>
+          )}
         </View>
 
         {/* Message Menu Modal */}
@@ -835,6 +920,39 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#9ca3af',
     fontStyle: 'italic',
+  },
+
+  // Blocked bar
+  blockedBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+    borderTopWidth: 1,
+    borderTopColor: '#252550',
+    backgroundColor: '#0f0f1e',
+  },
+  blockedBarText: {
+    flex: 1,
+    color: '#fca5a5',
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'right',
+  },
+  blockedBarBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(248, 113, 113, 0.4)',
+    backgroundColor: 'rgba(248, 113, 113, 0.1)',
+  },
+  blockedBarBtnText: {
+    color: '#f87171',
+    fontSize: 13,
+    fontWeight: '700',
   },
 
   // Input

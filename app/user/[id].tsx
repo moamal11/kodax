@@ -27,7 +27,15 @@ import { useAuth } from '../_layout';
 import { useResponsiveLayout } from '@/hooks';
 import { getPublicProfile, ProfileData } from '@/services/profileService';
 import { checkIsFollowing } from '@/services/followService';
-import { getPublicSnippets, FeedSnippet } from '@/services/codeFeedService';
+import {
+  getPublicSnippets,
+  FeedSnippet,
+  blockUser,
+  unblockUser,
+  isUserBlocked,
+} from '@/services/codeFeedService';
+import { showAlert } from '@/utils/crossPlatformAlert';
+import { showToast } from '@/components/ui/Toast';
 import { getOrCreateConversation } from '@/services/messageService';
 import FollowButton from '@/components/ui/FollowButton';
 
@@ -84,6 +92,8 @@ export default function UserProfileScreen() {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -105,8 +115,12 @@ export default function UserProfileScreen() {
 
       // Check follow status
       if (user?.id && user.id !== id) {
-        const following = await checkIsFollowing(user.id, id);
+        const [following, blocked] = await Promise.all([
+          checkIsFollowing(user.id, id),
+          isUserBlocked(id),
+        ]);
         setIsFollowing(following);
+        setIsBlocked(blocked);
       }
 
       setLoading(false);
@@ -176,13 +190,58 @@ export default function UserProfileScreen() {
     setSendingMessage(false);
 
     if (error) {
-      Alert.alert('خطأ', 'حدث خطأ أثناء فتح المحادثة');
+      // الحظر (بأي اتجاه) يمنع بدء المحادثة على السيرفر
+      if (String(error?.message ?? '').includes('blocked')) {
+        Alert.alert('غير متاح', 'لا يمكن مراسلة هذا المستخدم.');
+      } else {
+        Alert.alert('خطأ', 'حدث خطأ أثناء فتح المحادثة');
+      }
       return;
     }
 
     if (conversationId) {
       router.push(`/message/${conversationId}` as any);
     }
+  };
+
+  // حظر / إلغاء حظر (user_blocks)
+  const blockName = profile?.full_name || profile?.username || 'المستخدم';
+  const doToggleBlock = async () => {
+    if (!id || blockBusy) return;
+    setBlockBusy(true);
+    const res = isBlocked ? await unblockUser(id) : await blockUser(id);
+    setBlockBusy(false);
+    if (!res.success) {
+      showToast.error(
+        isBlocked ? 'تعذّر إلغاء الحظر. حاول مرة أخرى.' : 'تعذّر الحظر. حاول مرة أخرى.'
+      );
+      return;
+    }
+    const nowBlocked = !isBlocked;
+    setIsBlocked(nowBlocked);
+    if (nowBlocked) {
+      setSnippets([]); // لا يظهر محتواه بعد الحظر (مثل الفيد)
+      showToast.success(`تم حظر ${blockName}`);
+    } else {
+      showToast.success(`تم إلغاء حظر ${blockName}`);
+      loadSnippets(0, false);
+    }
+  };
+  const handleBlockToggle = () => {
+    showAlert(
+      isBlocked ? `إلغاء حظر ${blockName}؟` : `حظر ${blockName}؟`,
+      isBlocked
+        ? 'سيتمكن من مراسلتك مجدداً وسترى محتواه.'
+        : 'لن يستطيع مراسلتك، ولن ترى أكواده. يمكنك إلغاء الحظر لاحقاً من الإعدادات ← المستخدمون المحظورون.',
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        {
+          text: isBlocked ? 'إلغاء الحظر' : 'حظر',
+          style: 'destructive',
+          onPress: doToggleBlock,
+        },
+      ]
+    );
   };
 
   // Handle share button
@@ -340,24 +399,42 @@ export default function UserProfileScreen() {
                 onToggle={handleFollowToggle}
               />
 
-              <TouchableOpacity
-                style={styles.messageBtn}
-                onPress={handleMessage}
-                disabled={sendingMessage}
-                activeOpacity={0.7}
-              >
-                <LinearGradient
-                  colors={['#1a1a3e', '#151530']}
-                  style={styles.messageBtnGradient}
+              {isBlocked ? (
+                <TouchableOpacity
+                  style={[styles.messageBtn, styles.unblockBtn]}
+                  onPress={handleBlockToggle}
+                  disabled={blockBusy}
+                  activeOpacity={0.7}
                 >
-                  {sendingMessage ? (
-                    <ActivityIndicator size="small" color="#8b5cf6" />
-                  ) : (
-                    <Ionicons name="mail-outline" size={18} color="#8b5cf6" />
-                  )}
-                  <Text style={styles.messageBtnText}>مراسلة</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                  <View style={styles.messageBtnGradient}>
+                    {blockBusy ? (
+                      <ActivityIndicator size="small" color="#f87171" />
+                    ) : (
+                      <Ionicons name="ban" size={18} color="#f87171" />
+                    )}
+                    <Text style={styles.unblockBtnText}>إلغاء الحظر</Text>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.messageBtn}
+                  onPress={handleMessage}
+                  disabled={sendingMessage}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient
+                    colors={['#1a1a3e', '#151530']}
+                    style={styles.messageBtnGradient}
+                  >
+                    {sendingMessage ? (
+                      <ActivityIndicator size="small" color="#8b5cf6" />
+                    ) : (
+                      <Ionicons name="mail-outline" size={18} color="#8b5cf6" />
+                    )}
+                    <Text style={styles.messageBtnText}>مراسلة</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.shareBtn}
@@ -375,6 +452,35 @@ export default function UserProfileScreen() {
                   />
                 </LinearGradient>
               </TouchableOpacity>
+
+              {!isBlocked && (
+                <TouchableOpacity
+                  style={styles.shareBtn}
+                  onPress={handleBlockToggle}
+                  disabled={blockBusy}
+                  activeOpacity={0.7}
+                  accessibilityLabel="حظر المستخدم"
+                >
+                  <LinearGradient
+                    colors={['#1a1a3e', '#151530']}
+                    style={styles.shareBtnGradient}
+                  >
+                    {blockBusy ? (
+                      <ActivityIndicator size="small" color="#f87171" />
+                    ) : (
+                      <Ionicons name="ban-outline" size={18} color="#f87171" />
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          {!isOwnProfile && isBlocked && (
+            <View style={styles.blockedBanner}>
+              <Ionicons name="ban" size={16} color="#f87171" />
+              <Text style={styles.blockedBannerText}>
+                لقد حظرت هذا المستخدم. لا يمكنكما تبادل الرسائل ولن ترى محتواه.
+              </Text>
             </View>
           )}
           <View
@@ -811,6 +917,35 @@ const styles = StyleSheet.create({
     color: '#8b5cf6',
     fontSize: 14,
     fontWeight: '600',
+  },
+  unblockBtn: {
+    borderColor: 'rgba(248, 113, 113, 0.4)',
+    backgroundColor: 'rgba(248, 113, 113, 0.1)',
+  },
+  unblockBtnText: {
+    color: '#f87171',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  blockedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(248, 113, 113, 0.3)',
+    backgroundColor: 'rgba(248, 113, 113, 0.08)',
+    alignSelf: 'stretch',
+  },
+  blockedBannerText: {
+    flex: 1,
+    color: '#fca5a5',
+    fontSize: 13,
+    lineHeight: 20,
   },
   shareBtn: {
     width: 44,

@@ -749,6 +749,54 @@ export async function blockUser(
   }
 }
 
+export interface BlockedUser {
+  id: string;
+  username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  blocked_at: string;
+}
+
+/** المستخدمون الذين حظرهم المستخدم الحالي (من user_blocks؛ RLS يقصرها على حظره هو) */
+export async function getBlockedUsers(): Promise<{
+  data: BlockedUser[];
+  error: string | null;
+}> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return { data: [], error: 'not_authenticated' };
+    const { data, error } = await supabase
+      .from('user_blocks')
+      .select(
+        'blocked_id, created_at, profile:profiles!user_blocks_blocked_id_fkey (id, username, full_name, avatar_url)'
+      )
+      .eq('blocker_id', uid)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    const users = (data || []).map((r: any) => ({
+      id: r.blocked_id as string,
+      username: r.profile?.username ?? null,
+      full_name: r.profile?.full_name ?? null,
+      avatar_url: r.profile?.avatar_url ?? null,
+      blocked_at: r.created_at as string,
+    }));
+    blockedCache = { userId: uid, ids: users.map((u) => u.id), at: Date.now() };
+    return { data: users, error: null };
+  } catch (error) {
+    console.error('getBlockedUsers error:', error);
+    return { data: [], error: 'load_failed' };
+  }
+}
+
+/** هل حظر المستخدم الحالي هذا المستخدم؟ (حظر الطرف الآخر لك لا يُكشف) */
+export async function isUserBlocked(userId: string): Promise<boolean> {
+  const ids = await getBlockedUserIds(true);
+  return ids.includes(userId);
+}
+
 export async function unblockUser(
   blockedId: string
 ): Promise<{ success: boolean }> {
