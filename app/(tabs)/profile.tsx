@@ -904,6 +904,50 @@ export default function ProfileScreen() {
                     <TouchableOpacity
                       style={webStyles.settingItemWeb}
                       activeOpacity={0.7}
+                      onPress={() => router.push('/privacy' as any)}
+                    >
+                      <View style={styles.settingLeft}>
+                        <View
+                          style={[
+                            styles.settingIconContainer,
+                            { backgroundColor: 'rgba(139, 92, 246, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons
+                            name="shield-checkmark"
+                            size={18}
+                            color="#8b5cf6"
+                          />
+                        </View>
+                        <Text style={styles.settingText}>سياسة الخصوصية</Text>
+                      </View>
+                      <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={webStyles.settingItemWeb}
+                      activeOpacity={0.7}
+                      onPress={() => router.push('/terms' as any)}
+                    >
+                      <View style={styles.settingLeft}>
+                        <View
+                          style={[
+                            styles.settingIconContainer,
+                            { backgroundColor: 'rgba(6, 182, 212, 0.15)' },
+                          ]}
+                        >
+                          <Ionicons
+                            name="document-text"
+                            size={18}
+                            color="#06b6d4"
+                          />
+                        </View>
+                        <Text style={styles.settingText}>شروط الاستخدام</Text>
+                      </View>
+                      <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={webStyles.settingItemWeb}
+                      activeOpacity={0.7}
                       onPress={() => router.push('/delete-account' as any)}
                     >
                       <View style={styles.settingLeft}>
@@ -1467,6 +1511,58 @@ export default function ProfileScreen() {
                             />
                           </View>
                           <Text style={styles.settingText}>عن التطبيق</Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color="#4b5563"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={webStyles.settingItemWeb}
+                        activeOpacity={0.7}
+                        onPress={() => router.push('/privacy' as any)}
+                      >
+                        <View style={styles.settingLeft}>
+                          <View
+                            style={[
+                              styles.settingIconContainer,
+                              { backgroundColor: 'rgba(139, 92, 246, 0.15)' },
+                            ]}
+                          >
+                            <Ionicons
+                              name="shield-checkmark"
+                              size={18}
+                              color="#8b5cf6"
+                            />
+                          </View>
+                          <Text style={styles.settingText}>سياسة الخصوصية</Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-back"
+                          size={18}
+                          color="#4b5563"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={webStyles.settingItemWeb}
+                        activeOpacity={0.7}
+                        onPress={() => router.push('/terms' as any)}
+                      >
+                        <View style={styles.settingLeft}>
+                          <View
+                            style={[
+                              styles.settingIconContainer,
+                              { backgroundColor: 'rgba(6, 182, 212, 0.15)' },
+                            ]}
+                          >
+                            <Ionicons
+                              name="document-text"
+                              size={18}
+                              color="#06b6d4"
+                            />
+                          </View>
+                          <Text style={styles.settingText}>شروط الاستخدام</Text>
                         </View>
                         <Ionicons
                           name="chevron-back"
@@ -2088,6 +2184,50 @@ export default function ProfileScreen() {
                       />
                     </View>
                     <Text style={styles.settingText}>عن التطبيق</Text>
+                  </View>
+                  <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.settingItem}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/privacy' as any)}
+                >
+                  <View style={styles.settingLeft}>
+                    <View
+                      style={[
+                        styles.settingIconContainer,
+                        { backgroundColor: 'rgba(139, 92, 246, 0.15)' },
+                      ]}
+                    >
+                      <Ionicons
+                        name="shield-checkmark"
+                        size={18}
+                        color="#8b5cf6"
+                      />
+                    </View>
+                    <Text style={styles.settingText}>سياسة الخصوصية</Text>
+                  </View>
+                  <Ionicons name="chevron-back" size={18} color="#4b5563" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.settingItem}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/terms' as any)}
+                >
+                  <View style={styles.settingLeft}>
+                    <View
+                      style={[
+                        styles.settingIconContainer,
+                        { backgroundColor: 'rgba(6, 182, 212, 0.15)' },
+                      ]}
+                    >
+                      <Ionicons
+                        name="document-text"
+                        size={18}
+                        color="#06b6d4"
+                      />
+                    </View>
+                    <Text style={styles.settingText}>شروط الاستخدام</Text>
                   </View>
                   <Ionicons name="chevron-back" size={18} color="#4b5563" />
                 </TouchableOpacity>

@@ -129,6 +129,9 @@ export default function DeleteAccountScreen() {
             <Text style={styles.note}>
               رسائل الطرف الآخر في محادثاتك تبقى عنده. قد نحتفظ بسجلات إشراف وإحصاءات مجهولة لا تُربط بك.
             </Text>
+            <TouchableOpacity onPress={() => router.push('/privacy' as any)} disabled={deleting}>
+              <Text style={styles.policyLink}>تفاصيل أكثر في سياسة الخصوصية</Text>
+            </TouchableOpacity>
 
             <Text style={styles.sectionTitle}>
               للتأكيد اكتب كلمة «{CONFIRM_WORD}»
@@ -234,6 +237,7 @@ const styles = StyleSheet.create({
   listRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
   listText: { flex: 1, color: '#d1d5db', fontSize: 14, lineHeight: 21, textAlign: 'right' },
   note: { color: '#6b7280', fontSize: 12, lineHeight: 19, textAlign: 'right' },
+  policyLink: { color: '#a78bfa', fontSize: 13, textAlign: 'right', textDecorationLine: 'underline' },
   input: {
     backgroundColor: '#1a1a3e',
     borderRadius: 14,

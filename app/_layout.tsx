@@ -61,6 +61,8 @@ function BadgeProviderConnected({
  * - موبايل + غير مسجل → صفحة تسجيل الدخول
  * - موبايل + مسجل → التطبيق مباشرة
  */
+const PUBLIC_ROUTES = new Set(['privacy', 'terms', 'account-deletion']);
+
 function NavigationGuard() {
   const { session, isInitializing, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -76,6 +78,8 @@ function NavigationGuard() {
 
     const inAuthGroup = segments[0] === '(auth)';
     const inDownload = segments[0] === 'download';
+    // صفحات عامة (سياسة الخصوصية، الشروط، حذف الحساب) تعمل بلا تسجيل دخول
+    const inPublic = PUBLIC_ROUTES.has(String(segments[0] ?? ''));
     const hasSegments = segments.length > 0;
 
     // انتظر حتى يكون الراوتر جاهز
@@ -97,7 +101,7 @@ function NavigationGuard() {
       }
     } else {
       // غير مسجل دخول
-      if (!inAuthGroup && !inDownload) {
+      if (!inAuthGroup && !inDownload && !inPublic) {
         console.log('[AUTH] navigating to login');
         if (Platform.OS === 'web') {
           // الويب: صفحة التحميل أولاً

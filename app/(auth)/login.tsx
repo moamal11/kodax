@@ -31,7 +31,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useResponsiveLayout } from '@/hooks';
 import * as WebBrowser from 'expo-web-browser';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -39,6 +39,7 @@ WebBrowser.maybeCompleteAuthSession();
 const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -476,11 +477,11 @@ export default function LoginScreen() {
             style={styles.footer}
           >
             <Text style={styles.footerText}>بالمتابعة، أنت توافق على </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/terms' as any)}>
               <Text style={styles.footerLink}>شروط الاستخدام</Text>
             </TouchableOpacity>
             <Text style={styles.footerText}> و</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/privacy' as any)}>
               <Text style={styles.footerLink}>سياسة الخصوصية</Text>
             </TouchableOpacity>
           </Animated.View>
