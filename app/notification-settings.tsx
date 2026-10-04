@@ -2,7 +2,7 @@
  * إعدادات الإشعارات — تفعيل الإشعارات على الجهاز + أنواعها + وقت التذكير + ساعات الهدوء
  * (التفضيلات محفوظة على السيرفر وتُحترم عند الإرسال)
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Platform,
   Dimensions,
   Linking,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,13 +22,18 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useResponsiveLayout } from '@/hooks';
 import {
   getNotificationPrefs,
-  getPermissionStatus,
+  getPermissionInfo,
+  isDeviceRegistered,
+  isPushOptedOut,
   isPushSupported,
   NotificationPrefs,
   registerForPush,
+  setDevicePushEnabled,
   setNotificationPrefs,
 } from '@/services/pushService';
 import { showToast } from '@/components/ui/Toast';
+import { showAlert } from '@/utils/crossPlatformAlert';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -47,23 +53,39 @@ const fmtHour = (h: number) => `${h % 12 === 0 ? 12 : h % 12}:00 ${h < 12 ? 'ص'
 
 export default function NotificationSettingsScreen() {
   const router = useRouter();
+  const { userId } = useAuth();
   const { isLargeScreen } = useResponsiveLayout();
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
-  const [devices, setDevices] = useState(0);
   const [permission, setPermission] = useState<string>('undetermined');
+  const [canAskAgain, setCanAskAgain] = useState(true);
+  const [deviceOn, setDeviceOn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [enabling, setEnabling] = useState(false);
 
   const load = useCallback(async () => {
     setError(false);
-    const [p, perm] = await Promise.all([getNotificationPrefs(), getPermissionStatus()]);
-    setPermission(perm);
+    const [p, perm] = await Promise.all([getNotificationPrefs(), getPermissionInfo()]);
+    setPermission(perm.status);
+    setCanAskAgain(perm.canAskAgain);
+    // الإذن ممنوح ولم يوقفها المستخدم لكن الجهاز غير مسجّل (مثلاً فُعّل الإذن من إعدادات الجهاز) → سجّله
+    let registered = await isDeviceRegistered();
+    if (perm.status === 'granted' && !registered && userId && !(await isPushOptedOut(userId))) {
+      registered = (await registerForPush(false)).ok;
+    }
+    setDeviceOn(perm.status === 'granted' && registered);
     if (!p.prefs) setError(true);
     setPrefs(p.prefs);
-    setDevices(p.devices);
     setLoading(false);
-  }, []);
+  }, [userId]);
+
+  // العودة من إعدادات الجهاز بعد تغيير الإذن
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') load();
+    });
+    return () => sub.remove();
+  }, [load]);
 
   useFocusEffect(
     useCallback(() => {
@@ -71,19 +93,35 @@ export default function NotificationSettingsScreen() {
     }, [load])
   );
 
-  const enable = async () => {
+  const openDeviceSettings = () =>
+    showAlert('الإشعارات مرفوضة من الجهاز', 'لتفعيلها افتح إعدادات التطبيق ثم اسمح بالإشعارات.', [
+      { text: 'إلغاء', style: 'cancel' },
+      { text: 'فتح الإعدادات', onPress: () => Linking.openSettings() },
+    ]);
+
+  const toggleDevice = async (on: boolean) => {
+    if (!userId) return;
+    if (on && permission === 'denied' && !canAskAgain) {
+      openDeviceSettings();
+      return;
+    }
     setEnabling(true);
-    const res = await registerForPush(true);
+    const res = await setDevicePushEnabled(userId, on);
     setEnabling(false);
-    if (res.ok) {
+    if (!on) {
+      showToast.success('تم إيقاف الإشعارات على هذا الجهاز');
+    } else if (res.ok) {
       showToast.success('تم تفعيل الإشعارات على هذا الجهاز');
-      load();
     } else if (res.reason === 'permission') {
-      setPermission(await getPermissionStatus());
-      showToast.error('الإذن مرفوض. فعّل الإشعارات من إعدادات الجهاز.');
+      const perm = await getPermissionInfo();
+      setPermission(perm.status);
+      setCanAskAgain(perm.canAskAgain);
+      // لم يُمنح الإذن (رفض نهائي، أو إشعارات التطبيق مطفأة من إعدادات Android) → الحل من إعدادات الجهاز
+      openDeviceSettings();
     } else {
       showToast.error('تعذّر تفعيل الإشعارات حالياً. حاول لاحقاً.');
     }
+    load();
   };
 
   const update = async (patch: Partial<NotificationPrefs>) => {
@@ -98,7 +136,6 @@ export default function NotificationSettingsScreen() {
     }
   };
 
-  const deviceEnabled = permission === 'granted' && devices > 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -128,32 +165,38 @@ export default function NotificationSettingsScreen() {
         ) : (
           <ScrollView contentContainerStyle={styles.content}>
             {isPushSupported ? (
-              <View style={[styles.card, deviceEnabled ? styles.cardOk : styles.cardWarn]}>
+              <View style={[styles.card, deviceOn ? styles.cardOk : styles.cardWarn]}>
                 <Ionicons
-                  name={deviceEnabled ? 'checkmark-circle' : 'notifications-off'}
+                  name={deviceOn ? 'checkmark-circle' : 'notifications-off'}
                   size={24}
-                  color={deviceEnabled ? '#10b981' : '#fbbf24'}
+                  color={deviceOn ? '#10b981' : '#fbbf24'}
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardTitle}>
-                    {deviceEnabled ? 'الإشعارات مفعّلة على هذا الجهاز' : 'الإشعارات غير مفعّلة على هذا الجهاز'}
+                    {deviceOn ? 'الإشعارات مفعّلة على هذا الجهاز' : 'الإشعارات غير مفعّلة على هذا الجهاز'}
                   </Text>
                   <Text style={styles.cardHint}>
-                    {permission === 'denied'
-                      ? 'رفضت الإذن سابقاً — فعّله من إعدادات الجهاز.'
-                      : 'ستصلك التنبيهات التي تختارها أدناه فقط.'}
+                    {permission === 'denied' && !canAskAgain
+                      ? 'الإذن مرفوض من إعدادات الجهاز — اضغط للتفعيل من هناك.'
+                      : deviceOn
+                        ? 'ستصلك التنبيهات التي تختارها أدناه فقط.'
+                        : 'فعّلها لتصلك الرسائل والتذكيرات المهمة.'}
                   </Text>
                 </View>
-                {!deviceEnabled &&
-                  (permission === 'denied' ? (
-                    <TouchableOpacity style={styles.enableBtn} onPress={() => Linking.openSettings()}>
-                      <Text style={styles.enableText}>الإعدادات</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity style={styles.enableBtn} onPress={enable} disabled={enabling}>
-                      {enabling ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.enableText}>تفعيل</Text>}
-                    </TouchableOpacity>
-                  ))}
+                {enabling ? (
+                  <ActivityIndicator color="#8b5cf6" size="small" />
+                ) : permission === 'denied' && !canAskAgain ? (
+                  <TouchableOpacity style={styles.enableBtn} onPress={() => Linking.openSettings()}>
+                    <Text style={styles.enableText}>الإعدادات</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Switch
+                    value={deviceOn}
+                    onValueChange={toggleDevice}
+                    trackColor={{ false: '#374151', true: '#7c3aed' }}
+                    thumbColor="#ffffff"
+                  />
+                )}
               </View>
             ) : (
               <View style={[styles.card, styles.cardWarn]}>

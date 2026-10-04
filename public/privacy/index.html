@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>سياسة الخصوصية | Privacy Policy — Kodax</title>
+  <meta name="description" content="سياسة الخصوصية الرسمية لتطبيق وموقع Kodax - توضح البيانات التي نجمعها، ولماذا نستخدمها، وحقوقك في التحكم بها وحذفها." />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0a0a14" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="سياسة الخصوصية | Privacy Policy — Kodax" />
+  <meta property="og:description" content="توضح هذه السياسة البيانات التي يجمعها تطبيق Kodax وموقعه kodax.app، ولماذا نستخدمها، ومع من نشاركها، وكيف تتحكم بها أو تحذفها." />
+  <meta property="og:url" content="https://kodax.app/privacy/" />
+  <meta property="og:site_name" content="Kodax" />
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #0a0a14;
+      --bg-surface: #121226;
+      --bg-surface-elevated: #181834;
+      --border: #232348;
+      --border-focus: #8b5cf6;
+      --primary: #8b5cf6;
+      --primary-hover: #7c3aed;
+      --primary-light: #a78bfa;
+      --primary-glow: rgba(139, 92, 246, 0.15);
+      --text: #ffffff;
+      --text-muted: #d1d5db;
+      --text-subtle: #9ca3af;
+      --text-dim: #6b7280;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --font-ar: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-en: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      font-family: var(--font-ar);
+      background-color: var(--bg);
+      color: var(--text-muted);
+      line-height: 1.75;
+      font-size: 15px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.12) 0%, transparent 600px),
+        radial-gradient(circle at 10% 30%, rgba(59, 130, 246, 0.05) 0%, transparent 400px);
+      background-repeat: no-repeat;
+    }
+
+    html[dir="ltr"] body {
+      font-family: var(--font-en);
+    }
+
+    a {
+      color: var(--primary-light);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    a:hover {
+      color: #c4b5fd;
+      text-decoration: underline;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ─── Header ─── */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10, 10, 20, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(35, 35, 72, 0.6);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      list-style: none;
+    }
+
+    .nav-item a {
+      display: inline-block;
+      padding: 7px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-subtle);
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .nav-item a:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+      text-decoration: none;
+    }
+
+    .nav-item.active a {
+      color: #ffffff;
+      background: rgba(139, 92, 246, 0.2);
+      border: 1px solid rgba(139, 92, 246, 0.4);
+    }
+
+    .lang-switcher {
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .lang-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-subtle);
+      padding: 6px 12px;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .lang-btn:hover {
+      color: #ffffff;
+    }
+
+    .lang-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+    }
+
+    /* ─── Hero / Header Card ─── */
+    .hero-card {
+      margin: 36px 0 28px;
+      padding: 32px;
+      background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(18, 18, 38, 0.6) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #8b5cf6, #6366f1, #3b82f6);
+    }
+
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary-light);
+      background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      margin-bottom: 16px;
+    }
+
+    .doc-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+
+    .updated-date {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    .doc-intro {
+      font-size: 16px;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+
+    /* ─── Sections ─── */
+    .sections-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-bottom: 48px;
+    }
+
+    .legal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .legal-card:hover {
+      border-color: rgba(139, 92, 246, 0.35);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .section-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(139, 92, 246, 0.15);
+      color: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .legal-paragraph {
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      line-height: 1.8;
+    }
+
+    .legal-paragraph:last-child {
+      margin-bottom: 0;
+    }
+
+    .bullets-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bullet-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      color: var(--text-muted);
+      line-height: 1.75;
+    }
+
+    .bullet-dot {
+      color: var(--primary-light);
+      font-size: 18px;
+      line-height: 1.4;
+      flex-shrink: 0;
+    }
+
+    /* Contact Links Card */
+    .contact-card {
+      background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-surface-elevated) 100%);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 48px;
+    }
+
+    .contact-links-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .contact-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      padding: 10px 18px;
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .contact-pill:hover {
+      background: rgba(139, 92, 246, 0.25);
+      border-color: rgba(139, 92, 246, 0.5);
+      color: #ffffff;
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+
+    /* ─── Footer ─── */
+    .site-footer {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      padding: 36px 0;
+      color: var(--text-subtle);
+      font-size: 13px;
+    }
+
+    .footer-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      text-align: center;
+    }
+
+    .footer-nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .footer-nav a {
+      color: var(--text-subtle);
+      text-decoration: none;
+    }
+
+    .footer-nav a:hover {
+      color: #ffffff;
+    }
+
+    .copyright {
+      color: var(--text-dim);
+    }
+
+    /* Responsive */
+    @media (max-width: 680px) {
+      .header-inner {
+        flex-wrap: wrap;
+      }
+      .nav-links {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        padding-top: 8px;
+      }
+      .hero-card {
+        padding: 22px;
+        margin-top: 20px;
+      }
+      .doc-title {
+        font-size: 22px;
+      }
+      .legal-card {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="site-header">
+    <div class="container">
+      <div class="header-inner">
+        <a href="https://kodax.app/" class="brand" title="Kodax Homepage">
+          <div class="brand-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+          </div>
+          <span>KODAX</span>
+        </a>
+
+        <ul class="nav-links">
+          <li class="nav-item active"><a href="/privacy/" id="nav-privacy">الخصوصية</a></li>
+          <li class="nav-item"><a href="/terms/" id="nav-terms">الشروط</a></li>
+          <li class="nav-item"><a href="/delete-account/" id="nav-delete">حذف الحساب</a></li>
+        </ul>
+
+        <div class="lang-switcher" role="group" aria-label="Language switcher">
+          <button type="button" class="lang-btn active" id="btn-ar" onclick="setLanguage('ar')">عربي</button>
+          <button type="button" class="lang-btn" id="btn-en" onclick="setLanguage('en')">EN</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="container">
+
+    <!-- ARABIC CONTENT -->
+    <article id="content-ar" class="lang-section" lang="ar" dir="rtl">
+      <header class="hero-card">
+        <div class="doc-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>وثيقة قانونية رسمية</span>
+        </div>
+        <h1 class="doc-title">سياسة الخصوصية</h1>
+        <div class="updated-date">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>آخر تحديث: 3 أكتوبر 2026</span>
+        </div>
+        <p class="doc-intro">
+          توضح هذه السياسة البيانات التي يجمعها تطبيق Kodax وموقعه kodax.app، ولماذا نستخدمها، ومع من نشاركها، وكيف تتحكم بها أو تحذفها.
+        </p>
+      </header>
+
+      <div class="sections-wrapper">
+        <!-- 1 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">1</div>
+            <h2 class="section-title">الحساب وتسجيل الدخول</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>البريد الإلكتروني وكلمة المرور عند التسجيل بالبريد. كلمة المرور لا نراها؛ تُدار عبر Supabase Auth.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>عند الدخول بحساب Google: الاسم والبريد وصورة الحساب كما تشاركها Google.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>نستخدمها لإنشاء حسابك وتأمين الدخول فقط.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 2 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">2</div>
+            <h2 class="section-title">الملف الشخصي (عام)</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>الاسم، واسم المستخدم، والصورة، والمحافظة، والجنس، وعدد المتابعين والمتابَعين، والمستوى والـ XP والسلسلة.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>هذه المعلومات تظهر للمستخدمين الآخرين في ملفك وفي لوحة المتصدرين.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 3 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">3</div>
+            <h2 class="section-title">التعلم والتقدم</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>الدروس المكتملة وإجابات اختبارات الدروس، ومحاولات التحديات ونتائجها، والـ XP والمستوى والسلسلة والأهداف والإنجازات والشهادات.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>رصيد الكوينات وسجل معاملاتها (من أين كُسبت وأين صُرفت).</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>نستخدمها لحفظ تقدمك ومنح المكافآت ومنع التلاعب. الشهادات قابلة للتحقق العلني عبر رابطها.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 4 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">4</div>
+            <h2 class="section-title">المحتوى والتفاعل الاجتماعي</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>الأكواد التي تنشرها علناً، والتعليقات والإعجابات والمتابعات: تظهر للآخرين.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>الرسائل الخاصة: تُخزَّن لعرضها لك وللطرف الآخر فقط. نصل إليها تقنياً فقط عند الضرورة (مثل التحقيق في بلاغ إساءة أو طلب قانوني).</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>الحظر والبلاغات: نسجّل من حظرت ومن أبلغت عنه وسبب البلاغ ووقته لأغراض الإشراف.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 5 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">5</div>
+            <h2 class="section-title">المساعد الذكي (Google Gemini)</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>عند استخدام المساعد تُرسل رسالتك والكود المرتبط بها (وسياق الدرس/التحدي) إلى Google Gemini API لتوليد الرد. لا نرسل اسمك أو بريدك.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>نخزّن محادثاتك مع المساعد لتظهر لك لاحقاً، ونحسب عدد طلباتك اليومية لتطبيق الحد المجاني.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>تخضع معالجة Google لشروط Gemini API الخاصة بها.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 6 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">6</div>
+            <h2 class="section-title">تشغيل الكود</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>عند تشغيل كود أو التحقق من حل تحدٍ يُرسل نص الكود إلى خدمات تشغيل خارجية: Wandbox (wandbox.org) ولغة Kotlin عبر خادم JetBrains (api.kotlinlang.org).</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>لا ترسل لهذه الخدمات أي بيانات شخصية؛ لا تكتب معلومات خاصة داخل الكود.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 7 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">7</div>
+            <h2 class="section-title">الإعلانات (Google AdMob)</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>نعرض إعلانات بمكافأة فقط وبطلب منك (لا لافتات ولا إعلانات منبثقة).</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>تجمع Google AdMob معرّف الإعلانات للجهاز وعنوان IP ومعلومات الجهاز لعرض الإعلان وقياسه ومنع الاحتيال، وفق سياسة Google.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>في المناطق التي تتطلب ذلك (مثل أوروبا والمملكة المتحدة) نطلب موافقتك عبر نموذج الموافقة من Google (UMP). يمكنك إعادة ضبط معرّف الإعلانات أو تعطيل التخصيص من إعدادات جهازك.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>نخزّن جلسة المكافأة (المستخدم، الوقت، الغرض، معرّف التحقق من Google) لمنح المكافأة مرة واحدة فقط.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 8 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">8</div>
+            <h2 class="section-title">الإحصاءات والسجلات</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>نسجّل أحداث استخدام داخل خوادمنا (مثل فتح التطبيق، فتح درس، طلب إعلان) لتحسين التعليم وقياس الاحتفاظ. لا نستخدم أي خدمة تحليلات خارجية.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>عند حذف الحساب تُفصل هذه الأحداث عن هويتك وتبقى إحصاءات مجهولة.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 9 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">9</div>
+            <h2 class="section-title">الإشعارات</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>إشعارات داخل التطبيق (الإعجابات، التعليقات، المتابعات، ردود الدعم، رسائل الإدارة).</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>عند تفعيل الإشعارات على جهازك نخزّن رمز الجهاز (push token) لإرسال التنبيهات، ويمكنك التحكم بأنواعها أو إيقافها من الإعدادات أو من إعدادات الجهاز.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 10 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">10</div>
+            <h2 class="section-title">الدعم الفني</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>عند فتح تذكرة دعم نخزّن اسمك وبريدك ونص المحادثة للرد عليك.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 11 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">11</div>
+            <h2 class="section-title">التحديثات والتخزين على الجهاز</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>يستخدم التطبيق Expo (EAS Updates) لتنزيل تحديثات البرنامج؛ يتطلب ذلك إرسال إصدار التطبيق ونوع الجهاز إلى خوادم Expo.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>نحفظ على جهازك جلسة الدخول وبعض البيانات المؤقتة (التقدم، المسودات) لتسريع التطبيق والعمل دون اتصال.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 12 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">12</div>
+            <h2 class="section-title">أين تُخزَّن البيانات ومن يصل إليها</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>تُخزَّن البيانات في Supabase (قاعدة بيانات وتخزين ملفات وتوثيق) في منطقة آسيا (مومباي).</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>الوصول محمي بصلاحيات لكل مستخدم على مستوى قاعدة البيانات؛ فريق الإدارة يصل لما يلزم للإشراف والدعم فقط.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>لا نبيع بياناتك ولا نشاركها لأغراض تسويقية. نشاركها فقط مع مزوّدي الخدمة المذكورين أعلاه بالقدر اللازم لعمل الميزة، أو عند وجود إلزام قانوني.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 13 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">13</div>
+            <h2 class="section-title">مدة الاحتفاظ والحذف</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>نحتفظ ببياناتك ما دام حسابك قائماً.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>يمكنك حذف حسابك نهائياً من: ملفي ← الإعدادات ← حذف الحساب. يحذف ذلك ملفك وصورتك وتقدمك وكوينزك وأكوادك وتعليقاتك ورسائلك ومحادثات المساعد وتذاكر الدعم وكل ما يرتبط بحسابك فوراً.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>تبقى سجلات إشراف إدارية وإحصاءات مجهولة غير مرتبطة بك، وقد تبقى نسخ في النسخ الاحتياطية للخادم لفترة محدودة حتى تُستبدل.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>رسائل الطرف الآخر في محادثاتكما تبقى عنده.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 14 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">14</div>
+            <h2 class="section-title">الأطفال</h2>
+          </div>
+          <p class="legal-paragraph">
+            Kodax غير موجّه للأطفال دون 13 عاماً، ولا نجمع عن قصد بيانات منهم. إذا علمت أن طفلاً أنشأ حساباً تواصل معنا لحذفه.
+          </p>
+        </section>
+
+        <!-- 15 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">15</div>
+            <h2 class="section-title">حقوقك</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>تعديل ملفك من داخل التطبيق.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>حذف حسابك وبياناتك في أي وقت.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>طلب نسخة من بياناتك أو الاستفسار عنها عبر الدعم الفني.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 16 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">16</div>
+            <h2 class="section-title">التغييرات</h2>
+          </div>
+          <p class="legal-paragraph">
+            قد نحدّث هذه السياسة عند تغيّر الخدمات؛ يظهر تاريخ آخر تحديث أعلى الصفحة.
+          </p>
+        </section>
+      </div>
+
+      <!-- Contact Section -->
+      <section class="contact-card">
+        <div class="section-header">
+          <div class="section-num">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+          <h2 class="section-title">التواصل</h2>
+        </div>
+        <p class="legal-paragraph">
+          للاستفسارات أو طلبات الخصوصية: من داخل التطبيق عبر الإعدادات ← المساعدة والدعم، أو:
+        </p>
+        <div class="contact-links-grid">
+          <a href="https://t.me/mo7za" target="_blank" rel="noopener noreferrer" class="contact-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+            </svg>
+            <span>Telegram: t.me/mo7za</span>
+          </a>
+          <a href="https://instagram.com/mo_nz.0" target="_blank" rel="noopener noreferrer" class="contact-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+            </svg>
+            <span>Instagram: instagram.com/mo_nz.0</span>
+          </a>
+        </div>
+      </section>
+    </article>
+
+    <!-- ENGLISH CONTENT -->
+    <article id="content-en" class="lang-section" lang="en" dir="ltr" style="display: none;">
+      <header class="hero-card">
+        <div class="doc-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>Official Legal Document</span>
+        </div>
+        <h1 class="doc-title">Privacy Policy</h1>
+        <div class="updated-date">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>Last updated: October 3, 2026</span>
+        </div>
+        <p class="doc-intro">
+          This policy explains what data the Kodax app and kodax.app collect, why, who we share it with, and how you can control or delete it.
+        </p>
+      </header>
+
+      <div class="sections-wrapper">
+        <!-- 1 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">1</div>
+            <h2 class="section-title">Account and sign-in</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Email and password when you sign up with email. Passwords are handled by Supabase Auth; we never see them.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>With Google Sign-In: your name, email and profile picture as shared by Google.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Used only to create and secure your account.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 2 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">2</div>
+            <h2 class="section-title">Profile (public)</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Name, username, avatar, province, gender, follower/following counts, level, XP and streak.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Visible to other users on your profile and on the leaderboard.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 3 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">3</div>
+            <h2 class="section-title">Learning progress</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Completed lessons and quiz answers, challenge attempts and results, XP, level, streak, goals, achievements and certificates.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Coin balance and transaction history.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Used to save progress, grant rewards and prevent abuse. Certificates can be publicly verified via their link.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 4 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">4</div>
+            <h2 class="section-title">Content and social features</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Code you publish publicly, comments, likes and follows are visible to others.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Private messages are stored to show them to you and the other participant only. We access them only when necessary (e.g. investigating an abuse report or a legal request).</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Blocks and reports: we record who you blocked or reported, the reason and the time, for moderation.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 5 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">5</div>
+            <h2 class="section-title">AI assistant (Google Gemini)</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>When you use the assistant, your message and related code (plus lesson/challenge context) are sent to the Google Gemini API to generate a reply. Your name and email are not sent.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>We store your assistant conversations so you can see them later, and count daily requests to apply the free limit.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Google's processing is subject to the Gemini API terms.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 6 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">6</div>
+            <h2 class="section-title">Code execution</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>When you run code or verify a challenge, the code text is sent to external execution services: Wandbox (wandbox.org) and JetBrains Kotlin (api.kotlinlang.org).</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>No personal data is sent; do not put private information in your code.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 7 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">7</div>
+            <h2 class="section-title">Ads (Google AdMob)</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>We show rewarded ads only, and only when you choose to watch one (no banners or interstitials).</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Google AdMob collects the device advertising ID, IP address and device information to serve and measure ads and prevent fraud, under Google's policies.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Where required (e.g. EEA/UK) we ask for consent through Google's User Messaging Platform (UMP). You can reset your advertising ID or opt out of personalization in your device settings.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>We store each reward session (user, time, purpose, Google verification ID) to grant a reward only once.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 8 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">8</div>
+            <h2 class="section-title">Analytics and logs</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>We record usage events on our own servers (e.g. app opened, lesson opened, ad requested) to improve learning and measure retention. We do not use third-party analytics.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>When you delete your account these events are unlinked from you and kept only as anonymous statistics.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 9 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">9</div>
+            <h2 class="section-title">Notifications</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>In-app notifications (likes, comments, follows, support replies, admin messages).</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>If you enable push notifications we store your device push token to send alerts; you can choose the types or turn them off in settings or in your device settings.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 10 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">10</div>
+            <h2 class="section-title">Support</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>When you open a support ticket we store your name, email and the conversation to reply to you.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 11 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">11</div>
+            <h2 class="section-title">Updates and on-device storage</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>The app uses Expo (EAS Updates) to download software updates; this sends the app version and platform to Expo servers.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>We keep your session and some cached data (progress, drafts) on your device for speed and offline use.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 12 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">12</div>
+            <h2 class="section-title">Where data is stored and who can access it</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Data is stored with Supabase (database, file storage and auth) in the Asia (Mumbai) region.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Access is protected by per-user database permissions; our admin team accesses only what is needed for moderation and support.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>We do not sell your data or share it for marketing. We share it only with the service providers above, as needed for each feature, or when legally required.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 13 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">13</div>
+            <h2 class="section-title">Retention and deletion</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>We keep your data while your account exists.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>You can permanently delete your account from Profile → Settings → Delete account. This immediately deletes your profile, avatar, progress, coins, code, comments, messages, assistant conversations, support tickets and everything linked to your account.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Administrative moderation records and anonymous statistics not linked to you are kept, and server backups may retain copies for a limited period until they rotate.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>The other participant's messages in your conversations remain with them.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 14 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">14</div>
+            <h2 class="section-title">Children</h2>
+          </div>
+          <p class="legal-paragraph">
+            Kodax is not directed to children under 13, and we do not knowingly collect their data. If you believe a child created an account, contact us to delete it.
+          </p>
+        </section>
+
+        <!-- 15 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">15</div>
+            <h2 class="section-title">Your rights</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Edit your profile in the app.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Delete your account and data at any time.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">•</span>
+              <span>Request a copy of your data or ask about it through support.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 16 -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-num">16</div>
+            <h2 class="section-title">Changes</h2>
+          </div>
+          <p class="legal-paragraph">
+            We may update this policy when our services change; the last updated date is shown at the top.
+          </p>
+        </section>
+      </div>
+
+      <!-- Contact Section -->
+      <section class="contact-card">
+        <div class="section-header">
+          <div class="section-num">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+          <h2 class="section-title">Contact</h2>
+        </div>
+        <p class="legal-paragraph">
+          For questions or privacy requests: in the app via Settings → Help &amp; Support, or:
+        </p>
+        <div class="contact-links-grid">
+          <a href="https://t.me/mo7za" target="_blank" rel="noopener noreferrer" class="contact-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+            </svg>
+            <span>Telegram: t.me/mo7za</span>
+          </a>
+          <a href="https://instagram.com/mo_nz.0" target="_blank" rel="noopener noreferrer" class="contact-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+            </svg>
+            <span>Instagram: instagram.com/mo_nz.0</span>
+          </a>
+        </div>
+      </section>
+    </article>
+
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <ul class="footer-nav">
+        <li><a href="/privacy/" id="footer-privacy">سياسة الخصوصية</a></li>
+        <li><a href="/terms/" id="footer-terms">شروط الاستخدام</a></li>
+        <li><a href="/delete-account/" id="footer-delete">حذف الحساب</a></li>
+        <li><a href="https://kodax.app/">الرئيسية</a></li>
+      </ul>
+      <p class="copyright">
+        &copy; 2026 Kodax (kodax.app). جميع الحقوق محفوظة.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    function setLanguage(lang) {
+      const arSection = document.getElementById('content-ar');
+      const enSection = document.getElementById('content-en');
+      const btnAr = document.getElementById('btn-ar');
+      const btnEn = document.getElementById('btn-en');
+      const html = document.documentElement;
+
+      // Nav and footer label updates
+      const navPrivacy = document.getElementById('nav-privacy');
+      const navTerms = document.getElementById('nav-terms');
+      const navDelete = document.getElementById('nav-delete');
+      const footerPrivacy = document.getElementById('footer-privacy');
+      const footerTerms = document.getElementById('footer-terms');
+      const footerDelete = document.getElementById('footer-delete');
+
+      if (lang === 'en') {
+        arSection.style.display = 'none';
+        enSection.style.display = 'block';
+        btnAr.classList.remove('active');
+        btnEn.classList.add('active');
+        html.setAttribute('lang', 'en');
+        html.setAttribute('dir', 'ltr');
+        document.title = 'Privacy Policy — Kodax';
+
+        if (navPrivacy) navPrivacy.textContent = 'Privacy';
+        if (navTerms) navTerms.textContent = 'Terms';
+        if (navDelete) navDelete.textContent = 'Delete Account';
+        if (footerPrivacy) footerPrivacy.textContent = 'Privacy Policy';
+        if (footerTerms) footerTerms.textContent = 'Terms of Service';
+        if (footerDelete) footerDelete.textContent = 'Delete Account';
+      } else {
+        enSection.style.display = 'none';
+        arSection.style.display = 'block';
+        btnEn.classList.remove('active');
+        btnAr.classList.add('active');
+        html.setAttribute('lang', 'ar');
+        html.setAttribute('dir', 'rtl');
+        document.title = 'سياسة الخصوصية — Kodax';
+
+        if (navPrivacy) navPrivacy.textContent = 'الخصوصية';
+        if (navTerms) navTerms.textContent = 'الشروط';
+        if (navDelete) navDelete.textContent = 'حذف الحساب';
+        if (footerPrivacy) footerPrivacy.textContent = 'سياسة الخصوصية';
+        if (footerTerms) footerTerms.textContent = 'شروط الاستخدام';
+        if (footerDelete) footerDelete.textContent = 'حذف الحساب';
+      }
+
+      try {
+        localStorage.setItem('kodax_legal_lang', lang);
+      } catch (e) {}
+    }
+
+    // Auto-detect lang from query param ?lang=en or localStorage
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const queryLang = params.get('lang');
+      let savedLang = null;
+      try {
+        savedLang = localStorage.getItem('kodax_legal_lang');
+      } catch (e) {}
+
+      if (queryLang === 'en' || queryLang === 'ar') {
+        setLanguage(queryLang);
+      } else if (savedLang === 'en') {
+        setLanguage('en');
+      }
+    })();
+  </script>
+</body>
+</html>

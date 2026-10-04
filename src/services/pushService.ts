@@ -12,6 +12,10 @@ import AsyncStorage from '@/lib/platformStorage';
 import { supabase } from '@/lib/supabase';
 
 const TOKEN_KEY = '@kodax_push_token';
+/** طُلب إذن النظام على هذا الجهاز (مرة واحدة فقط، مهما كان الجواب) */
+const ASKED_KEY = '@kodax_push_asked';
+/** المستخدم أوقف الإشعارات على هذا الجهاز من الإعدادات — لا تسجيل تلقائي */
+const optOutKey = (userId: string) => `@kodax_push_off:${userId}`;
 
 export interface NotificationPrefs {
   daily_goal: boolean;
@@ -62,6 +66,65 @@ export async function getPermissionStatus(): Promise<'granted' | 'denied' | 'und
   if (!isPushSupported) return 'unsupported';
   const { status } = await Notifications.getPermissionsAsync();
   return status as 'granted' | 'denied' | 'undetermined';
+}
+
+/** حالة الإذن + هل يمكن عرض نافذة النظام مجدداً (false = مرفوض نهائياً، الحل من إعدادات الجهاز) */
+export async function getPermissionInfo(): Promise<{
+  status: 'granted' | 'denied' | 'undetermined' | 'unsupported';
+  canAskAgain: boolean;
+}> {
+  if (!isPushSupported) return { status: 'unsupported', canAskAgain: false };
+  const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+  return { status: status as 'granted' | 'denied' | 'undetermined', canAskAgain };
+}
+
+export async function isPushOptedOut(userId: string): Promise<boolean> {
+  return (await AsyncStorage.getItem(optOutKey(userId))) === '1';
+}
+
+/** هل هذا الجهاز مسجّل حالياً لاستقبال الإشعارات */
+export async function isDeviceRegistered(): Promise<boolean> {
+  return !!(await AsyncStorage.getItem(TOKEN_KEY));
+}
+
+/**
+ * بعد الدخول (أو عند فتح التطبيق بجلسة قائمة):
+ * - الإذن ممنوح → تسجيل الجهاز تلقائياً
+ * - لم يُسأل من قبل على هذا الجهاز → نافذة إذن النظام مرة واحدة؛ الموافقة تفعّل الإشعارات مباشرة
+ * - مرفوض أو سُئل سابقاً أو أوقفها المستخدم من الإعدادات → لا شيء (بلا إزعاج)
+ */
+export async function initPushForUser(userId: string): Promise<void> {
+  if (!isPushSupported || !userId) return;
+  try {
+    if (await isPushOptedOut(userId)) return;
+    const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+    if (status === 'granted') {
+      await registerForPush(false);
+      return;
+    }
+    // Android 13+ يُرجع 'denied' قبل أول طلب (areNotificationsEnabled=false) مع canAskAgain=true؛
+    // canAskAgain=false = رفض نهائي → لا نافذة. ASKED_KEY يضمن مرة واحدة فقط على الجهاز.
+    if (!canAskAgain || (await AsyncStorage.getItem(ASKED_KEY))) return;
+    await AsyncStorage.setItem(ASKED_KEY, '1');
+    await registerForPush(true);
+  } catch (e) {
+    console.warn('[push] init failed:', e instanceof Error ? e.message : e);
+  }
+}
+
+/** تفعيل/إيقاف الإشعارات على هذا الجهاز من شاشة الإعدادات */
+export async function setDevicePushEnabled(
+  userId: string,
+  enabled: boolean
+): Promise<{ ok: boolean; reason?: string }> {
+  if (!enabled) {
+    await AsyncStorage.setItem(optOutKey(userId), '1');
+    await unregisterPush();
+    return { ok: true };
+  }
+  await AsyncStorage.removeItem(optOutKey(userId));
+  await AsyncStorage.setItem(ASKED_KEY, '1');
+  return registerForPush(true);
 }
 
 /**

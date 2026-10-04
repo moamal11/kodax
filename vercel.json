@@ -13,6 +13,11 @@
       "source": "/robots.txt",
       "destination": "https://raw.githubusercontent.com/m2iq/kodax-seo/refs/heads/main/robots.txt",
       "permanent": true
+    },
+    {
+      "source": "/account-deletion",
+      "destination": "/delete-account/",
+      "permanent": true
     }
   ],
   "headers": [

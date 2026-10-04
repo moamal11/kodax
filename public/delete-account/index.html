@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>حذف حساب Kodax | Delete Account — Kodax</title>
+  <meta name="description" content="معلومات حذف حساب Kodax وبياناته نهائياً - خطوات الحذف من داخل التطبيق، البيانات المحذوفة، وما تفعله إذا لم تستطع الدخول." />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0a0a14" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="حذف حساب Kodax | Delete Account — Kodax" />
+  <meta property="og:description" content="يمكنك حذف حسابك وكل بياناته نهائياً في أي وقت. خطوات واضحة ومباشرة لحذف حسابك وبياناتك المرتبطة." />
+  <meta property="og:url" content="https://kodax.app/delete-account/" />
+  <meta property="og:site_name" content="Kodax" />
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #0a0a14;
+      --bg-surface: #121226;
+      --bg-surface-elevated: #181834;
+      --border: #232348;
+      --border-focus: #8b5cf6;
+      --primary: #8b5cf6;
+      --primary-hover: #7c3aed;
+      --primary-light: #a78bfa;
+      --primary-glow: rgba(139, 92, 246, 0.15);
+      --danger: #ef4444;
+      --danger-light: #fca5a5;
+      --danger-bg: rgba(239, 68, 68, 0.1);
+      --danger-border: rgba(239, 68, 68, 0.35);
+      --text: #ffffff;
+      --text-muted: #d1d5db;
+      --text-subtle: #9ca3af;
+      --text-dim: #6b7280;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --font-ar: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-en: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      font-family: var(--font-ar);
+      background-color: var(--bg);
+      color: var(--text-muted);
+      line-height: 1.75;
+      font-size: 15px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.1) 0%, transparent 600px),
+        radial-gradient(circle at 90% 40%, rgba(139, 92, 246, 0.08) 0%, transparent 400px);
+      background-repeat: no-repeat;
+    }
+
+    html[dir="ltr"] body {
+      font-family: var(--font-en);
+    }
+
+    a {
+      color: var(--primary-light);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    a:hover {
+      color: #c4b5fd;
+      text-decoration: underline;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ─── Header ─── */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10, 10, 20, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(35, 35, 72, 0.6);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      list-style: none;
+    }
+
+    .nav-item a {
+      display: inline-block;
+      padding: 7px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-subtle);
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .nav-item a:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+      text-decoration: none;
+    }
+
+    .nav-item.active a {
+      color: #ffffff;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .lang-switcher {
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .lang-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-subtle);
+      padding: 6px 12px;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .lang-btn:hover {
+      color: #ffffff;
+    }
+
+    .lang-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+    }
+
+    /* ─── Hero / Header Card ─── */
+    .hero-card {
+      margin: 36px 0 28px;
+      padding: 32px;
+      background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(18, 18, 38, 0.6) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #ef4444, #f97316, #8b5cf6);
+    }
+
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--danger-light);
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      margin-bottom: 16px;
+    }
+
+    .doc-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+
+    .updated-date {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    .doc-intro {
+      font-size: 16px;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+
+    /* Warning Callout */
+    .warning-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      margin-bottom: 24px;
+    }
+
+    .warning-icon {
+      color: var(--danger);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .warning-text {
+      color: #fca5a5;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .warning-text strong {
+      color: #ffffff;
+      display: block;
+      margin-bottom: 4px;
+      font-size: 15px;
+    }
+
+    /* ─── Sections ─── */
+    .sections-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-bottom: 48px;
+    }
+
+    .legal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      transition: border-color 0.2s ease;
+    }
+
+    .legal-card:hover {
+      border-color: rgba(139, 92, 246, 0.35);
+    }
+
+    .legal-card.card-danger-hover:hover {
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .section-icon-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: rgba(139, 92, 246, 0.15);
+      color: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .section-icon-badge.danger-badge {
+      background: var(--danger-bg);
+      color: var(--danger-light);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .legal-paragraph {
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      line-height: 1.8;
+    }
+
+    .legal-paragraph:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Steps list */
+    .steps-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+    }
+
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-content {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .bullets-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bullet-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      color: var(--text-muted);
+      line-height: 1.75;
+    }
+
+    .bullet-dot {
+      color: var(--danger-light);
+      font-size: 16px;
+      line-height: 1.4;
+      flex-shrink: 0;
+    }
+
+    .bullet-dot-subtle {
+      color: var(--text-dim);
+      font-size: 16px;
+      line-height: 1.4;
+      flex-shrink: 0;
+    }
+
+    /* Contact Links Card */
+    .contact-card {
+      background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-surface-elevated) 100%);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 48px;
+    }
+
+    .contact-links-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .contact-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      padding: 10px 18px;
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .contact-pill:hover {
+      background: rgba(139, 92, 246, 0.25);
+      border-color: rgba(139, 92, 246, 0.5);
+      color: #ffffff;
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+
+    /* ─── Footer ─── */
+    .site-footer {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      padding: 36px 0;
+      color: var(--text-subtle);
+      font-size: 13px;
+    }
+
+    .footer-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      text-align: center;
+    }
+
+    .footer-nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .footer-nav a {
+      color: var(--text-subtle);
+      text-decoration: none;
+    }
+
+    .footer-nav a:hover {
+      color: #ffffff;
+    }
+
+    .copyright {
+      color: var(--text-dim);
+    }
+
+    /* Responsive */
+    @media (max-width: 680px) {
+      .header-inner {
+        flex-wrap: wrap;
+      }
+      .nav-links {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        padding-top: 8px;
+      }
+      .hero-card {
+        padding: 22px;
+        margin-top: 20px;
+      }
+      .doc-title {
+        font-size: 22px;
+      }
+      .legal-card {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="site-header">
+    <div class="container">
+      <div class="header-inner">
+        <a href="https://kodax.app/" class="brand" title="Kodax Homepage">
+          <div class="brand-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+          </div>
+          <span>KODAX</span>
+        </a>
+
+        <ul class="nav-links">
+          <li class="nav-item"><a href="/privacy/" id="nav-privacy">الخصوصية</a></li>
+          <li class="nav-item"><a href="/terms/" id="nav-terms">الشروط</a></li>
+          <li class="nav-item active"><a href="/delete-account/" id="nav-delete">حذف الحساب</a></li>
+        </ul>
+
+        <div class="lang-switcher" role="group" aria-label="Language switcher">
+          <button type="button" class="lang-btn active" id="btn-ar" onclick="setLanguage('ar')">عربي</button>
+          <button type="button" class="lang-btn" id="btn-en" onclick="setLanguage('en')">EN</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="container">
+
+    <!-- ARABIC CONTENT -->
+    <article id="content-ar" class="lang-section" lang="ar" dir="rtl">
+      <header class="hero-card">
+        <div class="doc-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>إدارة الحساب والبيانات</span>
+        </div>
+        <h1 class="doc-title">حذف حساب Kodax</h1>
+        <div class="updated-date">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>آخر تحديث: 3 أكتوبر 2026</span>
+        </div>
+        <p class="doc-intro">
+          يمكنك حذف حسابك وكل بياناته نهائياً في أي وقت.
+        </p>
+      </header>
+
+      <div class="warning-box">
+        <div class="warning-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </div>
+        <div class="warning-text">
+          <strong>الحذف نهائي وفوري</strong>
+          بمجرد إتمام عملية الحذف، سيتم مسح حسابك وكافة البيانات المرتبطة به نهائياً ولن تتمكن من استعادتها حتى لو قمت بالتسجيل بنفس البريد لاحقاً.
+        </div>
+      </div>
+
+      <div class="sections-wrapper">
+        <!-- 1: من داخل التطبيق -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-icon-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+            </div>
+            <h2 class="section-title">من داخل التطبيق (فوري)</h2>
+          </div>
+          <ol class="steps-list">
+            <li class="step-item">
+              <span class="step-num">1</span>
+              <div class="step-content">افتح Kodax وسجّل الدخول.</div>
+            </li>
+            <li class="step-item">
+              <span class="step-num">2</span>
+              <div class="step-content">اذهب إلى: <strong>ملفي ← الإعدادات ← حذف الحساب</strong>.</div>
+            </li>
+            <li class="step-item">
+              <span class="step-num">3</span>
+              <div class="step-content">اكتب كلمة التأكيد ثم اضغط «<strong>حذف حسابي نهائياً</strong>».</div>
+            </li>
+          </ol>
+        </section>
+
+        <!-- 2: ما الذي يُحذف -->
+        <section class="legal-card card-danger-hover">
+          <div class="section-header">
+            <div class="section-icon-badge danger-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </div>
+            <h2 class="section-title">ما الذي يُحذف</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">✕</span>
+              <span>الحساب وبيانات الدخول، والملف الشخصي والصورة.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">✕</span>
+              <span>التقدم والدروس والتحديات والـ XP والسلسلة والأهداف والإنجازات والشهادات والكوينات.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">✕</span>
+              <span>الأكواد والتعليقات والإعجابات والمتابعات وقائمة المحظورين.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">✕</span>
+              <span>الرسائل الخاصة التي أرسلتها، ومحادثات المساعد الذكي، وتذاكر الدعم والإشعارات.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 3: ما الذي قد يبقى -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-icon-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            </div>
+            <h2 class="section-title">ما الذي قد يبقى</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot-subtle">•</span>
+              <span>إحصاءات استخدام مجهولة لا ترتبط بك، وسجلات إشراف إدارية.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot-subtle">•</span>
+              <span>رسائل الطرف الآخر في محادثاتكما.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot-subtle">•</span>
+              <span>نسخ في النسخ الاحتياطية للخادم لفترة محدودة حتى تُستبدل.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 4: لا تستطيع الدخول -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-icon-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <h2 class="section-title">لا تستطيع الدخول إلى التطبيق؟</h2>
+          </div>
+          <p class="legal-paragraph">
+            تواصل معنا عبر الروابط أدناه من نفس الحساب أو مع إثبات ملكيته، وسنحذفه لك.
+          </p>
+        </section>
+      </div>
+
+      <!-- Contact Section -->
+      <section class="contact-card">
+        <div class="section-header">
+          <div class="section-icon-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+          <h2 class="section-title">التواصل</h2>
+        </div>
+        <p class="legal-paragraph">
+          للاستفسارات أو طلبات الخصوصية: من داخل التطبيق عبر الإعدادات ← المساعدة والدعم، أو:
+        </p>
+        <div class="contact-links-grid">
+          <a href="https://t.me/mo7za" target="_blank" rel="noopener noreferrer" class="contact-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+            </svg>
+            <span>Telegram: t.me/mo7za</span>
+          </a>
+          <a href="https://instagram.com/mo_nz.0" target="_blank" rel="noopener noreferrer" class="contact-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+            </svg>
+            <span>Instagram: instagram.com/mo_nz.0</span>
+          </a>
+        </div>
+      </section>
+    </article>
+
+    <!-- ENGLISH CONTENT -->
+    <article id="content-en" class="lang-section" lang="en" dir="ltr" style="display: none;">
+      <header class="hero-card">
+        <div class="doc-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Account &amp; Data Management</span>
+        </div>
+        <h1 class="doc-title">Delete your Kodax account</h1>
+        <div class="updated-date">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>Last updated: October 3, 2026</span>
+        </div>
+        <p class="doc-intro">
+          You can permanently delete your account and all of its data at any time.
+        </p>
+      </header>
+
+      <div class="warning-box">
+        <div class="warning-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </div>
+        <div class="warning-text">
+          <strong>Permanent and Immediate Deletion</strong>
+          Once deleted, your account and all associated data will be wiped permanently and cannot be recovered, even if you sign up with the same email later.
+        </div>
+      </div>
+
+      <div class="sections-wrapper">
+        <!-- 1: In the app -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-icon-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+            </div>
+            <h2 class="section-title">In the app (immediate)</h2>
+          </div>
+          <ol class="steps-list">
+            <li class="step-item">
+              <span class="step-num">1</span>
+              <div class="step-content">Open Kodax and sign in.</div>
+            </li>
+            <li class="step-item">
+              <span class="step-num">2</span>
+              <div class="step-content">Go to: <strong>Profile → Settings → Delete account</strong>.</div>
+            </li>
+            <li class="step-item">
+              <span class="step-num">3</span>
+              <div class="step-content">Type the confirmation word and tap "<strong>Delete my account permanently</strong>".</div>
+            </li>
+          </ol>
+        </section>
+
+        <!-- 2: What is deleted -->
+        <section class="legal-card card-danger-hover">
+          <div class="section-header">
+            <div class="section-icon-badge danger-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </div>
+            <h2 class="section-title">What is deleted</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot">✕</span>
+              <span>Your account and sign-in data, profile and avatar.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">✕</span>
+              <span>Progress, lessons, challenges, XP, streak, goals, achievements, certificates and coins.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">✕</span>
+              <span>Code, comments, likes, follows and your block list.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot">✕</span>
+              <span>Private messages you sent, AI assistant conversations, support tickets and notifications.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 3: What may remain -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-icon-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            </div>
+            <h2 class="section-title">What may remain</h2>
+          </div>
+          <ul class="bullets-list">
+            <li class="bullet-item">
+              <span class="bullet-dot-subtle">•</span>
+              <span>Anonymous usage statistics not linked to you, and administrative moderation records.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot-subtle">•</span>
+              <span>The other participant's messages in your conversations.</span>
+            </li>
+            <li class="bullet-item">
+              <span class="bullet-dot-subtle">•</span>
+              <span>Copies in server backups for a limited period until they rotate.</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 4: Can't access the app? -->
+        <section class="legal-card">
+          <div class="section-header">
+            <div class="section-icon-badge">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <h2 class="section-title">Can't access the app?</h2>
+          </div>
+          <p class="legal-paragraph">
+            Contact us using the links below from the same account or with proof of ownership, and we will delete it for you.
+          </p>
+        </section>
+      </div>
+
+      <!-- Contact Section -->
+      <section class="contact-card">
+        <div class="section-header">
+          <div class="section-icon-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+          <h2 class="section-title">Contact</h2>
+        </div>
+        <p class="legal-paragraph">
+          For questions or privacy requests: in the app via Settings → Help &amp; Support, or:
+        </p>
+        <div class="contact-links-grid">
+          <a href="https://t.me/mo7za" target="_blank" rel="noopener noreferrer" class="contact-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+            </svg>
+            <span>Telegram: t.me/mo7za</span>
+          </a>
+          <a href="https://instagram.com/mo_nz.0" target="_blank" rel="noopener noreferrer" class="contact-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+            </svg>
+            <span>Instagram: instagram.com/mo_nz.0</span>
+          </a>
+        </div>
+      </section>
+    </article>
+
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <ul class="footer-nav">
+        <li><a href="/privacy/" id="footer-privacy">سياسة الخصوصية</a></li>
+        <li><a href="/terms/" id="footer-terms">شروط الاستخدام</a></li>
+        <li><a href="/delete-account/" id="footer-delete">حذف الحساب</a></li>
+        <li><a href="https://kodax.app/">الرئيسية</a></li>
+      </ul>
+      <p class="copyright">
+        &copy; 2026 Kodax (kodax.app). جميع الحقوق محفوظة.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    function setLanguage(lang) {
+      const arSection = document.getElementById('content-ar');
+      const enSection = document.getElementById('content-en');
+      const btnAr = document.getElementById('btn-ar');
+      const btnEn = document.getElementById('btn-en');
+      const html = document.documentElement;
+
+      // Nav and footer label updates
+      const navPrivacy = document.getElementById('nav-privacy');
+      const navTerms = document.getElementById('nav-terms');
+      const navDelete = document.getElementById('nav-delete');
+      const footerPrivacy = document.getElementById('footer-privacy');
+      const footerTerms = document.getElementById('footer-terms');
+      const footerDelete = document.getElementById('footer-delete');
+
+      if (lang === 'en') {
+        arSection.style.display = 'none';
+        enSection.style.display = 'block';
+        btnAr.classList.remove('active');
+        btnEn.classList.add('active');
+        html.setAttribute('lang', 'en');
+        html.setAttribute('dir', 'ltr');
+        document.title = 'Delete Account — Kodax';
+
+        if (navPrivacy) navPrivacy.textContent = 'Privacy';
+        if (navTerms) navTerms.textContent = 'Terms';
+        if (navDelete) navDelete.textContent = 'Delete Account';
+        if (footerPrivacy) footerPrivacy.textContent = 'Privacy Policy';
+        if (footerTerms) footerTerms.textContent = 'Terms of Service';
+        if (footerDelete) footerDelete.textContent = 'Delete Account';
+      } else {
+        enSection.style.display = 'none';
+        arSection.style.display = 'block';
+        btnEn.classList.remove('active');
+        btnAr.classList.add('active');
+        html.setAttribute('lang', 'ar');
+        html.setAttribute('dir', 'rtl');
+        document.title = 'حذف حساب Kodax — Kodax';
+
+        if (navPrivacy) navPrivacy.textContent = 'الخصوصية';
+        if (navTerms) navTerms.textContent = 'الشروط';
+        if (navDelete) navDelete.textContent = 'حذف الحساب';
+        if (footerPrivacy) footerPrivacy.textContent = 'سياسة الخصوصية';
+        if (footerTerms) footerTerms.textContent = 'شروط الاستخدام';
+        if (footerDelete) footerDelete.textContent = 'حذف الحساب';
+      }
+
+      try {
+        localStorage.setItem('kodax_legal_lang', lang);
+      } catch (e) {}
+    }
+
+    // Auto-detect lang from query param ?lang=en or localStorage
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const queryLang = params.get('lang');
+      let savedLang = null;
+      try {
+        savedLang = localStorage.getItem('kodax_legal_lang');
+      } catch (e) {}
+
+      if (queryLang === 'en' || queryLang === 'ar') {
+        setLanguage(queryLang);
+      } else if (savedLang === 'en') {
+        setLanguage('en');
+      }
+    })();
+  </script>
+</body>
+</html>

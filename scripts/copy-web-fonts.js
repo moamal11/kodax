@@ -104,6 +104,28 @@ try {
   console.warn('⚠️ Error creating 404.html:', err.message);
 }
 
+// 3. Ensure static public legal pages exist in dist/ for direct access
+try {
+  const legalPages = ['privacy', 'terms', 'delete-account'];
+  for (const page of legalPages) {
+    const publicFile = path.join(__dirname, '..', 'public', page, 'index.html');
+    const distPageDir = path.join(distDir, page);
+    const distIndex = path.join(distPageDir, 'index.html');
+    const distHtml = path.join(distDir, `${page}.html`);
+
+    if (fs.existsSync(publicFile)) {
+      if (!fs.existsSync(distPageDir)) {
+        fs.mkdirSync(distPageDir, { recursive: true });
+      }
+      fs.copyFileSync(publicFile, distIndex);
+      fs.copyFileSync(publicFile, distHtml);
+      console.log(`✅ Synced static legal page: ${page} -> ${distIndex} & ${distHtml}`);
+    }
+  }
+} catch (legalErr) {
+  console.warn('⚠️ Error copying legal pages to dist:', legalErr.message);
+}
+
 // Ensure the script never fails the build — log and set exit code 0
 process.exitCode = 0;
 
