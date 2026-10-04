@@ -1,14 +1,20 @@
 // Supabase Configuration
-export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+export const SUPABASE_URL =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  'https://krtulodnhmfuoxjqajwl.supabase.co';
+
 export const SUPABASE_ANON_KEY =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtydHVsb2RuaG1mdW94anFhandsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NzQ5NDAsImV4cCI6MjA4NTQ1MDk0MH0.sHwD5__uCn0_wRNR3635eOU3PZ1Int51EE8k7WTbHks';
 
 // App Configuration
 export const APP_NAME = 'Kodax';
 export const APP_VERSION = '1.0.0';
 
 // API Configuration (Edge Function ai-chat — Google Gemini على السيرفر)
-export const AI_API_ENDPOINT = process.env.EXPO_PUBLIC_AI_API_ENDPOINT || '';
+export const AI_API_ENDPOINT =
+  process.env.EXPO_PUBLIC_AI_API_ENDPOINT ||
+  'https://krtulodnhmfuoxjqajwl.supabase.co/functions/v1/ai-chat';
 
 // Gamification Constants
 export const XP_PER_LESSON = 100;

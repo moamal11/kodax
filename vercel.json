@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "buildCommand": "npx expo export --platform web && node scripts/copy-web-fonts.js",
+  "buildCommand": "node scripts/prepare-build-env.js && npx expo export --platform web && node scripts/copy-web-fonts.js",
   "outputDirectory": "dist",
 
   "redirects": [

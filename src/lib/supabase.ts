@@ -67,21 +67,12 @@ if (Platform.OS === 'web') {
   }
 }
 
-// Check if Supabase credentials are configured
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn(
-    '⚠️ Supabase credentials not configured. Using temporary development mode.'
-  );
-  console.warn(
-    'Please add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to your .env file'
-  );
-}
+const DEFAULT_SUPABASE_URL = 'https://krtulodnhmfuoxjqajwl.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtydHVsb2RuaG1mdW94anFhandsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NzQ5NDAsImV4cCI6MjA4NTQ1MDk0MH0.sHwD5__uCn0_wRNR3635eOU3PZ1Int51EE8k7WTbHks';
 
-// Use dummy values for development if not configured
-const supabaseUrl = SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey =
-  SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTI4MDAsImV4cCI6MTk2MDc2ODgwMH0.placeholder';
+const supabaseUrl = SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const supabaseKey = SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
 
 const isWeb = Platform.OS === 'web';
 
