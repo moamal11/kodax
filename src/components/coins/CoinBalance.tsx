@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useCoins } from '@/contexts/CoinsContext';
 import { CoinIcon, COIN_COLORS } from './CoinIcon';
 
+import { darkColors } from '@/design/tokens';
 interface CoinBalanceProps {
   size?: 'small' | 'medium';
   onPress?: () => void;
@@ -38,7 +39,7 @@ export function CoinBalance({
       </Text>
       {showAdd && (
         <View style={[styles.add, small && styles.addSmall]}>
-          <Ionicons name="add" size={small ? 12 : 14} color="#0f0f1e" />
+          <Ionicons name="add" size={small ? 12 : 14} color={darkColors.bg} />
         </View>
       )}
     </TouchableOpacity>
@@ -65,11 +66,10 @@ const styles = StyleSheet.create({
   value: {
     color: COIN_COLORS.text,
     fontSize: 15,
-    fontWeight: '800',
-  },
+    fontFamily: 'Plex-700' },
   valueSmall: {
     fontSize: 13,
-  },
+    fontFamily: 'Plex-400' },
   add: {
     width: 18,
     height: 18,

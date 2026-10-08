@@ -15,6 +15,7 @@ import { useCoins } from '@/contexts/CoinsContext';
 import { showToast } from '@/components/ui/Toast';
 import { CoinIcon } from './CoinIcon';
 
+import { darkColors } from '@/design/tokens';
 export default function LearningGoalsCard() {
   const { refresh: refreshCoins } = useCoins();
   const [state, setState] = useState<ProgressState | null>(null);
@@ -69,7 +70,7 @@ export default function LearningGoalsCard() {
         </View>
       </View>
       <View style={styles.freezeRow}>
-        <Ionicons name="snow" size={16} color="#93C5FD" />
+        <Ionicons name="snow" size={16} color={darkColors.infoText} />
         <Text style={styles.freezeText}>
           تجميد السلسلة: {streak.freezes}/{streak.max_freezes} — يحمي سلسلتك إذا فاتك يوم
           (تحصل على {streak.free_freezes_per_week} مجاناً كل أسبوع).
@@ -82,7 +83,7 @@ export default function LearningGoalsCard() {
           onPress={() => run('freeze', () => coinService.buyStreakFreeze(), () => 'تمت إضافة تجميد للسلسلة ❄️')}
         >
           {busy === 'freeze' ? (
-            <ActivityIndicator color="#C4B5FD" />
+            <ActivityIndicator color={darkColors.brandText} />
           ) : (
             <>
               <Text style={styles.smallBtnText}>تجميد إضافي (اختياري)</Text>
@@ -127,7 +128,7 @@ export default function LearningGoalsCard() {
         {goals.weekly_rewarded ? ' — تحقق ✓' : goals.weekly_reward > 0 ? ` — مكافأة ${goals.weekly_reward} كوين` : ''}
       </Text>
       <View style={styles.bar}>
-        <View style={[styles.fill, { width: `${weekPct}%`, backgroundColor: '#8B5CF6' }]} />
+        <View style={[styles.fill, { width: `${weekPct}%`, backgroundColor: darkColors.brand }]} />
       </View>
 
       {aiPack && aiPack.price > 0 && (
@@ -144,7 +145,7 @@ export default function LearningGoalsCard() {
             onPress={() => run('ai', () => coinService.buyAiPack(), () => `+${aiPack.amount} طلبات ذكاء لليوم`)}
           >
             {busy === 'ai' ? (
-              <ActivityIndicator color="#C4B5FD" />
+              <ActivityIndicator color={darkColors.brandText} />
             ) : (
               <>
                 <Text style={styles.smallBtnText}>
@@ -177,10 +178,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   row: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
-  title: { color: '#F3F4F6', fontSize: 15, fontWeight: '700', textAlign: 'right' },
-  sub: { color: '#9CA3AF', fontSize: 13, lineHeight: 20, textAlign: 'right' },
+  title: { color: '#F3F4F6', fontSize: 15,  textAlign: 'right', fontFamily: 'Plex-700' },
+  sub: { color: darkColors.textMuted, fontSize: 13, lineHeight: 20, textAlign: 'right', fontFamily: 'Plex-400' },
   freezeRow: { flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 6, marginTop: 6 },
-  freezeText: { color: '#BFDBFE', fontSize: 12, lineHeight: 19, textAlign: 'right', flex: 1 },
+  freezeText: { color: '#BFDBFE', fontSize: 12, lineHeight: 19, textAlign: 'right', flex: 1, fontFamily: 'Plex-400' },
   smallBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -194,10 +195,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(196,181,253,0.4)',
     marginTop: 6,
   },
-  smallBtnText: { color: '#C4B5FD', fontSize: 13, fontWeight: '600' },
+  smallBtnText: { color: darkColors.brandText, fontSize: 13, fontFamily: 'Plex-600' },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 10 },
   bar: { height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 4 },
-  fill: { height: 8, borderRadius: 4, backgroundColor: '#10B981' },
+  fill: { height: 8, borderRadius: 4, backgroundColor: darkColors.success },
   options: { flexDirection: 'row-reverse', gap: 8, marginTop: 8 },
   option: {
     flex: 1,
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
   },
-  optionActive: { backgroundColor: 'rgba(16,185,129,0.15)', borderColor: '#10B981' },
-  optionText: { color: '#D1D5DB', fontSize: 12 },
-  optionTextActive: { color: '#6EE7B7', fontWeight: '700' },
+  optionActive: { backgroundColor: 'rgba(16,185,129,0.15)', borderColor: darkColors.success },
+  optionText: { color: darkColors.textSecondary, fontSize: 12, fontFamily: 'Plex-400' },
+  optionTextActive: { color: '#6EE7B7', fontFamily: 'Plex-700' },
 });

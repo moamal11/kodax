@@ -25,6 +25,7 @@ import { coinMessage } from '@/services/coinService';
 import { showToast } from '@/components/ui/Toast';
 import { CoinIcon, COIN_COLORS } from './CoinIcon';
 
+import { darkColors } from '@/design/tokens';
 const { height } = Dimensions.get('window');
 
 interface UnlockWithCoinsModalProps {
@@ -122,7 +123,7 @@ export default function UnlockWithCoinsModal({
             style={styles.successBox}
           >
             <View style={styles.successIcon}>
-              <Ionicons name="lock-open" size={48} color="#10B981" />
+              <Ionicons name="lock-open" size={48} color={darkColors.success} />
             </View>
             <Text style={styles.successTitle}>تم فتح الدورة!</Text>
             <Text style={styles.successText}>{courseName}</Text>
@@ -148,17 +149,17 @@ export default function UnlockWithCoinsModal({
         />
         <Animated.View entering={FadeInUp.springify()} style={styles.sheet}>
           <LinearGradient
-            colors={['#1A1A2E', '#16213E']}
+            colors={[darkColors.surface, darkColors.surface]}
             style={styles.gradient}
           >
             <View style={styles.handle} />
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={22} color="#9CA3AF" />
+              <Ionicons name="close" size={22} color={darkColors.textMuted} />
             </TouchableOpacity>
 
             <View style={styles.header}>
               <LinearGradient
-                colors={['#8B5CF6', '#3B82F6']}
+                colors={[darkColors.brand, darkColors.info]}
                 style={styles.headerIcon}
               >
                 <Ionicons
@@ -214,7 +215,7 @@ export default function UnlockWithCoinsModal({
                     entering={FadeInDown.delay(i * 60)}
                     style={styles.benefit}
                   >
-                    <Ionicons name={b.icon as any} size={18} color="#10B981" />
+                    <Ionicons name={b.icon as any} size={18} color={darkColors.success} />
                     <Text style={styles.benefitText}>{b.text}</Text>
                   </Animated.View>
                 ))}
@@ -238,7 +239,7 @@ export default function UnlockWithCoinsModal({
                   <Ionicons
                     name="information-circle"
                     size={18}
-                    color="#F87171"
+                    color={darkColors.dangerText}
                   />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
@@ -249,7 +250,7 @@ export default function UnlockWithCoinsModal({
             {alreadyUnlocked ? (
               <TouchableOpacity onPress={onClose} activeOpacity={0.85}>
                 <LinearGradient
-                  colors={['#10B981', '#059669']}
+                  colors={[darkColors.success, darkColors.success]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.primaryBtn}
@@ -265,7 +266,7 @@ export default function UnlockWithCoinsModal({
                 activeOpacity={0.85}
               >
                 <LinearGradient
-                  colors={['#10B981', '#3B82F6']}
+                  colors={[darkColors.success, darkColors.info]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.primaryBtn}
@@ -289,7 +290,7 @@ export default function UnlockWithCoinsModal({
                   style={styles.secondaryBtn}
                   activeOpacity={0.85}
                 >
-                  <Ionicons name="school" size={20} color="#A78BFA" />
+                  <Ionicons name="school" size={20} color={darkColors.brandText} />
                   <Text style={styles.secondaryText}>
                     حسناً، سأتابع التعلم
                   </Text>
@@ -343,15 +344,15 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFF',
     fontSize: 20,
-    fontWeight: '800',
+    
     textAlign: 'center',
-  },
+    fontFamily: 'Plex-700' },
   subtitle: {
-    color: '#9CA3AF',
+    color: darkColors.textMuted,
     fontSize: 13,
     marginTop: 4,
     textAlign: 'center',
-  },
+    fontFamily: 'Plex-400' },
   row: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   statCard: {
     flex: 1,
@@ -366,9 +367,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239,68,68,0.08)',
     borderColor: 'rgba(239,68,68,0.3)',
   },
-  statLabel: { color: '#9CA3AF', fontSize: 12, marginBottom: 6 },
+  statLabel: { color: darkColors.textMuted, fontSize: 12, marginBottom: 6, fontFamily: 'Plex-400' },
   statValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statValue: { color: '#FFF', fontSize: 22, fontWeight: '800' },
+  statValue: { color: '#FFF', fontSize: 22, fontFamily: 'Plex-700' },
   benefits: {
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: 16,
@@ -377,7 +378,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   benefit: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  benefitText: { color: '#E5E7EB', fontSize: 14, flex: 1, textAlign: 'right' },
+  benefitText: { color: darkColors.text, fontSize: 14, flex: 1, textAlign: 'right', fontFamily: 'Plex-400' },
   needBox: {
     backgroundColor: 'rgba(139,92,246,0.1)',
     borderColor: 'rgba(139,92,246,0.3)',
@@ -387,18 +388,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   needTitle: {
-    color: '#C4B5FD',
+    color: darkColors.brandText,
     fontSize: 15,
-    fontWeight: '700',
+    
     textAlign: 'center',
     marginBottom: 6,
-  },
+    fontFamily: 'Plex-700' },
   needText: {
-    color: '#9CA3AF',
+    color: darkColors.textMuted,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,
-  },
+    fontFamily: 'Plex-400' },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -408,7 +409,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
   },
-  errorText: { color: '#FCA5A5', fontSize: 13, flex: 1, textAlign: 'right' },
+  errorText: { color: '#FCA5A5', fontSize: 13, flex: 1, textAlign: 'right', fontFamily: 'Plex-400' },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -418,7 +419,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     minHeight: 54,
   },
-  primaryText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  primaryText: { color: '#FFF', fontSize: 16, fontFamily: 'Plex-700' },
   secondaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -430,7 +431,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(167,139,250,0.4)',
     backgroundColor: 'rgba(139,92,246,0.1)',
   },
-  secondaryText: { color: '#C4B5FD', fontSize: 15, fontWeight: '700' },
+  secondaryText: { color: darkColors.brandText, fontSize: 15, fontFamily: 'Plex-700' },
   successBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',
@@ -447,6 +448,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
-  successTitle: { color: '#10B981', fontSize: 24, fontWeight: '800' },
-  successText: { color: '#9CA3AF', fontSize: 15, marginTop: 6 },
+  successTitle: { color: darkColors.success, fontSize: 24, fontFamily: 'Plex-700' },
+  successText: { color: darkColors.textMuted, fontSize: 15, marginTop: 6, fontFamily: 'Plex-400' },
 });

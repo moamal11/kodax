@@ -13,6 +13,7 @@ import { BlurView } from 'expo-blur';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { AIUsageStats } from '@/services/conversationsService';
 
+import { darkColors } from '@/design/tokens';
 interface UsageStatsModalProps {
   visible: boolean;
   onClose: () => void;
@@ -29,9 +30,9 @@ export default function UsageStatsModal({
   if (!stats) return null;
 
   const getUsageColor = () => {
-    if (stats.usage_percentage >= 90) return '#ef4444'; // red
-    if (stats.usage_percentage >= 70) return '#f59e0b'; // orange
-    return '#10b981'; // green
+    if (stats.usage_percentage >= 90) return darkColors.danger; // red
+    if (stats.usage_percentage >= 70) return darkColors.warning; // orange
+    return darkColors.success; // green
   };
 
   const getUsageIcon = () => {
@@ -54,7 +55,7 @@ export default function UsageStatsModal({
           style={styles.modalContent}
         >
           <LinearGradient
-            colors={['#1f2937', '#111827']}
+            colors={[darkColors.surfaceRaised, darkColors.surfaceSunken]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={styles.modalGradient}
@@ -63,12 +64,12 @@ export default function UsageStatsModal({
             <View style={styles.header}>
               <View style={styles.headerLeft}>
                 <View style={styles.iconContainer}>
-                  <MaterialIcons name="analytics" size={24} color="#8b5cf6" />
+                  <MaterialIcons name="analytics" size={24} color={darkColors.brand} />
                 </View>
                 <Text style={styles.title}>إحصائيات الاستخدام</Text>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <MaterialIcons name="close" size={24} color="#9ca3af" />
+                <MaterialIcons name="close" size={24} color={darkColors.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -110,7 +111,7 @@ export default function UsageStatsModal({
                 <View
                   style={[styles.statIcon, { backgroundColor: '#8b5cf620' }]}
                 >
-                  <MaterialIcons name="bolt" size={24} color="#8b5cf6" />
+                  <MaterialIcons name="bolt" size={24} color={darkColors.brand} />
                 </View>
                 <Text style={styles.statValue}>
                   {stats.tokens_used_today.toLocaleString()}
@@ -125,7 +126,7 @@ export default function UsageStatsModal({
                 <View
                   style={[styles.statIcon, { backgroundColor: '#3b82f620' }]}
                 >
-                  <MaterialIcons name="chat" size={24} color="#3b82f6" />
+                  <MaterialIcons name="chat" size={24} color={darkColors.info} />
                 </View>
                 <Text style={styles.statValue}>{stats.total_messages}</Text>
                 <Text style={styles.statLabel}>إجمالي الرسائل</Text>
@@ -136,7 +137,7 @@ export default function UsageStatsModal({
                 <View
                   style={[styles.statIcon, { backgroundColor: '#10b98120' }]}
                 >
-                  <MaterialIcons name="forum" size={24} color="#10b981" />
+                  <MaterialIcons name="forum" size={24} color={darkColors.success} />
                 </View>
                 <Text style={styles.statValue}>
                   {stats.conversations_count}
@@ -149,7 +150,7 @@ export default function UsageStatsModal({
                 <View
                   style={[styles.statIcon, { backgroundColor: '#f59e0b20' }]}
                 >
-                  <MaterialIcons name="trending-up" size={24} color="#f59e0b" />
+                  <MaterialIcons name="trending-up" size={24} color={darkColors.warning} />
                 </View>
                 <Text style={styles.statValue}>
                   {stats.total_tokens_used.toLocaleString()}
@@ -174,7 +175,7 @@ export default function UsageStatsModal({
             {/* Bottom Button */}
             <TouchableOpacity onPress={onClose} style={styles.doneButton}>
               <LinearGradient
-                colors={['#8b5cf6', '#6366f1']}
+                colors={[darkColors.brand, '#6366f1']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.doneGradient}
@@ -264,7 +265,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: '#1f2937',
+    backgroundColor: darkColors.surfaceRaised,
     position: 'absolute',
     top: 10,
     left: 10,
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Plex-700' },
   percentageLabel: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     fontFamily: 'Plex-600' },
   statsGrid: {
     flexDirection: 'row',
@@ -310,11 +311,11 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 14,
     
-    color: '#e5e7eb',
+    color: darkColors.text,
     fontFamily: 'Plex-600' },
   statSubLabel: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     fontFamily: 'Plex-400' },
   infoCard: {
     flexDirection: 'row',
@@ -329,13 +330,13 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: '#e5e7eb',
+    color: darkColors.text,
     lineHeight: 20,
     fontFamily: 'Plex-400' },
   doneButton: {
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#8b5cf6',
+    shadowColor: darkColors.brand,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,

@@ -31,6 +31,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 
+import { darkColors } from '@/design/tokens';
 interface BroadcastModalProps {
   visible: boolean;
   title: string;
@@ -103,7 +104,7 @@ export default function BroadcastModal({
           <TouchableWithoutFeedback onPress={() => {}}>
             <Animated.View style={[styles.cardContainer, animatedStyle]}>
               <LinearGradient
-                colors={['#1e1e3a', '#151530', '#0f0f1e']}
+                colors={[darkColors.surfaceRaised, '#151530', darkColors.bg]}
                 style={styles.card}
               >
                 {/* Close Button */}
@@ -112,7 +113,7 @@ export default function BroadcastModal({
                   onPress={handleClose}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Ionicons name="close" size={22} color="#9ca3af" />
+                  <Ionicons name="close" size={22} color={darkColors.textMuted} />
                 </TouchableOpacity>
 
                 {/* Image */}
@@ -127,7 +128,7 @@ export default function BroadcastModal({
                 ) : (
                   <View style={styles.iconContainer}>
                     <LinearGradient
-                      colors={['#7c3aed', '#3b82f6']}
+                      colors={[darkColors.brandStrong, darkColors.info]}
                       style={styles.iconCircle}
                     >
                       <Ionicons name="megaphone" size={28} color="#fff" />
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#7c3aed',
+        shadowColor: darkColors.brandStrong,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
         shadowRadius: 16,
@@ -226,19 +227,19 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    
     color: '#ffffff',
     textAlign: 'center',
     marginBottom: 10,
     lineHeight: 28,
-  },
+    fontFamily: 'Plex-700' },
   body: {
     fontSize: 15,
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 8,
-  },
+    fontFamily: 'Plex-400' },
   dismissButton: {
     marginTop: 16,
     paddingVertical: 12,
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
   },
   dismissText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#a78bfa',
-  },
+    
+    color: darkColors.brandText,
+    fontFamily: 'Plex-600' },
 });

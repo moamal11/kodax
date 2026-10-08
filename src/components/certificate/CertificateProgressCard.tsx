@@ -26,6 +26,7 @@ import {
 import CertificateAwardModal from './CertificateAwardModal';
 import { getChallengesByCourse, ALL_COURSES } from '@/constants/courseData';
 
+import { darkColors } from '@/design/tokens';
 interface CertificateProgressCardProps {
   fieldId: string;
   fieldName: string;
@@ -180,7 +181,7 @@ export default function CertificateProgressCard({
                       .iconName as any
                   }
                   size={14}
-                  color="#1a1a2e"
+                  color={darkColors.surface}
                 />
                 <Text style={styles.currentCertLevel}>
                   {CERTIFICATE_LEVEL_CONFIG[currentCertificate.level].label}
@@ -269,14 +270,14 @@ export default function CertificateProgressCard({
           {silverEligibility && (
             <View style={styles.progressDetails}>
               <View style={styles.progressDetailRow}>
-                <Ionicons name="book" size={14} color="#60A5FA" />
+                <Ionicons name="book" size={14} color={darkColors.infoText} />
                 <Text style={styles.progressDetailLabel}>الدروس:</Text>
                 <Text style={styles.progressDetailValue}>
                   {silverEligibility.progress.lessons_percent}%
                 </Text>
               </View>
               <View style={styles.progressDetailRow}>
-                <Ionicons name="trophy" size={14} color="#F59E0B" />
+                <Ionicons name="trophy" size={14} color={darkColors.warning} />
                 <Text style={styles.progressDetailLabel}>التحديات:</Text>
                 <Text style={styles.progressDetailValue}>
                   {silverEligibility.progress.challenges_percent}%
@@ -310,10 +311,10 @@ export default function CertificateProgressCard({
                 end={{ x: 1, y: 0 }}
               >
                 {isIssuing ? (
-                  <ActivityIndicator color="#1a1a2e" size="small" />
+                  <ActivityIndicator color={darkColors.surface} size="small" />
                 ) : (
                   <>
-                    <Ionicons name="ribbon" size={18} color="#1a1a2e" />
+                    <Ionicons name="ribbon" size={18} color={darkColors.surface} />
                     <Text style={styles.claimText}>
                       {currentCertificate
                         ? `ترقية إلى ${
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 13,
     color: THEME_COLORS.textMuted,
-  },
+    fontFamily: 'Plex-400' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -434,12 +435,12 @@ const styles = StyleSheet.create({
   },
   headerIcon: {
     fontSize: 18,
-  },
+    fontFamily: 'Plex-400' },
   headerTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    
     color: '#fff',
-  },
+    fontFamily: 'Plex-700' },
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -448,8 +449,7 @@ const styles = StyleSheet.create({
   viewButtonText: {
     fontSize: 12,
     color: THEME_COLORS.accent,
-    fontWeight: '600',
-  },
+    fontFamily: 'Plex-600' },
   currentCert: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -469,17 +469,16 @@ const styles = StyleSheet.create({
   },
   currentCertEmoji: {
     fontSize: 14,
-  },
+    fontFamily: 'Plex-400' },
   currentCertLevel: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#1a1a2e',
-  },
+    
+    color: darkColors.surface,
+    fontFamily: 'Plex-700' },
   currentCertText: {
     fontSize: 13,
     color: THEME_COLORS.textSecondary,
-    fontWeight: '600',
-  },
+    fontFamily: 'Plex-600' },
   levelsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -513,17 +512,16 @@ const styles = StyleSheet.create({
   },
   levelCircleEmoji: {
     fontSize: 14,
-  },
+    fontFamily: 'Plex-400' },
   levelName: {
     fontSize: 11,
-    fontWeight: '700',
+    
     color: THEME_COLORS.textMuted,
-  },
+    fontFamily: 'Plex-700' },
   levelProgress: {
     fontSize: 10,
     color: THEME_COLORS.textMuted,
-    fontWeight: '600',
-  },
+    fontFamily: 'Plex-600' },
   progressDetails: {
     backgroundColor: THEME_COLORS.backgroundLight,
     borderRadius: BORDER_RADIUS.md,
@@ -540,15 +538,14 @@ const styles = StyleSheet.create({
   progressDetailLabel: {
     fontSize: 12,
     color: THEME_COLORS.textSecondary,
-    fontWeight: '500',
-  },
+    fontFamily: 'Plex-500' },
   progressDetailValue: {
     fontSize: 12,
     color: THEME_COLORS.textPrimary,
-    fontWeight: '700',
+    
     flex: 1,
     textAlign: 'left',
-  },
+    fontFamily: 'Plex-700' },
   detailsButton: {
     padding: 4,
     borderRadius: BORDER_RADIUS.sm,
@@ -568,9 +565,9 @@ const styles = StyleSheet.create({
   },
   claimText: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#1a1a2e',
-  },
+    
+    color: darkColors.surface,
+    fontFamily: 'Plex-700' },
   nextHint: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -586,5 +583,5 @@ const styles = StyleSheet.create({
     color: THEME_COLORS.textMuted,
     flex: 1,
     lineHeight: 18,
-  },
+    fontFamily: 'Plex-400' },
 });

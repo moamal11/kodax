@@ -22,6 +22,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { saveMandatoryData, IRAQ_PROVINCES } from '@/services/profileService';
 
+import { darkColors } from '@/design/tokens';
 interface MandatoryDataModalProps {
   visible: boolean;
   userId: string;
@@ -93,13 +94,13 @@ export default function MandatoryDataModal({
             style={styles.modalContainer}
           >
             <LinearGradient
-              colors={['#1e1e3a', '#151530', '#0f0f1e']}
+              colors={[darkColors.surfaceRaised, '#151530', darkColors.bg]}
               style={styles.modalGradient}
             >
               {/* Header */}
               <View style={styles.header}>
                 <LinearGradient
-                  colors={['#7c3aed', '#3b82f6']}
+                  colors={[darkColors.brandStrong, darkColors.info]}
                   style={styles.iconContainer}
                 >
                   <Ionicons name="person-add" size={28} color="#fff" />
@@ -113,7 +114,7 @@ export default function MandatoryDataModal({
               {/* Full Name */}
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>
-                  <Ionicons name="person" size={14} color="#9ca3af" /> الاسم
+                  <Ionicons name="person" size={14} color={darkColors.textMuted} /> الاسم
                   الكامل
                 </Text>
                 <TextInput
@@ -122,7 +123,7 @@ export default function MandatoryDataModal({
                     Platform.OS === 'web' && ({ outline: 'none' } as any),
                   ]}
                   placeholder="أدخل اسمك الكامل"
-                  placeholderTextColor="#4b5563"
+                  placeholderTextColor={darkColors.borderStrong}
                   value={fullName}
                   onChangeText={setFullName}
                   autoFocus
@@ -132,7 +133,7 @@ export default function MandatoryDataModal({
               {/* Province */}
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>
-                  <Ionicons name="location" size={14} color="#9ca3af" />{' '}
+                  <Ionicons name="location" size={14} color={darkColors.textMuted} />{' '}
                   المحافظة
                 </Text>
                 <TouchableOpacity
@@ -151,7 +152,7 @@ export default function MandatoryDataModal({
                   <Ionicons
                     name={showProvinceList ? 'chevron-up' : 'chevron-down'}
                     size={18}
-                    color="#9ca3af"
+                    color={darkColors.textMuted}
                   />
                 </TouchableOpacity>
 
@@ -190,7 +191,7 @@ export default function MandatoryDataModal({
                             <Ionicons
                               name="checkmark"
                               size={18}
-                              color="#7c3aed"
+                              color={darkColors.brandStrong}
                             />
                           )}
                         </TouchableOpacity>
@@ -203,7 +204,7 @@ export default function MandatoryDataModal({
               {/* Gender */}
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>
-                  <Ionicons name="male-female" size={14} color="#9ca3af" />{' '}
+                  <Ionicons name="male-female" size={14} color={darkColors.textMuted} />{' '}
                   الجنس
                 </Text>
                 <View style={styles.genderRow}>
@@ -218,7 +219,7 @@ export default function MandatoryDataModal({
                     <Ionicons
                       name="male"
                       size={20}
-                      color={gender === 'male' ? '#7c3aed' : '#6b7280'}
+                      color={gender === 'male' ? darkColors.brandStrong : darkColors.textMuted}
                     />
                     <Text
                       style={[
@@ -249,7 +250,7 @@ export default function MandatoryDataModal({
                     <Ionicons
                       name="female"
                       size={20}
-                      color={gender === 'female' ? '#ec4899' : '#6b7280'}
+                      color={gender === 'female' ? '#ec4899' : darkColors.textMuted}
                     />
                     <Text
                       style={[
@@ -284,7 +285,7 @@ export default function MandatoryDataModal({
               {/* Error */}
               {error ? (
                 <View style={styles.errorContainer}>
-                  <Ionicons name="alert-circle" size={16} color="#ef4444" />
+                  <Ionicons name="alert-circle" size={16} color={darkColors.danger} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               ) : null}
@@ -301,7 +302,7 @@ export default function MandatoryDataModal({
               >
                 <LinearGradient
                   colors={
-                    isValid ? ['#7c3aed', '#3b82f6'] : ['#374151', '#374151']
+                    isValid ? [darkColors.brandStrong, darkColors.info] : [darkColors.borderStrong, darkColors.borderStrong]
                   }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -369,24 +370,24 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '800',
+    
     color: '#fff',
     marginBottom: 8,
-  },
+    fontFamily: 'Plex-700' },
   subtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     textAlign: 'center',
-  },
+    fontFamily: 'Plex-400' },
   fieldContainer: {
     marginBottom: 20,
   },
   fieldLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#d1d5db',
+    
+    color: darkColors.textSecondary,
     marginBottom: 8,
-  },
+    fontFamily: 'Plex-600' },
   textInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     textAlign: 'right',
-  },
+    fontFamily: 'Plex-400' },
   selectButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
@@ -412,9 +413,9 @@ const styles = StyleSheet.create({
   selectButtonText: {
     fontSize: 16,
     color: '#fff',
-  },
+    fontFamily: 'Plex-400' },
   selectButtonPlaceholder: {
-    color: '#4b5563',
+    color: darkColors.borderStrong,
   },
   provinceList: {
     backgroundColor: 'rgba(15, 15, 30, 0.95)',
@@ -441,12 +442,11 @@ const styles = StyleSheet.create({
   },
   provinceItemText: {
     fontSize: 15,
-    color: '#d1d5db',
-  },
+    color: darkColors.textSecondary,
+    fontFamily: 'Plex-400' },
   provinceItemTextSelected: {
-    color: '#7c3aed',
-    fontWeight: '600',
-  },
+    color: darkColors.brandStrong,
+    fontFamily: 'Plex-600' },
   genderRow: {
     flexDirection: 'row',
     gap: 12,
@@ -470,9 +470,8 @@ const styles = StyleSheet.create({
   },
   genderText: {
     fontSize: 16,
-    color: '#9ca3af',
-    fontWeight: '600',
-  },
+    color: darkColors.textMuted,
+    fontFamily: 'Plex-600' },
   genderTextSelected: {
     color: '#fff',
   },
@@ -481,14 +480,14 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#4b5563',
+    borderColor: darkColors.borderStrong,
   },
   radioSelected: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#7c3aed',
+    borderColor: darkColors.brandStrong,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -496,7 +495,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#7c3aed',
+    backgroundColor: darkColors.brandStrong,
   },
   errorContainer: {
     flexDirection: 'row-reverse',
@@ -509,11 +508,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorText: {
-    color: '#ef4444',
+    color: darkColors.danger,
     fontSize: 13,
     flex: 1,
     textAlign: 'right',
-  },
+    fontFamily: 'Plex-400' },
   saveButton: {
     marginTop: 8,
     borderRadius: 16,
@@ -533,6 +532,5 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#fff',
     fontSize: 17,
-    fontWeight: '700',
-  },
+    fontFamily: 'Plex-700' },
 });

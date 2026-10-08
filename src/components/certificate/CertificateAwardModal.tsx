@@ -35,6 +35,7 @@ import {
   getNextLevel,
 } from '@/types/certificate';
 
+import { darkColors } from '@/design/tokens';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface CertificateAwardModalProps {
@@ -127,7 +128,7 @@ export default function CertificateAwardModal({
         {/* Card */}
         <Animated.View style={[styles.cardContainer, cardStyle]}>
           <LinearGradient
-            colors={['#1a1a3e', '#252550', '#1a1a3e']}
+            colors={[darkColors.surface, darkColors.border, darkColors.surface]}
             style={styles.card}
           >
             {/* Top accent */}
@@ -160,7 +161,7 @@ export default function CertificateAwardModal({
                   <Ionicons
                     name={config.iconName as any}
                     size={36}
-                    color="#1a1a2e"
+                    color={darkColors.surface}
                   />
                 </LinearGradient>
               </View>
@@ -217,7 +218,7 @@ export default function CertificateAwardModal({
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                     >
-                      <Ionicons name="ribbon" size={18} color="#1a1a2e" />
+                      <Ionicons name="ribbon" size={18} color={darkColors.surface} />
                       <Text style={styles.primaryActionText}>عرض الشهادة</Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -334,7 +335,7 @@ const styles = StyleSheet.create({
   },
   particleText: {
     fontSize: 20,
-  },
+    fontFamily: 'Plex-400' },
   cardContainer: {
     width: '100%',
     maxWidth: 380,
@@ -388,21 +389,21 @@ const styles = StyleSheet.create({
   },
   badgeEmoji: {
     fontSize: 36,
-  },
+    fontFamily: 'Plex-400' },
   title: {
     fontSize: 26,
-    fontWeight: '900',
+    
     color: '#fff',
     textAlign: 'center',
     marginBottom: 4,
-  },
+    fontFamily: 'Plex-700' },
   subtitle: {
     fontSize: 15,
     color: THEME_COLORS.textSecondary,
     textAlign: 'center',
-    fontWeight: '600',
+    
     marginBottom: 12,
-  },
+    fontFamily: 'Plex-600' },
   courseContainer: {
     alignItems: 'center',
     marginBottom: 16,
@@ -415,13 +416,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: THEME_COLORS.textMuted,
     marginBottom: 4,
-  },
+    fontFamily: 'Plex-400' },
   courseName: {
     fontSize: 17,
-    fontWeight: '700',
+    
     color: '#fff',
     textAlign: 'center',
-  },
+    fontFamily: 'Plex-700' },
   encouragementContainer: {
     marginBottom: 16,
     paddingHorizontal: 8,
@@ -431,7 +432,7 @@ const styles = StyleSheet.create({
     color: THEME_COLORS.textMuted,
     textAlign: 'center',
     lineHeight: 22,
-  },
+    fontFamily: 'Plex-400' },
   requirementsContainer: {
     width: '100%',
     marginBottom: 20,
@@ -441,11 +442,11 @@ const styles = StyleSheet.create({
   },
   requirementsTitle: {
     fontSize: 12,
-    fontWeight: '700',
+    
     color: THEME_COLORS.textSecondary,
     marginBottom: 8,
     textAlign: 'center',
-  },
+    fontFamily: 'Plex-700' },
   requirementRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -456,7 +457,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: THEME_COLORS.textMuted,
     flex: 1,
-  },
+    fontFamily: 'Plex-400' },
   actions: {
     width: '100%',
     gap: 10,
@@ -474,9 +475,9 @@ const styles = StyleSheet.create({
   },
   primaryActionText: {
     fontSize: 15,
-    fontWeight: '800',
-    color: '#1a1a2e',
-  },
+    
+    color: darkColors.surface,
+    fontFamily: 'Plex-700' },
   secondaryAction: {
     paddingVertical: 12,
     alignItems: 'center',
@@ -484,6 +485,5 @@ const styles = StyleSheet.create({
   secondaryActionText: {
     fontSize: 14,
     color: THEME_COLORS.textMuted,
-    fontWeight: '600',
-  },
+    fontFamily: 'Plex-600' },
 });

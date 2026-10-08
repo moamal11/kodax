@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInLeft } from 'react-native-reanimated';
 import { Conversation } from '@/services/conversationsService';
 
+import { darkColors } from '@/design/tokens';
 interface ConversationsListProps {
   conversations: Conversation[];
   selectedId?: string;
@@ -47,7 +48,7 @@ export default function ConversationsList({
         <Text style={styles.headerTitle}>المحادثات</Text>
         <TouchableOpacity onPress={onNew} style={styles.newButton}>
           <LinearGradient
-            colors={['#8b5cf6', '#6366f1']}
+            colors={[darkColors.brand, '#6366f1']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.newButtonGradient}
@@ -69,7 +70,7 @@ export default function ConversationsList({
             <MaterialIcons
               name="chat-bubble-outline"
               size={64}
-              color="#4b5563"
+              color={darkColors.borderStrong}
             />
             <Text style={styles.emptyText}>لا توجد محادثات بعد</Text>
             <Text style={styles.emptyHint}>ابدأ محادثة جديدة الآن!</Text>
@@ -114,12 +115,12 @@ export default function ConversationsList({
 
                   <View style={styles.conversationStats}>
                     <View style={styles.stat}>
-                      <MaterialIcons name="chat" size={14} color="#6b7280" />
+                      <MaterialIcons name="chat" size={14} color={darkColors.textMuted} />
                       <Text style={styles.statText}>{conv.total_messages}</Text>
                     </View>
                     {conv.total_tokens > 0 && (
                       <View style={styles.stat}>
-                        <MaterialIcons name="bolt" size={14} color="#6b7280" />
+                        <MaterialIcons name="bolt" size={14} color={darkColors.textMuted} />
                         <Text style={styles.statText}>
                           {conv.total_tokens.toLocaleString()}
                         </Text>
@@ -143,7 +144,7 @@ export default function ConversationsList({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111827',
+    backgroundColor: darkColors.surfaceSunken,
   },
   header: {
     flexDirection: 'row',
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
   newButton: {
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#8b5cf6',
+    shadowColor: darkColors.brand,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -194,11 +195,11 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     fontFamily: 'Plex-700' },
   emptyHint: {
     fontSize: 14,
-    color: '#6b7280',
+    color: darkColors.textMuted,
     fontFamily: 'Plex-400' },
   conversationCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
   },
   conversationCardSelected: {
     backgroundColor: 'rgba(139, 92, 246, 0.15)',
-    borderColor: '#8b5cf6',
+    borderColor: darkColors.brand,
   },
   conversationContent: {
     gap: 8,
@@ -231,11 +232,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Plex-700' },
   conversationDate: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     fontFamily: 'Plex-400' },
   conversationPreview: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     lineHeight: 20,
     fontFamily: 'Plex-400' },
   conversationStats: {
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: 12,
-    color: '#6b7280',
+    color: darkColors.textMuted,
     fontFamily: 'Plex-600' },
   selectedIndicator: {
     position: 'absolute',
@@ -258,6 +259,6 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 4,
-    backgroundColor: '#8b5cf6',
+    backgroundColor: darkColors.brand,
   },
 });

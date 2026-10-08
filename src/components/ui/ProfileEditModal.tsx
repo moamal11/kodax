@@ -33,6 +33,7 @@ import {
   IRAQ_PROVINCES,
 } from '@/services/profileService';
 
+import { darkColors } from '@/design/tokens';
 interface ProfileEditModalProps {
   visible: boolean;
   profile: ProfileData | null;
@@ -239,7 +240,7 @@ export default function ProfileEditModal({
             ]}
           >
             <LinearGradient
-              colors={['#1e1e3a', '#151530', '#0f0f1e']}
+              colors={[darkColors.surfaceRaised, '#151530', darkColors.bg]}
               style={styles.modalGradient}
             >
               {/* Header */}
@@ -249,7 +250,7 @@ export default function ProfileEditModal({
                   style={styles.closeButton}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Ionicons name="close" size={24} color="#9ca3af" />
+                  <Ionicons name="close" size={24} color={darkColors.textMuted} />
                 </TouchableOpacity>
                 <Text style={styles.title}>تعديل الملف الشخصي</Text>
                 <View style={{ width: 32 }} />
@@ -268,7 +269,7 @@ export default function ProfileEditModal({
                   <Ionicons
                     name="person"
                     size={16}
-                    color={activeTab === 'info' ? '#7c3aed' : '#6b7280'}
+                    color={activeTab === 'info' ? darkColors.brandStrong : darkColors.textMuted}
                   />
                   <Text
                     style={[
@@ -293,7 +294,7 @@ export default function ProfileEditModal({
                   <Ionicons
                     name="lock-closed"
                     size={16}
-                    color={activeTab === 'password' ? '#7c3aed' : '#6b7280'}
+                    color={activeTab === 'password' ? darkColors.brandStrong : darkColors.textMuted}
                   />
                   <Text
                     style={[
@@ -331,7 +332,7 @@ export default function ProfileEditModal({
                           />
                         ) : (
                           <LinearGradient
-                            colors={['#7c3aed', '#3b82f6']}
+                            colors={[darkColors.brandStrong, darkColors.info]}
                             style={styles.avatarPlaceholder}
                           >
                             <Text style={styles.avatarInitial}>
@@ -357,7 +358,7 @@ export default function ProfileEditModal({
                         value={fullName}
                         onChangeText={setFullName}
                         placeholder="الاسم الكامل"
-                        placeholderTextColor="#4b5563"
+                        placeholderTextColor={darkColors.borderStrong}
                       />
                     </View>
 
@@ -380,7 +381,7 @@ export default function ProfileEditModal({
                         value={username}
                         onChangeText={setUsername}
                         placeholder="اسم المستخدم"
-                        placeholderTextColor="#4b5563"
+                        placeholderTextColor={darkColors.borderStrong}
                         editable={canEditUsername}
                         autoCapitalize="none"
                       />
@@ -394,7 +395,7 @@ export default function ProfileEditModal({
                       activeOpacity={0.8}
                     >
                       <LinearGradient
-                        colors={['#7c3aed', '#3b82f6']}
+                        colors={[darkColors.brandStrong, darkColors.info]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.saveButtonGradient}
@@ -428,7 +429,7 @@ export default function ProfileEditModal({
                           value={password}
                           onChangeText={setPassword}
                           placeholder="كلمة المرور الجديدة"
-                          placeholderTextColor="#4b5563"
+                          placeholderTextColor={darkColors.borderStrong}
                           secureTextEntry={!showPassword}
                         />
                         <TouchableOpacity
@@ -438,7 +439,7 @@ export default function ProfileEditModal({
                           <Ionicons
                             name={showPassword ? 'eye' : 'eye-off'}
                             size={20}
-                            color="#6b7280"
+                            color={darkColors.textMuted}
                           />
                         </TouchableOpacity>
                       </View>
@@ -455,7 +456,7 @@ export default function ProfileEditModal({
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
                         placeholder="أعد إدخال كلمة المرور"
-                        placeholderTextColor="#4b5563"
+                        placeholderTextColor={darkColors.borderStrong}
                         secureTextEntry={!showPassword}
                       />
                     </View>
@@ -470,8 +471,8 @@ export default function ProfileEditModal({
                       <LinearGradient
                         colors={
                           password
-                            ? ['#7c3aed', '#3b82f6']
-                            : ['#374151', '#374151']
+                            ? [darkColors.brandStrong, darkColors.info]
+                            : [darkColors.borderStrong, darkColors.borderStrong]
                         }
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
@@ -499,7 +500,7 @@ export default function ProfileEditModal({
                 {/* Error/Success Messages */}
                 {error ? (
                   <View style={styles.errorContainer}>
-                    <Ionicons name="alert-circle" size={16} color="#ef4444" />
+                    <Ionicons name="alert-circle" size={16} color={darkColors.danger} />
                     <Text style={styles.errorText}>{error}</Text>
                   </View>
                 ) : null}
@@ -508,7 +509,7 @@ export default function ProfileEditModal({
                     <Ionicons
                       name="checkmark-circle"
                       size={16}
-                      color="#10b981"
+                      color={darkColors.success}
                     />
                     <Text style={styles.successText}>{success}</Text>
                   </View>
@@ -579,9 +580,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    
     color: '#fff',
-  },
+    fontFamily: 'Plex-700' },
   tabRow: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -605,11 +606,11 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#6b7280',
-  },
+    
+    color: darkColors.textMuted,
+    fontFamily: 'Plex-600' },
   tabTextActive: {
-    color: '#7c3aed',
+    color: darkColors.brandStrong,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -640,9 +641,9 @@ const styles = StyleSheet.create({
   },
   avatarInitial: {
     fontSize: 40,
-    fontWeight: '800',
+    
     color: '#fff',
-  },
+    fontFamily: 'Plex-700' },
   cameraIcon: {
     position: 'absolute',
     bottom: 4,
@@ -654,13 +655,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#1e1e3a',
+    borderColor: darkColors.surfaceRaised,
   },
   avatarHint: {
-    color: '#6b7280',
+    color: darkColors.textMuted,
     fontSize: 12,
     marginTop: 8,
-  },
+    fontFamily: 'Plex-400' },
   fieldContainer: {
     marginBottom: 18,
   },
@@ -671,16 +672,16 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#d1d5db',
+    
+    color: darkColors.textSecondary,
     marginBottom: 8,
     textAlign: 'right',
-  },
+    fontFamily: 'Plex-600' },
   fieldWarning: {
     fontSize: 11,
-    color: '#f59e0b',
+    color: darkColors.warning,
     marginBottom: 8,
-  },
+    fontFamily: 'Plex-400' },
   textInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
@@ -691,7 +692,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#fff',
     textAlign: 'right',
-  },
+    fontFamily: 'Plex-400' },
   textInputDisabled: {
     opacity: 0.5,
   },
@@ -724,8 +725,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
-  },
+    fontFamily: 'Plex-700' },
   errorContainer: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -737,11 +737,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   errorText: {
-    color: '#ef4444',
+    color: darkColors.danger,
     fontSize: 13,
     flex: 1,
     textAlign: 'right',
-  },
+    fontFamily: 'Plex-400' },
   successContainer: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -753,9 +753,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   successText: {
-    color: '#10b981',
+    color: darkColors.success,
     fontSize: 13,
     flex: 1,
     textAlign: 'right',
-  },
+    fontFamily: 'Plex-400' },
 });

@@ -32,6 +32,7 @@ import {
   openStoreListing,
 } from '@/services/updateService';
 
+import { darkColors } from '@/design/tokens';
 interface UpdateModalProps {
   visible: boolean;
   update: AppUpdate | null;
@@ -107,7 +108,7 @@ export default function UpdateModal({
           <View style={styles.iconContainer}>
             <LinearGradient
               colors={
-                isForced ? ['#ef4444', '#dc2626'] : ['#8b5cf6', '#6d28d9']
+                isForced ? [darkColors.danger, darkColors.danger] : [darkColors.brand, darkColors.brandStrong]
               }
               style={styles.iconGradient}
             >
@@ -130,12 +131,12 @@ export default function UpdateModal({
               <Text style={styles.versionLabel}>الحالي</Text>
               <Text style={styles.versionText}>{currentVersion}</Text>
             </View>
-            <Ionicons name="arrow-forward" size={20} color="#6b7280" />
+            <Ionicons name="arrow-forward" size={20} color={darkColors.textMuted} />
             <View style={[styles.versionBadge, styles.versionBadgeNew]}>
-              <Text style={[styles.versionLabel, { color: '#a78bfa' }]}>
+              <Text style={[styles.versionLabel, { color: darkColors.brandText }]}>
                 الجديد
               </Text>
-              <Text style={[styles.versionText, { color: '#a78bfa' }]}>
+              <Text style={[styles.versionText, { color: darkColors.brandText }]}>
                 {update.version}
               </Text>
             </View>
@@ -148,7 +149,7 @@ export default function UpdateModal({
               style={styles.notesContainer}
             >
               <Text style={styles.notesTitle}>
-                <Ionicons name="document-text" size={14} color="#9ca3af" /> ما
+                <Ionicons name="document-text" size={14} color={darkColors.textMuted} /> ما
                 الجديد
               </Text>
               <ScrollView
@@ -168,7 +169,7 @@ export default function UpdateModal({
             >
               <View style={styles.progressBar}>
                 <LinearGradient
-                  colors={['#8b5cf6', '#6d28d9']}
+                  colors={[darkColors.brand, darkColors.brandStrong]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={[styles.progressFill, { width: `${progress}%` }]}
@@ -185,7 +186,7 @@ export default function UpdateModal({
               <Ionicons
                 name="logo-google-playstore"
                 size={16}
-                color="#8b5cf6"
+                color={darkColors.brand}
               />
               <Text style={styles.installingText}>
                 أكمل التحديث من Google Play ثم أعد فتح التطبيق
@@ -196,7 +197,7 @@ export default function UpdateModal({
           {/* رسالة الخطأ */}
           {error ? (
             <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={16} color="#ef4444" />
+              <Ionicons name="alert-circle" size={16} color={darkColors.danger} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -212,10 +213,10 @@ export default function UpdateModal({
               <LinearGradient
                 colors={
                   isUpdating
-                    ? ['#4b5563', '#374151']
+                    ? [darkColors.borderStrong, darkColors.borderStrong]
                     : isForced
-                      ? ['#ef4444', '#dc2626']
-                      : ['#8b5cf6', '#6d28d9']
+                      ? [darkColors.danger, darkColors.danger]
+                      : [darkColors.brand, darkColors.brandStrong]
                 }
                 style={styles.updateButtonGradient}
               >
@@ -260,7 +261,7 @@ export default function UpdateModal({
               entering={FadeIn.delay(400)}
               style={styles.forceWarning}
             >
-              <Ionicons name="lock-closed" size={14} color="#fbbf24" />
+              <Ionicons name="lock-closed" size={14} color={darkColors.warningText} />
               <Text style={styles.forceWarningText}>
                 هذا التحديث إجباري ولا يمكن تأجيله
               </Text>
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: darkColors.surface,
     borderRadius: 24,
     padding: 28,
     alignItems: 'center',
@@ -311,11 +312,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    
     color: '#f3f4f6',
     textAlign: 'center',
     marginBottom: 16,
-  },
+    fontFamily: 'Plex-700' },
   versionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -337,15 +338,14 @@ const styles = StyleSheet.create({
   },
   versionLabel: {
     fontSize: 11,
-    color: '#9ca3af',
-    fontWeight: '600',
+    color: darkColors.textMuted,
+    
     marginBottom: 2,
-  },
+    fontFamily: 'Plex-600' },
   versionText: {
     fontSize: 16,
-    color: '#e5e7eb',
-    fontWeight: '700',
-  },
+    color: darkColors.text,
+    fontFamily: 'Plex-700' },
   notesContainer: {
     width: '100%',
     backgroundColor: 'rgba(255,255,255,0.03)',
@@ -357,20 +357,20 @@ const styles = StyleSheet.create({
   },
   notesTitle: {
     fontSize: 13,
-    color: '#9ca3af',
-    fontWeight: '600',
+    color: darkColors.textMuted,
+    
     marginBottom: 8,
     textAlign: 'right',
-  },
+    fontFamily: 'Plex-600' },
   notesScroll: {
     maxHeight: 120,
   },
   notesText: {
     fontSize: 14,
-    color: '#d1d5db',
+    color: darkColors.textSecondary,
     lineHeight: 22,
     textAlign: 'right',
-  },
+    fontFamily: 'Plex-400' },
   progressContainer: {
     width: '100%',
     marginBottom: 20,
@@ -389,10 +389,9 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 13,
-    color: '#a78bfa',
+    color: darkColors.brandText,
     textAlign: 'center',
-    fontWeight: '600',
-  },
+    fontFamily: 'Plex-600' },
   installingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,9 +402,8 @@ const styles = StyleSheet.create({
   },
   installingText: {
     fontSize: 14,
-    color: '#a78bfa',
-    fontWeight: '600',
-  },
+    color: darkColors.brandText,
+    fontFamily: 'Plex-600' },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -419,10 +417,10 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
-    color: '#ef4444',
+    color: darkColors.danger,
     flex: 1,
     textAlign: 'right',
-  },
+    fontFamily: 'Plex-400' },
   buttonsContainer: {
     width: '100%',
     gap: 10,
@@ -442,18 +440,17 @@ const styles = StyleSheet.create({
   },
   updateButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    
     color: '#fff',
-  },
+    fontFamily: 'Plex-700' },
   skipButton: {
     paddingVertical: 12,
     alignItems: 'center',
   },
   skipButtonText: {
     fontSize: 15,
-    color: '#9ca3af',
-    fontWeight: '600',
-  },
+    color: darkColors.textMuted,
+    fontFamily: 'Plex-600' },
   forceWarning: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -466,9 +463,9 @@ const styles = StyleSheet.create({
   },
   forceWarningText: {
     fontSize: 12,
-    color: '#fbbf24',
-    fontWeight: '600',
+    color: darkColors.warningText,
+    
     textAlign: 'right',
     flex: 1,
-  },
+    fontFamily: 'Plex-600' },
 });

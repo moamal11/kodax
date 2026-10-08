@@ -7,10 +7,11 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { darkColors } from '@/design/tokens';
 export const COIN_COLORS = {
-  gold: '#FBBF24',
+  gold: darkColors.warningText,
   goldDark: '#D97706',
-  text: '#FCD34D',
+  text: darkColors.warningText,
   bg: 'rgba(245,158,11,0.12)',
   border: 'rgba(245,158,11,0.3)',
 };
@@ -36,7 +37,7 @@ export function CoinIcon({ size = 18 }: { size?: number }) {
           },
         ]}
       >
-        <Text style={[styles.letter, { fontSize: size * 0.46 }]}>K</Text>
+        <Text style={[styles.letter, { fontSize: size * 0.46, fontFamily: 'Plex-400' }]}>K</Text>
       </View>
     </LinearGradient>
   );
@@ -55,10 +56,10 @@ const styles = StyleSheet.create({
   },
   letter: {
     color: '#78350F',
-    fontWeight: '900',
+    
     includeFontPadding: false,
     textAlignVertical: 'center',
-  },
+    fontFamily: 'Plex-700' },
 });
 
 export default CoinIcon;

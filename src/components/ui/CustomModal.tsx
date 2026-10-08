@@ -20,6 +20,7 @@ import Animated, {
   SlideInDown,
   SlideOutDown,
 } from 'react-native-reanimated';
+import { darkColors } from '@/design/tokens';
 // BlurView removed - not used in JSX
 
 const { width, height } = Dimensions.get('window');
@@ -55,28 +56,28 @@ const modalConfig: Record<
 > = {
   success: {
     icon: 'checkmark-circle',
-    colors: ['#10b981', '#059669'] as const,
-    iconColor: '#10b981',
+    colors: [darkColors.success, darkColors.success] as const,
+    iconColor: darkColors.success,
   },
   error: {
     icon: 'close-circle',
-    colors: ['#ef4444', '#dc2626'] as const,
-    iconColor: '#ef4444',
+    colors: [darkColors.danger, darkColors.danger] as const,
+    iconColor: darkColors.danger,
   },
   warning: {
     icon: 'warning',
-    colors: ['#f59e0b', '#d97706'] as const,
-    iconColor: '#f59e0b',
+    colors: [darkColors.warning, '#d97706'] as const,
+    iconColor: darkColors.warning,
   },
   info: {
     icon: 'information-circle',
-    colors: ['#3b82f6', '#2563eb'] as const,
-    iconColor: '#3b82f6',
+    colors: [darkColors.info, '#2563eb'] as const,
+    iconColor: darkColors.info,
   },
   achievement: {
     icon: 'trophy',
-    colors: ['#8b5cf6', '#7c3aed'] as const,
-    iconColor: '#fbbf24',
+    colors: [darkColors.brand, darkColors.brandStrong] as const,
+    iconColor: darkColors.warningText,
   },
 };
 
@@ -119,7 +120,7 @@ export default function CustomModal({
           style={styles.modalContainer}
         >
           <LinearGradient
-            colors={['#1a1a3e', '#252550']}
+            colors={[darkColors.surface, darkColors.border]}
             style={styles.modalContent}
           >
             {/* Icon Header */}
@@ -143,7 +144,7 @@ export default function CustomModal({
               <View style={styles.rewardsContainer}>
                 {xpReward && xpReward > 0 && (
                   <View style={styles.rewardBadge}>
-                    <Ionicons name="star" size={20} color="#fbbf24" />
+                    <Ionicons name="star" size={20} color={darkColors.warningText} />
                     <Text style={styles.rewardText}>+{xpReward} XP</Text>
                   </View>
                 )}
@@ -154,8 +155,8 @@ export default function CustomModal({
                       { backgroundColor: '#a78bfa20' },
                     ]}
                   >
-                    <Ionicons name="diamond" size={20} color="#a78bfa" />
-                    <Text style={[styles.rewardText, { color: '#a78bfa' }]}>
+                    <Ionicons name="diamond" size={20} color={darkColors.brandText} />
+                    <Text style={[styles.rewardText, { color: darkColors.brandText }]}>
                       +{pointsReward} نقطة
                     </Text>
                   </View>
@@ -305,18 +306,18 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
+    
     color: '#fff',
     marginBottom: 8,
     textAlign: 'center',
-  },
+    fontFamily: 'Plex-700' },
   message: {
     fontSize: 15,
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 16,
-  },
+    fontFamily: 'Plex-400' },
   rewardsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -334,9 +335,9 @@ const styles = StyleSheet.create({
   },
   rewardText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fbbf24',
-  },
+    
+    color: darkColors.warningText,
+    fontFamily: 'Plex-700' },
   buttonsContainer: {
     flexDirection: 'row',
     gap: 12,
@@ -366,16 +367,16 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 15,
-    fontWeight: '600',
+    
     color: '#fff',
     textAlign: 'center',
-  },
+    fontFamily: 'Plex-600' },
   buttonTextPrimary: {
     fontSize: 15,
-    fontWeight: '600',
+    
     color: '#fff',
-  },
+    fontFamily: 'Plex-600' },
   buttonTextDanger: {
-    color: '#ef4444',
+    color: darkColors.danger,
   },
 });
