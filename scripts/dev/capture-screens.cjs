@@ -39,7 +39,7 @@ async function api(p, opts = {}) {
     ['course-locked', '/course/py-advanced'],
     ['lesson', '/lesson/py-7'],
     ['challenges', '/challenges'],
-    ['challenge', '/challenge/ch-12'],
+    ['challenge', '/challenge/ch-4'],
     ['code-feed', '/code'],
     ['code-post', grades ? `/code/${grades.id}` : '/code'],
     ['code-add', '/code/add?lang=python'],

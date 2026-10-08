@@ -855,6 +855,16 @@ const server = http.createServer(async (req, res) => {
       }
     }
     if (parts[0] === 'health') return send(res, 200, { ok: true });
+    // محلياً: نفس مشغّل Python بصيغة Wandbox (تستخدمه سكربتات e2e لاعتراض طلبات المتصفح)
+    if (parts[0] === 'dev' && parts[1] === 'wandbox' && req.method === 'POST') {
+      const r = await fetch('https://wandbox.org/api/compile.json', { method: 'POST', headers: { 'content-type': 'application/json' }, body: raw.toString('utf8') });
+      return send(res, r.status, Buffer.from(await r.arrayBuffer()), { 'Content-Type': 'application/json' });
+    }
+    // محلياً: نفس مشغّل Python بصيغة Wandbox (تستخدمه سكربتات e2e لاعتراض طلبات المتصفح)
+    if (parts[0] === 'dev' && parts[1] === 'wandbox' && req.method === 'POST') {
+      const r = await fetch('https://wandbox.org/api/compile.json', { method: 'POST', headers: { 'content-type': 'application/json' }, body: raw.toString('utf8') });
+      return send(res, r.status, Buffer.from(await r.arrayBuffer()), { 'Content-Type': 'application/json' });
+    }
     return send(res, 404, { error: 'not found' });
   } catch (e) {
     const err = pgError(e);
@@ -863,7 +873,34 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+/**
+ * محلياً فقط: تحقق السيرفر (verify-challenge) يشغّل Python بمفسّر الجهاز بدل Wandbox
+ * (نفس شكل رد Wandbox) حتى لا يعتمد الاختبار المحلي على حدود خدمة خارجية. اللغات الأخرى تبقى على Wandbox.
+ * LOCAL_RUNNER=wandbox يعطّل هذا.
+ */
+function installLocalPythonRunner() {
+  if (process.env.LOCAL_RUNNER === 'wandbox') return;
+  const { spawnSync } = require('node:child_process') as typeof import('node:child_process');
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: any, init?: any) => {
+    const url = typeof input === 'string' ? input : input?.url;
+    if (url === 'https://wandbox.org/api/compile.json' && init?.body) {
+      const body = JSON.parse(String(init.body));
+      if (String(body.compiler || '').startsWith('cpython')) {
+        const r = spawnSync(process.env.PYTHON || 'python', ['-I', '-c', body.code], { input: body.stdin ?? '', encoding: 'utf8', timeout: 10000, env: { PYTHONIOENCODING: 'utf-8' } });
+        const timedOut = r.error && (r.error as any).code === 'ETIMEDOUT';
+        return new Response(
+          JSON.stringify({ status: String(r.status ?? 1), signal: timedOut ? 'Killed' : '', program_output: r.stdout ?? '', program_error: r.stderr ?? '', compiler_output: '', compiler_error: '' }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      }
+    }
+    return realFetch(input, init);
+  }) as typeof fetch;
+}
+
 (async () => {
+  installLocalPythonRunner();
   env = await createEnv();
   await env.db.exec(`CREATE SCHEMA IF NOT EXISTS storage;
     CREATE TABLE IF NOT EXISTS storage.objects (id uuid DEFAULT gen_random_uuid(), bucket_id text, name text, owner uuid);

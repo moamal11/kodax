@@ -8,9 +8,9 @@
  * - الحل لا يوجد في التطبيق: يأتي من السيرفر (challenge_reveal_solution) بعد التحقق.
  */
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CodeBlock } from '@/components/ui/CodeBlock';
+import { Surface, Text, Row, Button, CodeView, useTheme } from '@/design';
 import { coinService, coinMessage } from '@/services/coinService';
 import { watchRewardedAd, isRewardedAdsSupported } from '@/services/rewardedAds';
 
@@ -48,6 +48,7 @@ export default function SolutionReveal({
   onApplyCode,
   onRevealed,
 }: Props) {
+  const t = useTheme();
   const [phase, setPhase] = useState<Phase>('idle');
   const [solution, setSolution] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -87,119 +88,57 @@ export default function SolutionReveal({
 
   if (phase === 'shown' && solution) {
     return (
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <Ionicons name="bulb" size={18} color="#FBBF24" />
-          <Text style={styles.title}>الحل النموذجي</Text>
-        </View>
-        <Text style={styles.text}>
+      <Surface padding={14}>
+        <Row gap={8}>
+          <Ionicons name="bulb-outline" size={18} color={t.colors.warningText} />
+          <Text variant="label" weight="semibold">
+            الحل النموذجي
+          </Text>
+        </Row>
+        <Text variant="bodySm" tone="secondary" style={{ marginVertical: 8 }}>
           اقرأ الحل وافهم الفكرة، ثم جرّب كتابته بنفسك — هكذا تتعلم أكثر.
         </Text>
-        <CodeBlock code={solution} language={language.toLowerCase()} maxHeight={320} />
-        {onApplyCode && !isCompleted && (
-          <TouchableOpacity style={styles.secondaryBtn} onPress={() => onApplyCode(solution)}>
-            <Ionicons name="create-outline" size={16} color="#C4B5FD" />
-            <Text style={styles.secondaryText}>ضعه في المحرر</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+        <CodeView code={solution} language={language.toLowerCase()} />
+        {onApplyCode && !isCompleted && <Button label="ضعه في المحرر" variant="ghost" icon="create-outline" onPress={() => onApplyCode(solution)} style={{ alignSelf: 'flex-start', marginTop: 8 }} />}
+      </Surface>
     );
   }
 
   return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <Ionicons name="eye-outline" size={18} color="#A78BFA" />
-        <Text style={styles.title}>الحل الكامل</Text>
-      </View>
-
+    <Surface padding={14}>
+      <Row gap={8}>
+        <Ionicons name="eye-outline" size={18} color={t.colors.brandText} />
+        <Text variant="label" weight="semibold">
+          الحل الكامل
+        </Text>
+      </Row>
       {phase === 'confirm' && !free ? (
-        <>
-          <Text style={styles.text}>
-            يظهر الحل بعد مشاهدة إعلان قصير. إذا أظهرته قبل أن تحل التحدي فلن تحصل على
-            كوينات هذا التحدي، وستحصل على نصف XP عند حله. المحاولة بنفسك تبقى مجانية دائماً.
+        <View style={{ gap: 10, marginTop: 8 }}>
+          <Text variant="bodySm" tone="secondary">
+            يظهر الحل بعد مشاهدة إعلان قصير. إذا أظهرته قبل أن تحل التحدي فلن تحصل على كوينات هذا التحدي، وستحصل على نصف XP عند حله. المحاولة بنفسك تبقى مجانية دائماً.
           </Text>
           {isRewardedAdsSupported() ? (
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleWatch}>
-              <Ionicons name="play-circle" size={18} color="#1F2937" />
-              <Text style={styles.primaryText}>شاهد إعلاناً وأظهر الحل</Text>
-            </TouchableOpacity>
+            <Button label="شاهد إعلاناً وأظهر الحل" icon="play-circle-outline" onPress={handleWatch} />
           ) : (
-            <Text style={styles.note}>
+            <Text variant="caption" tone="muted">
               إظهار الحل بالإعلان متاح في تطبيق الهاتف. يمكنك متابعة المحاولة والتلميحات هنا.
             </Text>
           )}
-          <TouchableOpacity style={styles.secondaryBtn} onPress={() => setPhase('idle')}>
-            <Text style={styles.secondaryText}>سأحاول مرة أخرى</Text>
-          </TouchableOpacity>
-        </>
+          <Button label="سأحاول مرة أخرى" variant="ghost" onPress={() => setPhase('idle')} />
+        </View>
       ) : (
-        <>
-          <Text style={styles.text}>
-            {free
-              ? 'حللت التحدي — يمكنك مقارنة حلك بالحل النموذجي.'
-              : canReveal
-                ? 'إذا علقت، يمكنك إظهار الحل الكامل.'
-                : 'حاول بنفسك أولاً: بعد كل محاولة يظهر لك تلميح جديد، ويمكنك إظهار الحل بعد عدة محاولات.'}
+        <View style={{ gap: 10, marginTop: 8 }}>
+          <Text variant="bodySm" tone="secondary">
+            {free ? 'حللت التحدي — قارن حلك بالحل النموذجي.' : canReveal ? 'إذا علقت، يمكنك إظهار الحل الكامل.' : 'حاول بنفسك أولاً: بعد كل محاولة يظهر تلميح جديد، ويمكنك إظهار الحل بعد عدة محاولات.'}
           </Text>
-          <TouchableOpacity
-            style={[styles.outlineBtn, phase === 'busy' && { opacity: 0.6 }]}
-            onPress={handlePress}
-            disabled={phase === 'busy'}
-          >
-            {phase === 'busy' ? (
-              <ActivityIndicator color="#C4B5FD" />
-            ) : (
-              <Text style={styles.outlineText}>{free ? 'اعرض الحل النموذجي' : 'إظهار الحل'}</Text>
-            )}
-          </TouchableOpacity>
-        </>
+          <Button label={free ? 'اعرض الحل النموذجي' : 'إظهار الحل'} variant="secondary" onPress={handlePress} loading={phase === 'busy'} style={{ alignSelf: 'flex-start' }} />
+        </View>
       )}
-      {note && <Text style={styles.note}>{note}</Text>}
-    </View>
+      {!!note && (
+        <Text variant="caption" tone="warning" style={{ marginTop: 8 }}>
+          {note}
+        </Text>
+      )}
+    </Surface>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: 'rgba(139,92,246,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(139,92,246,0.3)',
-    gap: 10,
-  },
-  header: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
-  title: { color: '#E9D5FF', fontSize: 15, fontWeight: '700' },
-  text: { color: '#D1D5DB', fontSize: 13, lineHeight: 21, textAlign: 'right' },
-  note: { color: '#FCD34D', fontSize: 12, lineHeight: 19, textAlign: 'right' },
-  primaryBtn: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#FBBF24',
-    paddingVertical: 11,
-    borderRadius: 12,
-  },
-  primaryText: { color: '#1F2937', fontWeight: '700', fontSize: 14 },
-  outlineBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(196,181,253,0.5)',
-  },
-  outlineText: { color: '#C4B5FD', fontWeight: '600', fontSize: 14 },
-  secondaryBtn: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-  },
-  secondaryText: { color: '#C4B5FD', fontSize: 13 },
-});

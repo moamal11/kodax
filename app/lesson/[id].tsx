@@ -163,7 +163,7 @@ export default function LessonScreen() {
           </Row>
         </View>
 
-        <LessonContent content={lesson.content} defaultLanguage={lesson.language} />
+        <LessonContent content={lesson.content} defaultLanguage={lesson.language} title={lesson.title} />
 
         {!!lesson.codeExample && <CodeView code={lesson.codeExample} language={lesson.language || 'javascript'} title={`مثال · ${lesson.language ?? ''}`} />}
 

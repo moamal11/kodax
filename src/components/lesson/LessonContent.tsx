@@ -103,9 +103,14 @@ function Inline({ text, variant = 'body', tone = 'secondary', weight, style }: {
   );
 }
 
-export function LessonContent({ content, defaultLanguage }: { content: string; defaultLanguage?: string }) {
+export function LessonContent({ content, defaultLanguage, title }: { content: string; defaultLanguage?: string; /** عنوان الدرس المعروض فوق المحتوى: لا نكرره إن بدأ المحتوى به */ title?: string }) {
   const t = useTheme();
-  const blocks = useMemo(() => parseLessonContent(content || ''), [content]);
+  const blocks = useMemo(() => {
+    const all = parseLessonContent(content || '');
+    const first = all.findIndex((b) => b.type !== 'space');
+    if (title && first >= 0 && all[first].type === 'h' && (all[first] as any).text.trim() === title.trim()) all.splice(first, 1);
+    return all;
+  }, [content, title]);
   return (
     <View style={{ gap: 2 }}>
       {blocks.map((b, i) => {
