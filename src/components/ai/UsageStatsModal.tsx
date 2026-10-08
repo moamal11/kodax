@@ -234,9 +234,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '900',
+    
     color: '#fff',
-  },
+    fontFamily: 'Plex-700' },
   closeButton: {
     width: 40,
     height: 40,
@@ -274,13 +274,11 @@ const styles = StyleSheet.create({
   },
   percentage: {
     fontSize: 48,
-    fontWeight: '900',
-  },
+    fontFamily: 'Plex-700' },
   percentageLabel: {
     fontSize: 14,
     color: '#9ca3af',
-    fontWeight: '600',
-  },
+    fontFamily: 'Plex-600' },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -306,18 +304,18 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 28,
-    fontWeight: '900',
+    
     color: '#fff',
-  },
+    fontFamily: 'Plex-700' },
   statLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    
     color: '#e5e7eb',
-  },
+    fontFamily: 'Plex-600' },
   statSubLabel: {
     fontSize: 12,
     color: '#9ca3af',
-  },
+    fontFamily: 'Plex-400' },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -333,7 +331,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#e5e7eb',
     lineHeight: 20,
-  },
+    fontFamily: 'Plex-400' },
   doneButton: {
     borderRadius: 16,
     overflow: 'hidden',
@@ -349,7 +347,7 @@ const styles = StyleSheet.create({
   },
   doneText: {
     fontSize: 18,
-    fontWeight: '800',
+    
     color: '#fff',
-  },
+    fontFamily: 'Plex-700' },
 });

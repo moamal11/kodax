@@ -160,6 +160,8 @@ const light: ColorTokens = {
 };
 
 export const palettes = { dark, light } as const;
+/** للأنماط الثابتة خارج React (المود المعتمد) */
+export const darkColors = dark;
 export type ThemeMode = keyof typeof palettes;
 
 /** مسافات (أساس 4) */

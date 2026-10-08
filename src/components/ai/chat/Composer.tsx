@@ -112,8 +112,8 @@ const styles = StyleSheet.create({
     borderColor: C.border,
   },
   modeChipActive: { backgroundColor: C.accentSoft, borderColor: C.borderStrong },
-  modeText: { color: C.muted, fontSize: 12.5 },
-  modeTextActive: { color: '#fff', fontWeight: '600' },
+  modeText: { color: C.muted, fontSize: 12.5, fontFamily: 'Plex-400' },
+  modeTextActive: { color: '#fff', fontFamily: 'Plex-600' },
   box: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -133,8 +133,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingTop: Platform.OS === 'web' ? 12 : 11,
     paddingBottom: Platform.OS === 'web' ? 10 : 11,
-  },
+    fontFamily: 'Plex-400' },
   sendTouch: { marginBottom: 1 },
   send: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  disclaimer: { color: C.muted, fontSize: 11.5, textAlign: 'center' },
+  disclaimer: { color: C.muted, fontSize: 11.5, textAlign: 'center', fontFamily: 'Plex-400' },
 });

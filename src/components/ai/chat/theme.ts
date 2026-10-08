@@ -1,29 +1,31 @@
 /** ألوان وأبعاد صفحة مساعد Kodax */
 import { Platform } from 'react-native';
+import { darkColors, fontFamily } from '@/design/tokens';
 
+/** ألوان صفحة المساعد = رموز نظام التصميم (المود الداكن) */
 export const C = {
-  bg: '#0b0b18',
-  bgAlt: '#11112a',
-  surface: 'rgba(255,255,255,0.04)',
-  surfaceStrong: 'rgba(255,255,255,0.07)',
-  border: 'rgba(255,255,255,0.08)',
-  borderStrong: 'rgba(167,139,250,0.35)',
-  text: '#e8e8f0',
-  textSoft: '#c9c9d6',
-  muted: '#8f8fa3',
-  accent: '#8b5cf6',
-  accentSoft: 'rgba(139,92,246,0.16)',
-  accent2: '#22d3ee',
-  userA: '#7c3aed',
-  userB: '#4f46e5',
-  success: '#34d399',
-  warning: '#fbbf24',
-  danger: '#f87171',
-  inlineCodeBg: 'rgba(139,92,246,0.18)',
-  inlineCode: '#d8ccff',
+  bg: darkColors.bg,
+  bgAlt: darkColors.bg,
+  surface: darkColors.surface,
+  surfaceStrong: darkColors.surfaceRaised,
+  border: darkColors.border,
+  borderStrong: darkColors.borderStrong,
+  text: darkColors.text,
+  textSoft: darkColors.textSecondary,
+  muted: darkColors.textMuted,
+  accent: darkColors.brand,
+  accentSoft: darkColors.brandSoft,
+  accent2: darkColors.info,
+  userA: darkColors.brandStrong,
+  userB: darkColors.brandStrong,
+  success: darkColors.successText,
+  warning: darkColors.warningText,
+  danger: darkColors.dangerText,
+  inlineCodeBg: darkColors.brandSoft,
+  inlineCode: darkColors.brandText,
 };
 
-export const FONT_MONO = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
+export const FONT_MONO = fontFamily.mono;
 
 /** هل يبدأ النص بحرف عربي؟ (لاتجاه الفقرة) */
 export function isRtlText(text: string): boolean {

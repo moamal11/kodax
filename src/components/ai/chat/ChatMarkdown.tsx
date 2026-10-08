@@ -157,7 +157,7 @@ function ChatMarkdownImpl({ content, variant = 'assistant', compact }: Props) {
                 key={idx}
                 style={[
                   styles.heading,
-                  { color, fontSize: b.level <= 2 ? fontSize + 3 : fontSize + 1 },
+                  { color, fontSize: b.level <= 2 ? fontSize + 3 : fontSize + 1, fontFamily: 'Plex-400' },
                   dirStyle(b.text),
                 ]}
               >
@@ -199,7 +199,7 @@ function ChatMarkdownImpl({ content, variant = 'assistant', compact }: Props) {
                     <View key={j} style={[styles.tr, j === 0 && styles.thRow]}>
                       {r.map((cell, k) => (
                         <View key={k} style={styles.td}>
-                          <Text style={[{ color, fontSize: fontSize - 1.5, lineHeight: lineHeight - 4 }, j === 0 && styles.bold, dirStyle(cell)]}>
+                          <Text style={[{ color, fontSize: fontSize - 1.5, lineHeight: lineHeight - 4, fontFamily: 'Plex-400' }, j === 0 && styles.bold, dirStyle(cell)]}>
                             <Inline text={cell} color={color} />
                           </Text>
                         </View>
@@ -228,8 +228,8 @@ const styles = StyleSheet.create({
   // رسالة المستخدم داخل فقاعة بعرض المحتوى: عرض 100% فيها يسبب ارتفاعاً زائداً على Android
   rootFull: { width: '100%' },
   code: { width: '100%', marginVertical: 2 },
-  heading: { fontWeight: '700', marginTop: 4 },
-  bold: { fontWeight: '700' },
+  heading: {  marginTop: 4, fontFamily: 'Plex-700' },
+  bold: { fontFamily: 'Plex-700' },
   italic: { fontStyle: 'italic' },
   link: { color: C.accent2, textDecorationLine: 'underline' },
   inlineCode: {
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   quoteLtr: { borderLeftWidth: 3, borderLeftColor: C.accent },
   list: { gap: 6 },
   li: { gap: 8, alignItems: 'flex-start' },
-  bullet: { fontWeight: '700', minWidth: 16, textAlign: 'center' },
+  bullet: {  minWidth: 16, textAlign: 'center', fontFamily: 'Plex-700' },
   tableWrap: { borderRadius: 10, borderWidth: 1, borderColor: C.border },
   tr: { flexDirection: 'row-reverse', borderBottomWidth: 1, borderBottomColor: C.border },
   thRow: { backgroundColor: C.surfaceStrong },

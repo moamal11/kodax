@@ -63,5 +63,3 @@ export function makeStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.Name
   };
 }
 
-/** للاستخدام خارج React (نادراً): ألوان المود المعتمد */
-export const darkColors = palettes.dark;

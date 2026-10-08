@@ -21,7 +21,7 @@ export function EmptyChat({ onPick, bp }: { onPick: (t: string) => void; bp: Bre
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.wrap}>
       <AssistantAvatar size={bp === 'phone' ? 56 : 68} />
-      <Text style={[styles.title, bp === 'phone' && { fontSize: 22 }]}>شنو نتعلم اليوم؟</Text>
+      <Text style={[styles.title, bp === 'phone' && { fontSize: 22, fontFamily: 'Plex-400' }]}>شنو نتعلم اليوم؟</Text>
       <Text style={styles.sub}>
         أعرف كل دورات ودروس وتحديات Kodax. اسألني عن البرمجة، الصق كودك حتى أصححه، أو اسأل عن التطبيق.
       </Text>
@@ -40,7 +40,7 @@ export function EmptyChat({ onPick, bp }: { onPick: (t: string) => void; bp: Bre
       </View>
       <View style={styles.note}>
         <Ionicons name="flash" size={13} color={C.accent2} />
-        <Text style={styles.noteText}>الأسئلة الشائعة عن Kodax والبرمجة تنجاوب فوراً وما تنحسب من حصتك.</Text>
+        <Text style={styles.noteText}>بعض الأسئلة الشائعة عن Kodax تنجاوب فوراً وما تنحسب. باقي الأسئلة تنحسب من حصة اليوم الظاهرة فوق.</Text>
       </View>
     </Animated.View>
   );
@@ -73,8 +73,8 @@ export function TypingIndicator({ label }: { label: string }) {
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', paddingVertical: 28, paddingHorizontal: 8, gap: 12 },
-  title: { color: '#fff', fontSize: 26, fontWeight: '800', marginTop: 6 },
-  sub: { color: C.muted, fontSize: 14.5, lineHeight: 23, textAlign: 'center', maxWidth: 520 },
+  title: { color: '#fff', fontSize: 26,  marginTop: 6, fontFamily: 'Plex-700' },
+  sub: { color: C.muted, fontSize: 14.5, lineHeight: 23, textAlign: 'center', maxWidth: 520, fontFamily: 'Plex-400' },
   grid: { width: '100%', flexDirection: 'row-reverse', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 10 },
   card: {
     flexDirection: 'row-reverse',
@@ -88,9 +88,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
   },
-  cardText: { flex: 1, color: C.textSoft, fontSize: 13.5, lineHeight: 20, textAlign: 'right', writingDirection: 'rtl' },
+  cardText: { flex: 1, color: C.textSoft, fontSize: 13.5, lineHeight: 20, textAlign: 'right', writingDirection: 'rtl', fontFamily: 'Plex-400' },
   note: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 10 },
-  noteText: { color: C.muted, fontSize: 12.5, textAlign: 'center', flexShrink: 1 },
+  noteText: { color: C.muted, fontSize: 12.5, textAlign: 'center', flexShrink: 1, fontFamily: 'Plex-400' },
   typingRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, marginVertical: 8 },
   typingBubble: {
     flexDirection: 'row-reverse',
@@ -105,5 +105,5 @@ const styles = StyleSheet.create({
   },
   tDots: { flexDirection: 'row', gap: 4 },
   tDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.accent },
-  typingText: { color: C.muted, fontSize: 13 },
+  typingText: { color: C.muted, fontSize: 13, fontFamily: 'Plex-400' },
 });

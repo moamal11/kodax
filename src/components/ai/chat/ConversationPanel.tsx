@@ -72,7 +72,7 @@ export function ConversationPanel({ conversations, currentId, onSelect, onNew, o
 const styles = StyleSheet.create({
   wrap: { flex: 1, padding: 14, gap: 10 },
   head: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' },
-  title: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  title: { color: '#fff', fontSize: 16, fontFamily: 'Plex-700' },
   iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: C.surface },
   newBtn: {
     flexDirection: 'row-reverse',
@@ -83,11 +83,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: C.userA,
   },
-  newText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  empty: { color: C.muted, textAlign: 'center', marginTop: 24, fontSize: 13 },
+  newText: { color: '#fff',  fontSize: 14, fontFamily: 'Plex-700' },
+  empty: { color: C.muted, textAlign: 'center', marginTop: 24, fontSize: 13, fontFamily: 'Plex-400' },
   item: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12 },
   itemActive: { backgroundColor: C.accentSoft, borderWidth: 1, borderColor: C.borderStrong },
-  itemTitle: { color: C.textSoft, fontSize: 14, textAlign: 'right', writingDirection: 'rtl' },
-  itemMeta: { color: C.muted, fontSize: 11.5, textAlign: 'right', marginTop: 2 },
+  itemTitle: { color: C.textSoft, fontSize: 14, textAlign: 'right', writingDirection: 'rtl', fontFamily: 'Plex-400' },
+  itemMeta: { color: C.muted, fontSize: 11.5, textAlign: 'right', marginTop: 2, fontFamily: 'Plex-400' },
   delBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 18 },
 });

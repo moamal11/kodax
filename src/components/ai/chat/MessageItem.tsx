@@ -133,9 +133,9 @@ const styles = StyleSheet.create({
   assistantCardCompact: { paddingHorizontal: 13, paddingVertical: 12 },
   metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, marginTop: 6, paddingHorizontal: 4, flexWrap: 'wrap' },
   metaBtn: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 2 },
-  metaText: { color: C.muted, fontSize: 12 },
+  metaText: { color: C.muted, fontSize: 12, fontFamily: 'Plex-400' },
   instant: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4 },
-  instantText: { color: C.muted, fontSize: 11.5 },
+  instantText: { color: C.muted, fontSize: 11.5, fontFamily: 'Plex-400' },
   errorCard: {
     marginVertical: 8,
     borderRadius: 14,
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   errorHead: { flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 8 },
-  errorText: { flex: 1, fontSize: 14.5, lineHeight: 22, textAlign: 'right', writingDirection: 'rtl' },
+  errorText: { flex: 1, fontSize: 14.5, lineHeight: 22, textAlign: 'right', writingDirection: 'rtl', fontFamily: 'Plex-400' },
   errorActions: { flexDirection: 'row-reverse', gap: 8, flexWrap: 'wrap' },
   errBtn: {
     flexDirection: 'row-reverse',
@@ -159,5 +159,5 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   errBtnAccent: { backgroundColor: C.userA },
-  errBtnText: { color: '#fff', fontSize: 13.5, fontWeight: '600' },
+  errBtnText: { color: '#fff', fontSize: 13.5, fontFamily: 'Plex-600' },
 });

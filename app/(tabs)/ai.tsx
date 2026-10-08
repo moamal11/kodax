@@ -3,7 +3,7 @@
  * - الهاتف: محادثة بعرض الشاشة، حقل الكتابة ثابت أسفلها فوق الكيبورد، والمحادثات في نافذة.
  * - التابلت: عمود محادثة بعرض مريح في المنتصف.
  * - الكمبيوتر: شريط جانبي للمحادثات + عمود محادثة بعرض محدود وحقل كتابة ثابت أسفله.
- * الحصة تُعرض من السيرفر (ai_get_quota)، والردود الفورية لا تُحسب منها.
+ * الحصة تُعرض من السيرفر (ai_get_quota). الردود الفورية (smart/cache) لا تُحسب؛ بقية الأسئلة تُحسب (F19).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -20,7 +20,6 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../_layout';
 import { showAlert } from '@/utils/crossPlatformAlert';
@@ -247,7 +246,8 @@ export default function AIScreen() {
   const columnMax = isDesktop ? 820 : bp === 'tablet' ? 760 : undefined;
   const sidePad = isPhone ? 12 : 24;
   const column = useMemo(() => ({ width: '100%' as const, maxWidth: columnMax, alignSelf: 'center' as const }), [columnMax]);
-  const bottomSpace = Platform.OS === 'web' ? tabBar.bottom : Math.max(tabBar.bottom, insets.bottom);
+  // شريط التبويبات جزء من التخطيط (ليس فوق الصفحة): لا مسافة إضافية
+  const bottomSpace = 0;
   const lastIsUser = messages.length > 0 && messages[messages.length - 1].role === 'user';
 
   const header = (
@@ -258,8 +258,7 @@ export default function AIScreen() {
           <View>
             <Text style={styles.headerTitle}>مساعد Kodax</Text>
             <View style={styles.statusRow}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusText}>{loading ? 'يكتب…' : 'متصل · يعرف كل دروس Kodax'}</Text>
+              <Text style={styles.statusText}>{loading ? 'يكتب…' : 'للدروس والكود · يعرف مناهج Kodax'}</Text>
             </View>
           </View>
         </View>
@@ -331,7 +330,6 @@ export default function AIScreen() {
 
   return (
     <View ref={rootRef} style={styles.root}>
-      <LinearGradient colors={[C.bg, C.bgAlt, C.bg]} style={StyleSheet.absoluteFill} />
       {/* الويب على الشاشات الكبيرة: الشريط العلوي فوق الصفحة؛ غير ذلك: مساحة شريط الحالة.
           (لا نمرر paddingTop لـ SafeAreaView لأنه يلغي حشوة الـ safe area على الهاتف) */}
       <SafeAreaView edges={tabBar.top > 0 ? [] : ['top']} style={styles.safe}>
@@ -375,19 +373,19 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   safe: { flex: 1 },
   body: { flex: 1, flexDirection: 'row-reverse' },
-  sidebar: { borderLeftWidth: 1, borderLeftColor: C.border, backgroundColor: 'rgba(255,255,255,0.02)' },
+  sidebar: { borderLeftWidth: 1, borderLeftColor: C.border, backgroundColor: C.bg },
   chatCol: { flex: 1, minWidth: 0 },
-  header: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: 'rgba(11,11,24,0.85)' },
+  header: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.bg },
   headerInner: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   headerTitleWrap: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, flexShrink: 1 },
-  headerTitle: { color: '#fff', fontSize: 16.5, fontWeight: '800', textAlign: 'right' },
+  headerTitle: { color: '#fff', fontSize: 16.5,  textAlign: 'right', fontFamily: 'Plex-700' },
   statusRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5, marginTop: 2 },
   statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.success },
-  statusText: { color: C.muted, fontSize: 11.5 },
+  statusText: { color: C.muted, fontSize: 11.5, fontFamily: 'Plex-400' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
   listContent: { paddingTop: 12, paddingBottom: 12, flexGrow: 1 },
-  composerWrap: { paddingTop: 8, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: 'rgba(11,11,24,0.92)' },
+  composerWrap: { paddingTop: 8, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.bg },
   listWrap: { flex: 1 },
   toBottom: {
     position: 'absolute',
@@ -403,7 +401,7 @@ const styles = StyleSheet.create({
   noticeWrap: { position: 'absolute', top: 70, left: 0, right: 0, alignItems: 'center' },
   notice: {
     color: '#fff',
-    backgroundColor: 'rgba(30,30,55,0.97)',
+    backgroundColor: C.surfaceStrong,
     borderWidth: 1,
     borderColor: C.borderStrong,
     paddingHorizontal: 14,
@@ -413,7 +411,7 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     textAlign: 'center',
     maxWidth: 420,
-  },
+    fontFamily: 'Plex-400' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', flexDirection: 'row' },
-  sheet: { position: 'absolute', right: 0, top: 0, bottom: 0, backgroundColor: '#101026', borderLeftWidth: 1, borderLeftColor: C.border },
+  sheet: { position: 'absolute', right: 0, top: 0, bottom: 0, backgroundColor: C.surfaceStrong, borderLeftWidth: 1, borderLeftColor: C.border },
 });

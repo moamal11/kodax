@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: '#e5e7eb',
     marginBottom: 4,
-  },
+    fontFamily: 'Plex-400' },
   userText: {
     color: '#1f2937',
   },

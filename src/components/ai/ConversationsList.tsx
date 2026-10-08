@@ -155,9 +155,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    
     color: '#fff',
-  },
+    fontFamily: 'Plex-700' },
   newButton: {
     borderRadius: 12,
     overflow: 'hidden',
@@ -177,8 +177,7 @@ const styles = StyleSheet.create({
   newButtonText: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: '700',
-  },
+    fontFamily: 'Plex-700' },
   list: {
     flex: 1,
   },
@@ -194,13 +193,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '700',
+    
     color: '#9ca3af',
-  },
+    fontFamily: 'Plex-700' },
   emptyHint: {
     fontSize: 14,
     color: '#6b7280',
-  },
+    fontFamily: 'Plex-400' },
   conversationCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 16,
@@ -227,18 +226,18 @@ const styles = StyleSheet.create({
   conversationTitle: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '700',
+    
     color: '#fff',
-  },
+    fontFamily: 'Plex-700' },
   conversationDate: {
     fontSize: 12,
     color: '#9ca3af',
-  },
+    fontFamily: 'Plex-400' },
   conversationPreview: {
     fontSize: 14,
     color: '#9ca3af',
     lineHeight: 20,
-  },
+    fontFamily: 'Plex-400' },
   conversationStats: {
     flexDirection: 'row',
     gap: 16,
@@ -252,8 +251,7 @@ const styles = StyleSheet.create({
   statText: {
     fontSize: 12,
     color: '#6b7280',
-    fontWeight: '600',
-  },
+    fontFamily: 'Plex-600' },
   selectedIndicator: {
     position: 'absolute',
     left: 0,
