@@ -23,9 +23,8 @@ import {
 import { BadgeDefinition } from '@/constants/badgeDefinitions';
 import { progressService } from '@/services/progressService';
 import { hybridSyncService } from '@/services/hybridSyncService';
-import { showToast } from '@/components/ui/Toast';
-import { AchievementUnlock } from '@/components/gamification/AchievementUnlock';
-import { Badge as UIBadge } from '@/components/ui/BadgeComponent';
+import { BadgeBanner } from '@/features/rewards/BadgeBanner';
+import { msUntilRewardsQuiet } from '@/features/rewards/RewardLayer';
 import { setCheckBadgesFn } from '@/hooks/useProgressWithPoints';
 import { setHybridCheckBadgesRef } from '@/hooks/useHybridProgress';
 
@@ -74,12 +73,10 @@ export function BadgeProvider({
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // قائمة انتظار الشارات لعرض AchievementUnlock واحدة تلو الأخرى
-  const [badgeQueue, setBadgeQueue] = useState<BadgeDefinition[]>([]);
-  const [currentBadge, setCurrentBadge] = useState<BadgeDefinition | null>(
-    null
-  );
-  const [showUnlock, setShowUnlock] = useState(false);
+  // الشارات الجديدة المعلنة دفعة واحدة (BadgeBanner)
+  const [bannerBadges, setBannerBadges] = useState<BadgeDefinition[]>([]);
+  const pendingRef = useRef<BadgeDefinition[]>([]);
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // refs لمنع التكرار
   const initRef = useRef(false);
@@ -120,31 +117,23 @@ export function BadgeProvider({
       setUnreadCount(notifs.filter((n) => !n.read).length);
     };
 
-    // تسجيل callbacks
+    // تسجيل callbacks: الشارات تُجمع دفعة واحدة وتُعلن ببطاقة واحدة غير حاجبة
+    // (الشارات لا تمنح XP على السيرفر، فلا نذكر XP في الإعلان)
     badgeService.setOnBadgeEarned(async (badge) => {
-      // toast فوري - بالعربي
-      const rarityLabel =
-        badge.rarity === 'legendary'
-          ? 'أسطورية'
-          : badge.rarity === 'epic'
-            ? 'ملحمية'
-            : badge.rarity === 'rare'
-              ? 'نادرة'
-              : 'عادية';
-      showToast.success(
-        `تم الحصول على الشارة: ${badge.nameAr} (${rarityLabel}) (+${badge.xpReward} XP)`,
-        4000
-      );
-
-      // ✅ لا ننشئ إشعار للشارة - فقط نعرض AchievementUnlock + Toast
-      // السبب: الشارات تعرض في popup خاص، والإشعارات للرسائل والإنجازات المهمة فقط
-
-      // إضافة للقائمة لعرض AchievementUnlock
-      console.log('🎖️ Adding badge to queue:', badge.nameAr);
-      setBadgeQueue((prev) => {
-        console.log('📦 Current queue length:', prev.length);
-        return [...prev, badge];
-      });
+      pendingRef.current.push(badge);
+      if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+      // تأخير يسمح بانتهاء حركة XP واحتفال المستوى قبل الإعلان
+      const flush = () => {
+        const wait = msUntilRewardsQuiet();
+        if (wait > 0) {
+          flushTimerRef.current = setTimeout(flush, wait + 200);
+          return;
+        }
+        const batch = pendingRef.current;
+        pendingRef.current = [];
+        setBannerBadges((prev) => [...prev, ...batch]);
+      };
+      flushTimerRef.current = setTimeout(flush, 1200);
     });
 
     notificationService.setOnNewNotification((_notification) => {
@@ -161,32 +150,6 @@ export function BadgeProvider({
       notificationService.unsubscribeFromRealtime();
     };
   }, [userId]); // إعادة التهيئة عند تغيير userId
-
-  // ===== عرض AchievementUnlock واحدة من القائمة =====
-  // تأخير لعرض الشارة بعد رسائل XP والتحدي/الدرس
-  useEffect(() => {
-    if (!currentBadge && badgeQueue.length > 0) {
-      console.log('🎯 Showing badge from queue, remaining:', badgeQueue.length);
-      const timer = setTimeout(() => {
-        const [next, ...rest] = badgeQueue;
-        console.log('✨ Displaying badge:', next.nameAr);
-        setCurrentBadge(next);
-        setBadgeQueue(rest);
-        setShowUnlock(true);
-      }, 1500); // تأخير 1.5 ثانية لمنع التداخل مع رسائل الإكمال
-      return () => clearTimeout(timer);
-    }
-  }, [badgeQueue, currentBadge]);
-
-  const handleUnlockClose = useCallback(() => {
-    console.log('👋 Closing AchievementUnlock');
-    setShowUnlock(false);
-    // تأخير قصير لتجنب الوميض
-    setTimeout(() => {
-      setCurrentBadge(null);
-      console.log('✅ Badge cleared, queue length:', badgeQueue.length);
-    }, 300);
-  }, [badgeQueue.length]);
 
   // ===== بناء السياق الكامل للفحص =====
   const buildContext = useCallback(
@@ -335,15 +298,6 @@ export function BadgeProvider({
     setEarnedBadgeIds(ids);
   }, []);
 
-  // ===== تحويل BadgeDefinition إلى UIBadge (للاستخدام مع AchievementUnlock) =====
-  const toUIBadge = (def: BadgeDefinition): UIBadge => ({
-    id: def.id,
-    name: def.nameAr,
-    description: def.descriptionAr,
-    icon: def.icon,
-    rarity: def.rarity,
-  });
-
   const value: BadgeContextType = {
     earnedBadgeIds,
     earnedCount: earnedBadgeIds.length,
@@ -360,14 +314,7 @@ export function BadgeProvider({
   return (
     <BadgeContext.Provider value={value}>
       {children}
-      {/* عرض AchievementUnlock */}
-      {currentBadge && (
-        <AchievementUnlock
-          visible={showUnlock}
-          badge={toUIBadge(currentBadge)}
-          onClose={handleUnlockClose}
-        />
-      )}
+      {bannerBadges.length > 0 && <BadgeBanner badges={bannerBadges} onClose={() => setBannerBadges([])} />}
     </BadgeContext.Provider>
   );
 }

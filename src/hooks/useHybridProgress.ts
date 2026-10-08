@@ -126,6 +126,8 @@ export function useHybridProgress({
       xpAwarded?: number;
       alreadyCompleted?: boolean;
       levelUp?: boolean;
+      /** رد السيرفر (progress_complete_lesson): xp الإجمالي بعد الإكمال، المستوى، الدرس التالي */
+      server?: Record<string, any>;
     }> => {
       if (!userId || !courseId) {
         return { success: false, error: 'بيانات ناقصة' };
@@ -190,7 +192,7 @@ export function useHybridProgress({
         console.error('Error in post-lesson progress/badge update:', e);
       }
 
-      return { success: true, levelUp: false, xpAwarded: result.xpAwarded };
+      return { success: true, levelUp: false, xpAwarded: result.xpAwarded, server: result.server };
     },
     [courseId, userId, state.completedLessons]
   );

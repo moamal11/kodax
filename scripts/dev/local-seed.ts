@@ -24,6 +24,8 @@ const PEOPLE = [
   { n: 5, email: 'noor@kodax.local', username: 'noor_codes', full: 'نور الهدى', province: 'أربيل', gender: 'female' },
   { n: 6, email: 'ahmed@kodax.local', username: 'ahmed_k', full: 'Ahmed Karim', province: 'النجف', gender: 'male' },
   { n: 7, email: 'zainab@kodax.local', username: 'zainab_ali', full: 'زينب علي', province: 'كربلاء', gender: 'female' },
+  // قريب من حد المستوى 2 (400 XP): الدرس التالي يعبر المستوى — لاختبار احتفال المستوى
+  { n: 8, email: 'levelup@kodax.local', username: 'hasan_m', full: 'حسن مهدي', province: 'ديالى', gender: 'male' },
 ];
 
 export async function seed(env: TestEnv, _sign: (p: Record<string, unknown>) => string): Promise<Acc[]> {
@@ -72,10 +74,17 @@ export async function seed(env: TestEnv, _sign: (p: Record<string, unknown>) => 
   await complete(U(5), py, 9);
   await complete(U(6), py, 3);
   await complete(U(7), py, 11);
+  // حسن: يتوقف قبل أن يعبر 400 XP مباشرة
+  for (const l of await lessons(py, 20)) {
+    const xp = (await one(`SELECT xp FROM profiles WHERE id = $1`, [U(8)])).xp as number;
+    const next = (await one(`SELECT xp FROM lesson_catalog WHERE lesson_id = $1`, [l.lesson_id])).xp as number;
+    if (xp + next >= 400) break;
+    await asUser(U(8), `SELECT progress_complete_lesson($1, $2) r`, [l.lesson_id, l.quiz_correct]);
+  }
   await q(`UPDATE coin_config SET value = $1 WHERE key = 'progression'`, [cfg.value]);
 
   // تحديات محلولة (تسجيل السيرفر + مكافأة الكوينات كما في verify-challenge)
-  const challenges = (await q(`SELECT challenge_id, difficulty FROM challenge_catalog ORDER BY challenge_id LIMIT 6`).catch(() => ({ rows: [] }))).rows as any[];
+  const challenges = (await q(`SELECT id AS challenge_id, difficulty FROM challenge_catalog WHERE required_course_id IS NULL ORDER BY id LIMIT 6`)).rows as any[];
   const solve = async (uid: string, k: number) => {
     for (const c of challenges.slice(0, k)) {
       await asSvc(`SELECT record_challenge_submission($1, $2, 3, 3, true, 'seed') r`, [uid, c.challenge_id]).catch((e) => console.warn('[seed] challenge', e.message));
@@ -88,8 +97,8 @@ export async function seed(env: TestEnv, _sign: (p: Record<string, unknown>) => 
 
   // سلسلة أيام سابقة (النشاط اليوم سُجّل من الدوال أعلاه)
   for (const [uid, days] of [[U(1), 4], [U(2), 23], [U(4), 9]] as const) {
-    for (let d = 1; d < days; d++) await q(`INSERT INTO user_activity_days (user_id, day, lessons, challenges) VALUES ($1, (now() AT TIME ZONE 'Asia/Baghdad')::date - $2::int, 1, 0) ON CONFLICT DO NOTHING`, [uid, d]).catch(() => undefined);
-    await q(`UPDATE user_streaks SET current_streak = $2, best_streak = GREATEST(best_streak, $2) WHERE user_id = $1`, [uid, days]).catch(() => undefined);
+    for (let d = 1; d < days; d++) await q(`INSERT INTO user_activity_days (user_id, day, lessons, challenges_solved) VALUES ($1, (now() AT TIME ZONE 'Asia/Baghdad')::date - $2::int, 1, 0) ON CONFLICT DO NOTHING`, [uid, d]).catch((e) => console.warn('[seed] activity', e.message));
+    await q(`UPDATE user_streaks SET current_streak = $2, best_streak = GREATEST(best_streak, $2), last_active_day = (now() AT TIME ZONE 'Asia/Baghdad')::date WHERE user_id = $1`, [uid, days]).catch((e) => console.warn('[seed] streak', e.message));
     await q(`UPDATE profiles SET streak_days = $2 WHERE id = $1`, [uid, days]);
   }
   await asUser(U(1), `SELECT coins_claim_daily_reward() r`).catch(() => undefined);

@@ -13,7 +13,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=1, user-scalable=no"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no"
         />
 
         {/* SEO Meta Tags */}

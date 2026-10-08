@@ -8,10 +8,13 @@ import {
   View,
   Text,
   Platform,
+  I18nManager,
 } from 'react-native';
+import { ThemeProvider, useAppFonts, darkColors } from '@/design';
 import { CoinsProvider, useCoins } from '@/contexts/CoinsContext';
 import { BadgeProvider } from '@/contexts/BadgeContext';
-import { AppProvider } from '@/contexts/AppContext';
+import { AppProvider, useApp } from '@/contexts/AppContext';
+import { RewardProvider } from '@/features/rewards/RewardLayer';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { initializeDeepLinkAuthListener } from '@/services/deepLinkAuthService';
 import { showAlert } from '@/utils/crossPlatformAlert';
@@ -25,6 +28,13 @@ import PushManager from '@/components/ui/PushManager';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
+
+// التخطيط العربي مبني صراحةً (row-reverse + محاذاة يمين) في نظام التصميم؛ منع قلب النظام التلقائي
+// حتى لا ينقلب مرتين على أجهزة Android بلغة عربية.
+if (Platform.OS !== 'web') {
+  I18nManager.allowRTL(false);
+  I18nManager.forceRTL(false);
+}
 
 // Re-export useAuth for backward compatibility (pages that import from '../_layout')
 export { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +61,12 @@ function BadgeProviderConnected({
       {children}
     </BadgeProvider>
   );
+}
+
+/** طبقة المكافآت تحتاج XP الملف الشخصي (قيمة السيرفر) */
+function RewardProviderConnected({ children }: { children: React.ReactNode }) {
+  const { profile } = useApp();
+  return <RewardProvider profileXp={(profile as any)?.xp ?? null}>{children}</RewardProvider>;
 }
 
 /**
@@ -127,6 +143,7 @@ function NavigationGuard() {
  */
 function HydratedInnerLayout() {
   const { userId, isInitializing, fullName } = useAuth();
+  const fontsReady = useAppFonts();
   const [showMandatoryData, setShowMandatoryData] = useState(false);
   const [broadcastUserName, setBroadcastUserName] = useState('');
   const deepLinkListenerInitializedRef = useRef(false);
@@ -139,10 +156,10 @@ function HydratedInnerLayout() {
 
   // إخفاء SplashScreen عند اكتمال التهيئة
   useEffect(() => {
-    if (!isInitializing) {
+    if (!isInitializing && fontsReady) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [isInitializing]);
+  }, [isInitializing, fontsReady]);
 
   // تهيئة Deep Link Listener للموبايل
   useEffect(() => {
@@ -212,12 +229,12 @@ function HydratedInnerLayout() {
   // شاشة التحميل: فقط على الويب أثناء التهيئة
   if (isInitializing && Platform.OS === 'web') {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#3b82f6" />
-        <Text style={styles.loadingText}>جاري التحميل...</Text>
+      <View style={[styles.container, styles.loadingContainer]} accessibilityLabel="جارٍ التحميل">
+        <ActivityIndicator size="large" color={darkColors.brand} />
       </View>
     );
   }
+  if (!fontsReady) return <View style={styles.container} />;
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -225,7 +242,8 @@ function HydratedInnerLayout() {
       <AppProvider userId={userId}>
         <CoinsProvider userId={userId}>
           <BadgeProviderConnected userId={userId}>
-            <StatusBar style="light" backgroundColor="#0f0f1e" />
+           <RewardProviderConnected>
+            <StatusBar style="light" backgroundColor={darkColors.bg} />
 
             {/* Navigation Guard */}
             <NavigationGuard />
@@ -233,7 +251,7 @@ function HydratedInnerLayout() {
             <Stack
               screenOptions={{
                 headerShown: false,
-                contentStyle: { backgroundColor: '#0f0f1e' },
+                contentStyle: { backgroundColor: darkColors.bg },
                 animation: 'fade',
               }}
             >
@@ -279,6 +297,7 @@ function HydratedInnerLayout() {
               isForced={updateForced}
               onDismiss={() => setShowUpdate(false)}
             />
+           </RewardProviderConnected>
           </BadgeProviderConnected>
         </CoinsProvider>
       </AppProvider>
@@ -288,24 +307,21 @@ function HydratedInnerLayout() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <HydratedInnerLayout />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <HydratedInnerLayout />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0f1e',
+    backgroundColor: darkColors.bg,
   },
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingText: {
-    color: '#9ca3af',
-    marginTop: 16,
-    fontSize: 16,
   },
 });

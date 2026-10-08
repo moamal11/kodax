@@ -25,6 +25,7 @@ const child = spawn('npx', args, {
     EXPO_PUBLIC_SUPABASE_ANON_KEY: `${h}.${p}.${sig}`,
     EXPO_PUBLIC_AI_API_ENDPOINT: (process.env.LOCAL_BACKEND_URL || 'http://localhost:54321') + '/functions/v1/ai-chat',
     NODE_OPTIONS: '--max-old-space-size=8192',
+    EXPO_PUBLIC_THEME_PREVIEW: '1',
     BROWSER: 'none',
     CI: '1',
   },

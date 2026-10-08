@@ -4,13 +4,11 @@
  *
  * يدعم: # ## ### ####، القوائم (- * 1.)، القوائم الفرعية، كتل الكود ```lang،
  * `كود داخل السطر`، **عريض**، الجداول | a | b |، والملاحظات > (callout).
- * الأنماط مطابقة للأنماط السابقة في شاشة الدرس حتى لا يتغيّر شكل الدروس النصية.
+ * العرض بنظام التصميم: خط قراءة مريح، كود LTR بخط mono، وعزل الكود داخل السطر.
  */
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
-import CodeHighlight from '@/components/ui/CodeHighlight';
-
-const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
+import { View, ScrollView, Text as RNText } from 'react-native';
+import { Text, Row, CodeView, useTheme, type TextVariant, type Tone } from '@/design';
 
 type Block =
   | { type: 'h'; level: 1 | 2 | 3 | 4; text: string }
@@ -78,131 +76,96 @@ export function parseLessonContent(content: string): Block[] {
   return blocks;
 }
 
-/** نص مع **عريض** و `كود` داخل السطر */
-function Inline({ text, style }: { text: string; style: any }) {
+/** نص مع **عريض** و `كود` داخل السطر (الكود معزول LTR حتى لا تنقلب أقواسه داخل الجملة العربية) */
+function Inline({ text, variant = 'body', tone = 'secondary', weight, style }: { text: string; variant?: TextVariant; tone?: Tone; weight?: 'regular' | 'medium' | 'semibold' | 'bold'; style?: any }) {
+  const t = useTheme();
   const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean);
   return (
-    <Text style={style}>
+    <Text variant={variant} tone={tone} weight={weight} style={style}>
       {parts.map((part, i) => {
         if (part.startsWith('**') && part.endsWith('**')) {
           return (
-            <Text key={i} style={styles.bold}>
+            <RNText key={i} style={{ fontFamily: t.font.semibold, color: t.colors.text }}>
               {part.slice(2, -2)}
-            </Text>
+            </RNText>
           );
         }
         if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
           return (
-            <Text key={i} style={styles.inlineCode}>
-              {part.slice(1, -1)}
-            </Text>
+            <RNText key={i} style={{ fontFamily: t.font.mono, fontSize: 14, color: t.colors.brandText, backgroundColor: t.colors.brandSoft }}>
+              {`⁦${part.slice(1, -1)}⁩`}
+            </RNText>
           );
         }
-        return <Text key={i}>{part}</Text>;
+        return <RNText key={i}>{part}</RNText>;
       })}
     </Text>
   );
 }
 
 export function LessonContent({ content, defaultLanguage }: { content: string; defaultLanguage?: string }) {
+  const t = useTheme();
   const blocks = useMemo(() => parseLessonContent(content || ''), [content]);
   return (
-    <View>
+    <View style={{ gap: 2 }}>
       {blocks.map((b, i) => {
         switch (b.type) {
-          case 'h':
-            return <Inline key={i} text={b.text} style={[styles.h1, styles.h2, styles.h3, styles.h4][b.level - 1]} />;
-          case 'li':
+          case 'h': {
+            const v: TextVariant = b.level === 1 ? 'title' : b.level === 2 ? 'heading' : 'body';
+            return <Inline key={i} text={b.text} variant={v} tone="default" weight={b.level >= 3 ? 'semibold' : 'bold'} style={{ marginTop: b.level <= 2 ? 18 : 12, marginBottom: 6 }} />;
+          }
+          case 'li': {
+            const numbered = /\d/.test(b.marker);
             return (
-              <View key={i} style={[styles.listItem, b.depth ? styles.listNested : null]}>
-                <Text style={/\d/.test(b.marker) ? styles.listNumber : styles.listBullet}>{/\d/.test(b.marker) ? b.marker : '•'}</Text>
-                <Inline text={b.text} style={styles.listText} />
-              </View>
+              <Row key={i} gap={10} align="flex-start" style={{ paddingRight: b.depth ? 24 : 4, marginBottom: 6 }}>
+                <Text variant="body" tone="brand" weight="semibold" ltr={numbered} style={{ minWidth: numbered ? 22 : 12 }} align="right">
+                  {numbered ? b.marker : '•'}
+                </Text>
+                <View style={{ flex: 1 }}>
+                  <Inline text={b.text} />
+                </View>
+              </Row>
             );
+          }
           case 'code':
-            return (
-              <View key={i} style={styles.codeBlock}>
-                <CodeHighlight code={b.code} language={(b.lang || defaultLanguage || 'javascript').toLowerCase()} />
-              </View>
-            );
+            return <CodeView key={i} code={b.code} language={(b.lang || defaultLanguage || 'javascript').toLowerCase()} style={{ marginVertical: 10 }} />;
           case 'table':
             return (
-              <ScrollView key={i} horizontal style={styles.tableWrap} contentContainerStyle={{ flexGrow: 1 }}>
-                <View style={styles.table}>
-                  <View style={[styles.tableRow, styles.tableHeader]}>
+              <ScrollView key={i} horizontal style={{ marginVertical: 10 }} contentContainerStyle={{ flexGrow: 1 }}>
+                <View style={{ borderWidth: 1, borderColor: t.colors.border, borderRadius: t.radius.md, overflow: 'hidden', minWidth: '100%' }}>
+                  <Row style={{ backgroundColor: t.colors.surfaceRaised }}>
                     {b.header.map((c, j) => (
-                      <Inline key={j} text={c} style={[styles.tableCell, styles.tableHeaderText]} />
+                      <View key={j} style={{ flex: 1, minWidth: 110, padding: 10 }}>
+                        <Inline text={c} variant="bodySm" tone="default" weight="semibold" />
+                      </View>
                     ))}
-                  </View>
+                  </Row>
                   {b.rows.map((r, j) => (
-                    <View key={j} style={styles.tableRow}>
+                    <Row key={j} style={{ borderTopWidth: 1, borderTopColor: t.colors.border }}>
                       {b.header.map((_, k) => (
-                        <Inline key={k} text={r[k] ?? ''} style={styles.tableCell} />
+                        <View key={k} style={{ flex: 1, minWidth: 110, padding: 10 }}>
+                          <Inline text={r[k] ?? ''} variant="bodySm" />
+                        </View>
                       ))}
-                    </View>
+                    </Row>
                   ))}
                 </View>
               </ScrollView>
             );
           case 'quote':
             return (
-              <View key={i} style={styles.quote}>
-                <Inline text={b.text} style={styles.quoteText} />
+              <View key={i} style={{ borderRightWidth: 3, borderRightColor: t.colors.warning, backgroundColor: t.colors.warningSoft, padding: 12, borderRadius: t.radius.sm, marginVertical: 8 }}>
+                <Inline text={b.text} tone="default" variant="bodySm" />
               </View>
             );
           case 'space':
-            return <View key={i} style={{ height: 12 }} />;
+            return <View key={i} style={{ height: 10 }} />;
           default:
-            return <Inline key={i} text={b.text} style={styles.paragraph} />;
+            return <Inline key={i} text={b.text} style={{ marginBottom: 4 }} />;
         }
       })}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  h1: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 16, marginTop: 8 },
-  h2: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 12, marginTop: 16 },
-  h3: { fontSize: 16, fontWeight: '600', color: '#d1d5db', marginBottom: 8, marginTop: 12 },
-  h4: { fontSize: 15, fontWeight: '600', color: '#9ca3af', marginBottom: 6, marginTop: 10 },
-  paragraph: { fontSize: 15, color: '#d1d5db', lineHeight: 24, marginBottom: 8 },
-  listItem: { flexDirection: 'row', marginBottom: 8, paddingRight: 8 },
-  listNested: { paddingRight: 28 },
-  listBullet: { color: '#3b82f6', fontSize: 16, marginLeft: 8, width: 16 },
-  listNumber: { color: '#3b82f6', fontSize: 14, fontWeight: '600', marginLeft: 8, width: 24 },
-  listText: { flex: 1, fontSize: 15, color: '#d1d5db', lineHeight: 22 },
-  bold: { fontWeight: 'bold', color: '#fff' },
-  inlineCode: {
-    fontFamily: MONO,
-    fontSize: 13,
-    color: '#93c5fd',
-    backgroundColor: 'rgba(59, 130, 246, 0.12)',
-  },
-  codeBlock: {
-    backgroundColor: '#0d1117',
-    padding: 14,
-    borderRadius: 12,
-    marginVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(75, 85, 99, 0.4)',
-    // direction خاصية تخطيط في React Native الأصلي؛ React Native Web يرفضها (يكفي dir في الويب)
-    ...(Platform.OS === 'web' ? {} : { direction: 'ltr' as const }),
-  },
-  tableWrap: { marginVertical: 10 },
-  table: { borderWidth: 1, borderColor: 'rgba(75, 85, 99, 0.5)', borderRadius: 10, overflow: 'hidden', minWidth: '100%' },
-  tableRow: { flexDirection: 'row-reverse', borderBottomWidth: 1, borderBottomColor: 'rgba(75, 85, 99, 0.35)' },
-  tableHeader: { backgroundColor: 'rgba(59, 130, 246, 0.12)' },
-  tableHeaderText: { fontWeight: '700', color: '#fff' },
-  tableCell: { flex: 1, minWidth: 110, padding: 8, fontSize: 14, color: '#d1d5db', textAlign: 'right' },
-  quote: {
-    borderRightWidth: 3,
-    borderRightColor: '#f59e0b',
-    backgroundColor: 'rgba(245, 158, 11, 0.08)',
-    padding: 12,
-    borderRadius: 8,
-    marginVertical: 8,
-  },
-  quoteText: { fontSize: 14, color: '#fde68a', lineHeight: 22 },
-});
 
 export default LessonContent;

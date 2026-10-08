@@ -872,6 +872,8 @@ const server = http.createServer(async (req, res) => {
   const applied = await env.applyUpTo();
   await introspect();
   const accounts = await seed(env, signJwt);
+  // محلياً فقط: فاصل 5 ثوانٍ بين الدروس بدل 20 (لتجربة رحلة الدروس المتتالية بسرعة). الإنتاج لا يتأثر.
+  await env.db.exec(`UPDATE coin_config SET value = jsonb_set(value, '{min_seconds_between_lessons}', '5') WHERE key = 'progression'`);
   for (const a of accounts) USERS.set(a.email, { ...a, password: SEED_PASSWORD, created_at: new Date().toISOString() });
   server.listen(PORT, () => {
     console.log(`local backend on http://localhost:${PORT} — ${applied.length} migrations, ${COLS.size} relations, ${FNS.size} functions`);
