@@ -403,7 +403,7 @@ function generateCertificateHTML(
     month: 'long',
     day: 'numeric',
   });
-  const dateAR = issuedDate.toLocaleDateString('ar-IQ', {
+  const dateAR = issuedDate.toLocaleDateString('ar-IQ-u-nu-latn', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',

@@ -21,9 +21,12 @@ type FieldProps = Omit<TextInputProps, 'style'> & {
   style?: StyleProp<ViewStyle>;
   /** يخفي الـlabel بصرياً ويُبقيه لقارئ الشاشة */
   hideLabel?: boolean;
+  /** أقل ارتفاع للحقل متعدد الأسطر (الافتراضي 96) */
+  minHeight?: number;
 };
 
-export function Field({ label, hint, error, icon, secure, ltr, inputRef, style, multiline, hideLabel, ...input }: FieldProps) {
+export function Field({ label, hint, error, icon, secure, ltr, inputRef, style, multiline, hideLabel, minHeight, ...input }: FieldProps) {
+  const mh = multiline ? minHeight ?? 96 : 48;
   const t = useTheme();
   const c = t.colors;
   const [focused, setFocused] = useState(false);
@@ -39,7 +42,7 @@ export function Field({ label, hint, error, icon, secure, ltr, inputRef, style, 
       <Row
         gap={8}
         style={{
-          minHeight: multiline ? 96 : 48,
+          minHeight: mh,
           backgroundColor: c.surfaceSunken,
           borderWidth: 1,
           borderColor,
@@ -76,7 +79,8 @@ export function Field({ label, hint, error, icon, secure, ltr, inputRef, style, 
               textAlign: ltr ? 'left' : 'right',
               writingDirection: ltr ? 'ltr' : 'rtl',
               textAlignVertical: multiline ? 'top' : 'center',
-              minHeight: multiline ? 96 : undefined,
+              minHeight: multiline ? mh - 2 : undefined,
+              maxHeight: multiline ? 180 : undefined,
             },
             Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null,
           ]}
@@ -189,14 +193,16 @@ export function ChipBar({ children, style }: { children: React.ReactNode; style?
       horizontal
       showsHorizontalScrollIndicator={false}
       style={[{ flexGrow: 0 }, style]}
-      contentContainerStyle={{ flexDirection: 'row-reverse', gap: 8, paddingVertical: 2, flexGrow: 1 }}
+      // الويب: اتجاه المتصفح RTL يبدأ التمرير من اليمين أصلاً
+      {...(Platform.OS === 'web' ? ({ dir: 'rtl' } as any) : null)}
+      contentContainerStyle={{ flexDirection: Platform.OS === 'web' ? 'row' : 'row-reverse', gap: 8, paddingVertical: 2, flexGrow: 1 }}
       onScroll={() => {
         atStart.current = false;
       }}
       scrollEventThrottle={64}
       // المحتوى مرتب من اليمين؛ البداية المرئية = نهاية التمرير الأفقي
       onContentSizeChange={() => {
-        if (atStart.current) ref.current?.scrollToEnd({ animated: false });
+        if (Platform.OS !== 'web' && atStart.current) ref.current?.scrollToEnd({ animated: false });
       }}
     >
       {children}

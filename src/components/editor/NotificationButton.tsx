@@ -63,7 +63,7 @@ export function timeAgo(d: Date): string {
   if (h < 24) return `قبل ${h} س`;
   const days = Math.floor(h / 24);
   if (days < 7) return days === 1 ? 'أمس' : `قبل ${days} أيام`;
-  return d.toLocaleDateString('ar-IQ', { day: 'numeric', month: 'short', timeZone: 'Asia/Baghdad' });
+  return d.toLocaleDateString('ar-IQ-u-nu-latn', { day: 'numeric', month: 'short', timeZone: 'Asia/Baghdad' });
 }
 
 export function NotificationButton({ onNotificationPress }: NotificationButtonProps) {

@@ -399,7 +399,7 @@ function CertificateCard({
 
       <View style={styles.certFooter}>
         <Text style={styles.certDate}>
-          {new Date(certificate.issued_at).toLocaleDateString('ar-IQ', {
+          {new Date(certificate.issued_at).toLocaleDateString('ar-IQ-u-nu-latn', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',

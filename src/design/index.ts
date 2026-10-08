@@ -10,3 +10,4 @@ export * from './components/Controls';
 export * from './components/Feedback';
 export * from './components/Screen';
 export * from './components/CodeView';
+export * from './arabic';

@@ -23,7 +23,7 @@ function relTime(iso: string): string {
   const hours = Math.round(mins / 60);
   if (hours < 24) return `قبل ${hours} س`;
   const days = Math.round(hours / 24);
-  return days < 30 ? `قبل ${days} يوم` : new Date(iso).toLocaleDateString('ar-IQ');
+  return days < 30 ? `قبل ${days} يوم` : new Date(iso).toLocaleDateString('ar-IQ-u-nu-latn');
 }
 
 export function ConversationPanel({ conversations, currentId, onSelect, onNew, onDelete, onClose }: Props) {

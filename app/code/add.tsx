@@ -8,6 +8,8 @@
  * ✅ عنوان/وصف في dialog عند النشر
  */
 
+import { Sheet, Field, Button, IconButton, Chip, ChipBar, Segmented, SwitchRow, Surface, Tag, Row, Col, Text as DText, useTheme, darkColors } from '@/design';
+import { showToast } from '@/components/ui/Toast';
 import React, {
   useState,
   useRef,
@@ -1472,6 +1474,11 @@ export default function AddCodeScreen() {
     });
   }, []);
   const [saving, setSaving] = useState(false);
+  const [pubError, setPubError] = useState<string | null>(null);
+  const t = useTheme();
+  useEffect(() => {
+    if (showPublish) setPubError(null);
+  }, [showPublish]);
 
   // UI
   const [copied, setCopied] = useState(false);
@@ -1722,6 +1729,7 @@ export default function AddCodeScreen() {
   // Publish or Update
   const handlePublish = useCallback(async () => {
     if (!user?.id || !pubTitle.trim()) return;
+    setPubError(null);
     setPublishing(true);
     haptic('medium');
     const finalCode =
@@ -1754,7 +1762,10 @@ export default function AddCodeScreen() {
     setPublishing(false);
     if (!result.error && result.id) {
       setShowPublish(false);
+      showToast.success(isOwnerEdit ? 'تم تحديث الكود' : 'تم النشر في المجتمع');
       router.back();
+    } else {
+      setPubError('تعذّر النشر. كودك ما زال هنا — تحقق من الاتصال وحاول مرة أخرى.');
     }
   }, [
     user?.id,
@@ -1772,6 +1783,7 @@ export default function AddCodeScreen() {
   // Save draft
   const handleDraft = useCallback(async () => {
     if (!user?.id || !pubTitle.trim()) return;
+    setPubError(null);
     setSaving(true);
     const finalCode =
       mode === 'project'
@@ -1788,7 +1800,10 @@ export default function AddCodeScreen() {
     setSaving(false);
     if (!error) {
       setShowPublish(false);
+      showToast.success('حُفظت المسودة. تجدها في حسابي ← أكوادي (خاصة بك).');
       router.back();
+    } else {
+      setPubError('تعذّر حفظ المسودة. كودك ما زال هنا — حاول مرة أخرى.');
     }
   }, [user?.id, pubTitle, pubDesc, code, language, mode, projectFiles]);
 
@@ -1823,190 +1838,77 @@ export default function AddCodeScreen() {
       >
         <View style={[s.container, isLargeScreen && wS.container]}>
           {/* ===== HEADER ===== */}
-          <View style={s.header}>
-            <TouchableOpacity style={s.hBtn} onPress={handleBack}>
-              <Ionicons name="arrow-back" size={22} color="#d1d5db" />
-            </TouchableOpacity>
-
-            <View style={s.headerCenter}>
-              <MaterialCommunityIcons
-                name={mode === 'project' ? 'folder-open' : 'code-tags'}
-                size={18}
-                color="#8b5cf6"
-              />
-              <Text style={s.headerTitle}>
-                {mode === 'project'
-                  ? '\u0645\u0634\u0631\u0648\u0639 \u0648\u064a\u0628'
-                  : '\u0645\u062d\u0631\u0631 \u0627\u0644\u0623\u0643\u0648\u0627\u062f'}
-              </Text>
-            </View>
-
-            <View style={s.hRight}>
-              <TouchableOpacity style={s.hBtn} onPress={handleCopy}>
-                <Ionicons
-                  name={copied ? 'checkmark' : 'copy-outline'}
-                  size={18}
-                  color={copied ? '#10b981' : '#d1d5db'}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity style={s.runBtn} onPress={handleRun}>
-                <Ionicons name="play" size={16} color="#10b981" />
-                <Text style={s.runBtnTxt}>تشغيل</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.pubBtn}
-                onPress={() => setShowPublish(true)}
-              >
-                <MaterialIcons
-                  name={isOwnerEdit ? 'save' : 'publish'}
-                  size={16}
-                  color="#fff"
-                />
-                <Text style={s.pubBtnTxt}>{isOwnerEdit ? 'تحديث' : 'نشر'}</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={{ borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
+            <Row gap={6} style={{ paddingHorizontal: 8, minHeight: 56 }}>
+              <IconButton icon="arrow-forward" label="رجوع" onPress={handleBack} />
+              <View style={{ flex: 1 }}>
+                <DText variant="heading" numberOfLines={1}>
+                  {isOwnerEdit ? 'تعديل الكود' : isEditMode ? 'نسختك من الكود' : mode === 'project' ? 'مشروع ويب جديد' : 'كود جديد'}
+                </DText>
+                <DText variant="caption" tone="muted" numberOfLines={1}>
+                  {mode === 'project' ? 'HTML · CSS · JavaScript' : selectedLang.full} · {lineCount} سطر
+                </DText>
+              </View>
+              <IconButton icon={copied ? 'checkmark' : 'copy-outline'} label={copied ? 'تم النسخ' : 'نسخ الكود'} onPress={handleCopy} color={copied ? t.colors.successText : undefined} />
+              <Button label={mode === 'project' || activeLang === 'html' ? 'معاينة' : 'شغّل'} icon={mode === 'project' || activeLang === 'html' ? 'eye-outline' : 'play'} variant="success" size="sm" onPress={handleRun} />
+              <Button label={isOwnerEdit ? 'تحديث' : 'نشر'} size="sm" onPress={() => setShowPublish(true)} />
+            </Row>
           </View>
 
           {/* ===== LANGUAGE STRIP ===== */}
-          {mode === 'snippet' && !langFromParam && (
-            <FlatList
-              data={LANGUAGES}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(i) => i.id}
-              style={s.langStrip}
-              contentContainerStyle={s.langStripInner}
-              renderItem={({ item }) => {
-                const on = language === item.id;
-                return (
-                  <TouchableOpacity
-                    style={[
-                      s.langChip,
-                      on && {
-                        backgroundColor: item.color + '25',
-                        borderColor: item.color,
-                      },
-                    ]}
+          {/* F23: «ويب» يحوّل لمشروع HTML/CSS/JS حقيقي، وبقية اللغات تعيد وضع الملف الواحد */}
+          {!langFromParam && !isEditMode && (
+            <View style={{ paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
+              <ChipBar>
+                {LANGUAGES.map((item) => (
+                  <Chip
+                    key={item.id}
+                    label={item.name}
+                    selected={item.id === 'web' ? mode === 'project' : mode === 'snippet' && language === item.id}
                     onPress={() => {
-                      setLanguage(item.id);
                       haptic();
+                      if (item.id === 'web') {
+                        setMode('project');
+                        setActiveTab('html');
+                      } else {
+                        setMode('snippet');
+                        setLanguage(item.id);
+                      }
                     }}
-                  >
-                    <View
-                      style={[
-                        s.langDot,
-                        { backgroundColor: on ? item.color : '#4b5563' },
-                      ]}
-                    />
-                    <Text style={[s.langTxt, on && { color: item.color }]}>
-                      {item.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          )}
-
-          {/* ===== SELECTED LANGUAGE BADGE (when lang from param) ===== */}
-          {mode === 'snippet' && langFromParam && (
-            <View style={s.selectedLangBadge}>
-              <View
-                style={[
-                  s.selectedLangIcon,
-                  { backgroundColor: selectedLang.color + '30' },
-                ]}
-              >
-                <Ionicons
-                  name={selectedLang.icon as any}
-                  size={20}
-                  color={selectedLang.color}
-                />
-              </View>
-              <View style={s.selectedLangTextWrap}>
-                <Text style={s.selectedLangLabel}>لغة البرمجة</Text>
-                <Text
-                  style={[s.selectedLangName, { color: selectedLang.color }]}
-                >
-                  {selectedLang.full}
-                </Text>
-              </View>
-              <View
-                style={[
-                  s.selectedLangDot,
-                  { backgroundColor: selectedLang.color },
-                ]}
-              />
+                  />
+                ))}
+              </ChipBar>
             </View>
           )}
 
           {/* ===== PROJECT TABS ===== */}
           {mode === 'project' && (
-            <View style={s.projTabs}>
-              {(['html', 'css', 'js'] as ProjectTab[]).map((tab) => {
-                const on = activeTab === tab;
-                const c =
-                  tab === 'html'
-                    ? '#e34c26'
-                    : tab === 'css'
-                      ? '#1572b6'
-                      : '#f7df1e';
-                return (
-                  <TouchableOpacity
-                    key={tab}
-                    style={[
-                      s.projTab,
-                      on && {
-                        borderBottomColor: c,
-                        backgroundColor: '#1a1a3e',
-                      },
-                    ]}
-                    onPress={() => {
-                      setActiveTab(tab);
-                      // Push new tab's code to WebView
-                      if (Platform.OS !== 'web' && mobileEditorRef.current) {
-                        mobileEditorRef.current.setCodeExternal(
-                          projectFiles[tab]
-                        );
-                      }
-                      haptic();
-                    }}
-                  >
-                    <View style={[s.projTabDot, { backgroundColor: c }]} />
-                    <Text style={[s.projTabTxt, on && { color: '#fff' }]}>
-                      {tab === 'html'
-                        ? 'index.html'
-                        : tab === 'css'
-                          ? 'style.css'
-                          : 'script.js'}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+            <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
+              <Segmented
+                value={activeTab}
+                onChange={(tab) => {
+                  setActiveTab(tab as ProjectTab);
+                  if (Platform.OS !== 'web' && mobileEditorRef.current) mobileEditorRef.current.setCodeExternal(projectFiles[tab as ProjectTab]);
+                  haptic();
+                }}
+                options={[
+                  { value: 'html', label: 'index.html' },
+                  { value: 'css', label: 'style.css' },
+                  { value: 'js', label: 'script.js' },
+                ]}
+              />
             </View>
           )}
 
           {/* ===== STATUS BAR ===== */}
-          <View style={s.statusBar}>
-            <View style={s.statusL}>
-              <View style={s.dots}>
-                <View style={[s.dot, { backgroundColor: '#ef4444' }]} />
-                <View style={[s.dot, { backgroundColor: '#f59e0b' }]} />
-                <View style={[s.dot, { backgroundColor: '#10b981' }]} />
-              </View>
-              <Text style={s.fileName}>
-                {mode === 'project'
-                  ? activeTab === 'html'
-                    ? 'index.html'
-                    : activeTab === 'css'
-                      ? 'style.css'
-                      : 'script.js'
-                  : `main.${selectedLang.id === 'react' ? 'jsx' : selectedLang.id === 'csharp' ? 'cs' : selectedLang.id}`}
-              </Text>
-            </View>
-            <Text style={s.statusInfo}>
-              {lineCount} سطر • {activeCode.length} حرف
-            </Text>
-          </View>
+          <Row justify="space-between" style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
+            <DText variant="caption" tone="muted" tabular>
+              {lineCount} سطر · {activeCode.length} حرف
+            </DText>
+            <DText mono variant="caption" ltr style={{ color: t.colors.codeMuted }}>
+              {mode === 'project' ? (activeTab === 'html' ? 'index.html' : activeTab === 'css' ? 'style.css' : 'script.js') : `main.${selectedLang.id === 'react' ? 'jsx' : selectedLang.id === 'csharp' ? 'cs' : selectedLang.id}`}
+            </DText>
+          </Row>
 
           {/* ===== CODE EDITOR ===== */}
           <View style={[s.editorWrap, isLargeScreen && wS.editorWrap]}>
@@ -2136,277 +2038,96 @@ export default function AddCodeScreen() {
           )}
         </View>
 
-        {/* ===== RUN OUTPUT PANEL ===== */}
-        <Modal
+        {/* ===== RUN OUTPUT ===== */}
+        <Sheet
           visible={showRunPanel}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowRunPanel(false)}
+          onClose={() => setShowRunPanel(false)}
+          title="الناتج"
+          maxWidth={640}
+          footer={
+            <Row gap={8}>
+              <Button
+                label="شغّل مجدداً"
+                icon="refresh"
+                variant="secondary"
+                onPress={() => {
+                  setShowRunPanel(false);
+                  setTimeout(handleRun, 200);
+                }}
+                style={{ flex: 1 }}
+              />
+              <Button label="إغلاق" variant="ghost" onPress={() => setShowRunPanel(false)} />
+            </Row>
+          }
         >
-          <TouchableOpacity
-            style={s.overlay}
-            activeOpacity={1}
-            onPress={() => setShowRunPanel(false)}
-          >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => {}}
-              style={[s.runPanel, isLargeScreen && wS.dialog]}
-            >
-              <View style={s.panelHandle} />
-              <View style={s.runPanelHeader}>
-                <Text style={s.runPanelTitle}>الإخراج</Text>
-                <TouchableOpacity onPress={() => setShowRunPanel(false)}>
-                  <Ionicons name="close-circle" size={24} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-              <ScrollView style={s.outputScroll}>
-                <Text style={s.outputText} selectable>
-                  {runOutput}
-                </Text>
-              </ScrollView>
-              <View style={s.runPanelActions}>
-                <TouchableOpacity
-                  style={s.runAgainBtn}
-                  onPress={() => {
-                    setShowRunPanel(false);
-                    setTimeout(handleRun, 200);
-                  }}
-                >
-                  <Ionicons name="refresh" size={16} color="#8b5cf6" />
-                  <Text style={s.runAgainTxt}>إعادة التشغيل</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={s.closeOutputBtn}
-                  onPress={() => setShowRunPanel(false)}
-                >
-                  <Text style={s.closeOutputTxt}>إغلاق</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
+          <View style={{ backgroundColor: t.colors.codeBg, borderRadius: t.radius.md, borderWidth: 1, borderColor: t.colors.codeBorder, padding: 12 }}>
+            <DText mono ltr variant="bodySm" selectable style={{ color: runOutput.startsWith('[خطأ]') ? t.colors.dangerText : t.colors.codeText }}>
+              {runOutput.replace(/^\[(نجاح|خطأ|تحذير|معلومة)\]\s*/gm, '')}
+            </DText>
+          </View>
+        </Sheet>
 
         {/* ===== WEB PREVIEW (for projects & HTML) ===== */}
-        <Modal
-          visible={showWebPreview}
-          transparent={false}
-          animationType="slide"
-          onRequestClose={() => setShowWebPreview(false)}
-        >
-          <SafeAreaView style={s.previewSafe}>
-            <View style={s.previewHeader}>
-              <TouchableOpacity
-                style={s.hBtn}
-                onPress={() => setShowWebPreview(false)}
-              >
-                <Ionicons name="close" size={22} color="#d1d5db" />
-              </TouchableOpacity>
-              <Text style={s.previewTitle}>معاينة المشروع</Text>
-              <TouchableOpacity
-                style={s.hBtn}
+        <Modal visible={showWebPreview} transparent={false} animationType="slide" onRequestClose={() => setShowWebPreview(false)}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg }}>
+            <Row gap={6} style={{ paddingHorizontal: 8, minHeight: 56, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
+              <IconButton icon="close" label="إغلاق المعاينة" onPress={() => setShowWebPreview(false)} />
+              <DText variant="heading" style={{ flex: 1 }}>
+                معاينة المشروع
+              </DText>
+              <IconButton
+                icon="refresh"
+                label="إعادة تحميل المعاينة"
                 onPress={() => {
                   setShowWebPreview(false);
                   setTimeout(() => setShowWebPreview(true), 100);
                 }}
-              >
-                <Ionicons name="refresh" size={20} color="#d1d5db" />
-              </TouchableOpacity>
+              />
+            </Row>
+            <View style={{ flex: 1, margin: isLargeScreen ? 24 : 8, borderRadius: t.radius.md, overflow: 'hidden', backgroundColor: '#fff' }}>
+              {Platform.OS === 'web' ? (
+                // @ts-ignore — عنصر DOM على الويب فقط
+                <iframe srcDoc={webPreviewHtml} style={{ width: '100%', height: '100%', border: 'none' }} sandbox="allow-scripts allow-same-origin" title="معاينة المشروع" />
+              ) : (
+                <WebView source={{ html: webPreviewHtml }} style={{ flex: 1 }} javaScriptEnabled domStorageEnabled startInLoadingState scalesPageToFit originWhitelist={['*']} />
+              )}
             </View>
-            {Platform.OS === 'web' ? (
-              <View style={s.iframeWrap}>
-                {/* @ts-ignore - dangerouslySetInnerHTML for web only */}
-                <div
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: '#ffffff',
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <iframe
-                    srcDoc={webPreviewHtml}
-                    style={{ width: '100%', height: '100%', border: 'none' }}
-                    sandbox="allow-scripts allow-same-origin"
-                    title="preview"
-                  />
-                </div>
-              </View>
-            ) : (
-              <View style={{ flex: 1, backgroundColor: '#fff' }}>
-                <WebView
-                  source={{ html: webPreviewHtml }}
-                  style={{ flex: 1 }}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  startInLoadingState={true}
-                  scalesPageToFit={true}
-                  originWhitelist={['*']}
-                />
-              </View>
-            )}
           </SafeAreaView>
         </Modal>
 
-        {/* ===== PUBLISH DIALOG ===== */}
-        <Modal
-          visible={showPublish}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowPublish(false)}
-        >
-          <KeyboardAvoidingView
-            style={s.flex}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          >
-            <TouchableOpacity
-              style={s.overlay}
-              activeOpacity={1}
-              onPress={() => setShowPublish(false)}
-            >
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => {}}
-                style={[s.pubSheet, isLargeScreen && wS.dialog]}
-              >
-                <View style={s.panelHandle} />
-                <Text style={s.pubSheetTitle}>نشر الكود</Text>
-                <Text style={s.pubSheetSub}>
-                  أضف عنوان ووصف للكود قبل النشر
-                </Text>
-
-                <Text style={s.fieldLabel}>عنوان الكود *</Text>
-                <TextInput
-                  style={[
-                    s.fieldInput,
-                    Platform.OS === 'web' && ({ outline: 'none' } as any),
-                  ]}
-                  placeholder="مثال: دالة ترتيب المصفوفات"
-                  placeholderTextColor="#4b5563"
-                  value={pubTitle}
-                  onChangeText={setPubTitle}
-                  maxLength={100}
-                  autoFocus
-                />
-
-                <Text style={s.fieldLabel}>
-                  وصف{' '}
-                  <Text style={{ color: '#4b5563', fontSize: 12 }}>
-                    (اختياري)
-                  </Text>
-                </Text>
-                <TextInput
-                  style={[
-                    s.fieldInput,
-                    s.fieldDesc,
-                    Platform.OS === 'web' && ({ outline: 'none' } as any),
-                  ]}
-                  placeholder="اشرح ما يفعله الكود..."
-                  placeholderTextColor="#4b5563"
-                  value={pubDesc}
-                  onChangeText={setPubDesc}
-                  maxLength={500}
-                  multiline
-                  numberOfLines={3}
-                />
-
-                <View style={s.pubPreview}>
-                  <View
-                    style={[
-                      s.pubPreviewDot,
-                      { backgroundColor: selectedLang.color },
-                    ]}
-                  />
-                  <Text style={s.pubPreviewLang}>
-                    {mode === 'project' ? 'مشروع HTML' : selectedLang.full}
-                  </Text>
-                  <Text style={s.pubPreviewLines}>{lineCount} سطر</Text>
-                </View>
-
-                <TouchableOpacity
-                  style={s.rulesBox}
-                  onPress={toggleRules}
-                  activeOpacity={0.8}
-                >
-                  <View style={s.rulesHeader}>
-                    <Ionicons
-                      name={rulesAccepted ? 'checkbox' : 'square-outline'}
-                      size={20}
-                      color={rulesAccepted ? '#10b981' : '#9ca3af'}
-                    />
-                    <Text style={s.rulesTitle}>أوافق على قواعد النشر</Text>
-                  </View>
-                  {PUBLISH_RULES.map((rule) => (
-                    <Text key={rule} style={s.rulesItem}>
-                      • {rule}
-                    </Text>
-                  ))}
-                </TouchableOpacity>
-
-                <View style={s.pubActions}>
-                  <TouchableOpacity
-                    style={s.discardBtn}
-                    onPress={() => {
-                      setShowPublish(false);
-                      router.back();
-                    }}
-                  >
-                    <MaterialIcons
-                      name="delete-outline"
-                      size={16}
-                      color="#ef4444"
-                    />
-                    <Text style={s.discardTxt}>تجاهل</Text>
-                  </TouchableOpacity>
-                  {!isEditMode && (
-                    <TouchableOpacity
-                      style={[s.draftBtn, !pubTitle.trim() && s.disabled]}
-                      onPress={handleDraft}
-                      disabled={!pubTitle.trim() || saving}
-                    >
-                      {saving ? (
-                        <ActivityIndicator size="small" color="#9ca3af" />
-                      ) : (
-                        <Text style={s.draftTxt}>مسودة</Text>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    style={[
-                      s.pubDialogBtn,
-                      (!pubTitle.trim() || !rulesAccepted) && s.disabled,
-                    ]}
-                    onPress={handlePublish}
-                    disabled={!pubTitle.trim() || !rulesAccepted || publishing}
-                  >
-                    {publishing ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <MaterialIcons
-                          name={isOwnerEdit ? 'save' : 'publish'}
-                          size={16}
-                          color="#fff"
-                        />
-                        <Text style={s.pubDialogTxt}>
-                          {isOwnerEdit ? 'تحديث الكود' : 'نشر'}
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity
-                  style={s.cancelBtn}
-                  onPress={() => setShowPublish(false)}
-                >
-                  <Text style={s.cancelTxt}>إلغاء - العودة للتحرير</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
-            </TouchableOpacity>
-          </KeyboardAvoidingView>
-        </Modal>
+        {/* ===== PUBLISH ===== */}
+        <Sheet visible={showPublish} onClose={() => setShowPublish(false)} title={isOwnerEdit ? 'تحديث الكود' : 'انشر أو احفظ'} maxWidth={520}>
+          <Col gap={14}>
+            <Field label="العنوان" placeholder="مثال: حاسبة المعدل الفصلي" value={pubTitle} onChangeText={setPubTitle} maxLength={100} autoFocus hint="يظهر في المجتمع وفي ملفك" />
+            <Field label="الوصف (اختياري)" placeholder="ماذا يفعل الكود؟ ماذا تعلمت منه؟" value={pubDesc} onChangeText={setPubDesc} maxLength={500} multiline />
+            <Row gap={8} style={{ justifyContent: 'flex-start' }}>
+              <Tag label={mode === 'project' ? 'مشروع ويب' : selectedLang.full} tone="brand" />
+              <Tag label={`${lineCount} سطر`} />
+            </Row>
+            <SwitchRow title="أوافق على قواعد النشر" hint={PUBLISH_RULES.join(' · ')} value={rulesAccepted} onValueChange={toggleRules} last />
+            {!!pubError && (
+              <Surface variant="danger" padding={12}>
+                <DText variant="bodySm" tone="danger" accessibilityLiveRegion="polite">
+                  {pubError}
+                </DText>
+              </Surface>
+            )}
+            <Button label={isOwnerEdit ? 'حفظ التحديث' : 'انشر في المجتمع'} icon={isOwnerEdit ? 'save-outline' : 'cloud-upload-outline'} onPress={handlePublish} disabled={!pubTitle.trim() || !rulesAccepted} loading={publishing} size="lg" />
+            {!isEditMode && <Button label="احفظه كمسودة خاصة" variant="secondary" onPress={handleDraft} disabled={!pubTitle.trim()} loading={saving} />}
+            <Row gap={8}>
+              <Button label="متابعة التحرير" variant="ghost" onPress={() => setShowPublish(false)} style={{ flex: 1 }} />
+              <Button
+                label="خروج بدون حفظ"
+                variant="ghost"
+                onPress={() => {
+                  setShowPublish(false);
+                  router.back();
+                }}
+                style={{ flex: 1 }}
+              />
+            </Row>
+          </Col>
+        </Sheet>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -2431,16 +2152,16 @@ const s = StyleSheet.create({
     gap: 8,
     marginBottom: 4,
   },
-  rulesTitle: { color: '#e5e7eb', fontSize: 14, fontWeight: '700' },
+  rulesTitle: { color: darkColors.text, fontSize: 14, fontWeight: '700' },
   rulesItem: {
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     fontSize: 12,
     textAlign: 'right',
     lineHeight: 18,
   },
   flex: { flex: 1 },
-  safe: { flex: 1, backgroundColor: '#0f0f1e' },
-  container: { flex: 1, backgroundColor: '#0f0f1e' },
+  safe: { flex: 1, backgroundColor: darkColors.bg },
+  container: { flex: 1, backgroundColor: darkColors.bg },
 
   // Header
   header: {
@@ -2450,13 +2171,13 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#1a1a3e',
+    borderBottomColor: darkColors.surface,
   },
   hBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#1a1a3e',
+    backgroundColor: darkColors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2472,7 +2193,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#10b98140',
   },
-  runBtnTxt: { fontSize: 12, fontWeight: '700', color: '#10b981' },
+  runBtnTxt: { fontSize: 12, fontWeight: '700', color: darkColors.success },
   pubBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2480,7 +2201,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#8b5cf6',
+    backgroundColor: darkColors.brand,
   },
   pubBtnTxt: { fontSize: 12, fontWeight: '700', color: '#fff' },
 
@@ -2502,7 +2223,7 @@ const s = StyleSheet.create({
   langStrip: {
     maxHeight: 38,
     borderBottomWidth: 1,
-    borderBottomColor: '#1a1a3e',
+    borderBottomColor: darkColors.surface,
   },
   langStripInner: {
     paddingHorizontal: 10,
@@ -2517,12 +2238,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 14,
-    backgroundColor: '#141428',
+    backgroundColor: darkColors.surfaceSunken,
     borderWidth: 1,
-    borderColor: '#252550',
+    borderColor: darkColors.border,
   },
   langDot: { width: 5, height: 5, borderRadius: 2.5 },
-  langTxt: { fontSize: 11, fontWeight: '700', color: '#6b7280' },
+  langTxt: { fontSize: 11, fontWeight: '700', color: darkColors.textMuted },
 
   // Selected language badge (when lang from param)
   selectedLangBadge: {
@@ -2532,10 +2253,10 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 12,
     padding: 12,
-    backgroundColor: '#141428',
+    backgroundColor: darkColors.surfaceSunken,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#252550',
+    borderColor: darkColors.border,
   },
   selectedLangIcon: {
     width: 44,
@@ -2550,7 +2271,7 @@ const s = StyleSheet.create({
   selectedLangLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#6b7280',
+    color: darkColors.textMuted,
     marginBottom: 2,
   },
   selectedLangName: {
@@ -2567,9 +2288,9 @@ const s = StyleSheet.create({
   // Project tabs
   projTabs: {
     flexDirection: 'row',
-    backgroundColor: '#0d0d1a',
+    backgroundColor: darkColors.codeBg,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e1e3a',
+    borderBottomColor: darkColors.surfaceRaised,
   },
   projTab: {
     flex: 1,
@@ -2585,7 +2306,7 @@ const s = StyleSheet.create({
   projTabTxt: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#6b7280',
+    color: darkColors.textMuted,
     fontFamily: MONO,
   },
 
@@ -2596,9 +2317,9 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 5,
-    backgroundColor: '#0a0a16',
+    backgroundColor: darkColors.codeBg,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e1e3a',
+    borderBottomColor: darkColors.surfaceRaised,
   },
   statusL: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dots: { flexDirection: 'row', gap: 4 },
@@ -2606,28 +2327,28 @@ const s = StyleSheet.create({
   fileName: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     fontFamily: MONO,
   },
-  statusInfo: { fontSize: 10, color: '#4b5563' },
+  statusInfo: { fontSize: 10, color: darkColors.borderStrong },
 
   // Editor
   editorWrap: { flex: 1, overflow: 'hidden', position: 'relative' },
-  editorScroll: { flex: 1, backgroundColor: '#0d0d1a' },
+  editorScroll: { flex: 1, backgroundColor: darkColors.codeBg },
   editorRow: { flexDirection: 'row', minWidth: SW, minHeight: SH * 0.45 },
   lineNums: {
     paddingVertical: 10,
     paddingHorizontal: 4,
-    backgroundColor: '#08081a',
+    backgroundColor: darkColors.codeBg,
     borderRightWidth: 1,
-    borderRightColor: '#1e1e3a',
+    borderRightColor: darkColors.surfaceRaised,
     alignItems: 'flex-end',
     minWidth: 36,
   },
   lineNum: {
     fontSize: 12,
     lineHeight: 20,
-    color: '#374151',
+    color: darkColors.borderStrong,
     fontFamily: MONO,
     textAlign: 'right',
   },
@@ -2671,7 +2392,7 @@ const s = StyleSheet.create({
     color: 'transparent',
     backgroundColor: 'transparent',
     ...(Platform.OS === 'web'
-      ? ({ caretColor: '#8b5cf6', outlineStyle: 'none' } as any)
+      ? ({ caretColor: darkColors.brand, outlineStyle: 'none' } as any)
       : {}),
     ...(Platform.OS === 'android' ? { includeFontPadding: false } : {}),
     textAlignVertical: 'top',
@@ -2686,9 +2407,9 @@ const s = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#141428',
+    backgroundColor: darkColors.surfaceSunken,
     borderTopWidth: 1,
-    borderTopColor: '#252550',
+    borderTopColor: darkColors.border,
     maxHeight: 220,
     zIndex: 100,
   },
@@ -2699,9 +2420,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e1e3a',
+    borderBottomColor: darkColors.surfaceRaised,
   },
-  acHeaderTxt: { flex: 1, fontSize: 11, fontWeight: '600', color: '#f59e0b' },
+  acHeaderTxt: { flex: 1, fontSize: 11, fontWeight: '600', color: darkColors.warning },
   acList: { flex: 1 },
   acItem: {
     flexDirection: 'row',
@@ -2710,19 +2431,19 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#1e1e3a',
+    borderBottomColor: darkColors.surfaceRaised,
   },
   acLabel: {
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-    color: '#d1d5db',
+    color: darkColors.textSecondary,
     fontFamily: MONO,
   },
   acKind: {
     fontSize: 10,
-    color: '#4b5563',
-    backgroundColor: '#0d0d1a',
+    color: darkColors.borderStrong,
+    backgroundColor: darkColors.codeBg,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -2730,9 +2451,9 @@ const s = StyleSheet.create({
 
   // Bottom toolbar
   bottomBar: {
-    backgroundColor: '#0a0a16',
+    backgroundColor: darkColors.codeBg,
     borderTopWidth: 1,
-    borderTopColor: '#1e1e3a',
+    borderTopColor: darkColors.surfaceRaised,
     paddingBottom: Platform.OS === 'ios' ? 4 : 2,
   },
   qInsertRow: { paddingHorizontal: 6, paddingVertical: 4, gap: 3 },
@@ -2740,37 +2461,37 @@ const s = StyleSheet.create({
     width: 34,
     height: 30,
     borderRadius: 5,
-    backgroundColor: '#141428',
+    backgroundColor: darkColors.surfaceSunken,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#252550',
+    borderColor: darkColors.border,
   },
   qKeyTxt: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     fontFamily: MONO,
   },
 
   // Overlays
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: darkColors.overlay,
     justifyContent: 'flex-end',
   },
   panelHandle: {
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#374151',
+    backgroundColor: darkColors.borderStrong,
     alignSelf: 'center',
     marginBottom: 14,
   },
 
   // Run output panel
   runPanel: {
-    backgroundColor: '#0f0f1e',
+    backgroundColor: darkColors.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -2785,17 +2506,17 @@ const s = StyleSheet.create({
   },
   runPanelTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
   outputScroll: {
-    backgroundColor: '#0a0a16',
+    backgroundColor: darkColors.codeBg,
     borderRadius: 12,
     padding: 14,
     maxHeight: SH * 0.3,
     borderWidth: 1,
-    borderColor: '#1e1e3a',
+    borderColor: darkColors.surfaceRaised,
   },
   outputText: {
     fontSize: 13,
     lineHeight: 20,
-    color: '#d1d5db',
+    color: darkColors.textSecondary,
     fontFamily: MONO,
   },
   runPanelActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
@@ -2811,19 +2532,19 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#8b5cf640',
   },
-  runAgainTxt: { fontSize: 13, fontWeight: '600', color: '#8b5cf6' },
+  runAgainTxt: { fontSize: 13, fontWeight: '600', color: darkColors.brand },
   closeOutputBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#1a1a3e',
+    backgroundColor: darkColors.surface,
   },
-  closeOutputTxt: { fontSize: 13, fontWeight: '600', color: '#9ca3af' },
+  closeOutputTxt: { fontSize: 13, fontWeight: '600', color: darkColors.textMuted },
 
   // Web preview
-  previewSafe: { flex: 1, backgroundColor: '#0f0f1e' },
+  previewSafe: { flex: 1, backgroundColor: darkColors.bg },
   previewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2831,7 +2552,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#1a1a3e',
+    borderBottomColor: darkColors.surface,
   },
   previewTitle: { fontSize: 16, fontWeight: '700', color: '#fff' },
   iframeWrap: {
@@ -2840,7 +2561,7 @@ const s = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#252550',
+    borderColor: darkColors.border,
   },
   noPreviewWrap: {
     flex: 1,
@@ -2852,12 +2573,12 @@ const s = StyleSheet.create({
   noPreviewTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#9ca3af',
+    color: darkColors.textMuted,
     marginTop: 8,
   },
   noPreviewSub: {
     fontSize: 14,
-    color: '#6b7280',
+    color: darkColors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -2868,16 +2589,16 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#1a1a3e',
+    backgroundColor: darkColors.surface,
     borderWidth: 1,
     borderColor: '#8b5cf640',
     marginTop: 12,
   },
-  copyPreviewTxt: { fontSize: 14, fontWeight: '600', color: '#8b5cf6' },
+  copyPreviewTxt: { fontSize: 14, fontWeight: '600', color: darkColors.brand },
 
   // Publish dialog
   pubSheet: {
-    backgroundColor: '#0f0f1e',
+    backgroundColor: darkColors.bg,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     padding: 22,
@@ -2892,7 +2613,7 @@ const s = StyleSheet.create({
   },
   pubSheetSub: {
     fontSize: 12,
-    color: '#6b7280',
+    color: darkColors.textMuted,
     textAlign: 'center',
     marginTop: 3,
     marginBottom: 18,
@@ -2900,18 +2621,18 @@ const s = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#d1d5db',
+    color: darkColors.textSecondary,
     marginBottom: 6,
   },
   fieldInput: {
-    backgroundColor: '#1a1a3e',
+    backgroundColor: darkColors.surface,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
     color: '#fff',
     borderWidth: 1,
-    borderColor: '#252550',
+    borderColor: darkColors.border,
     textAlign: 'right',
     marginBottom: 14,
   },
@@ -2922,7 +2643,7 @@ const s = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#141428',
+    backgroundColor: darkColors.surfaceSunken,
     borderRadius: 8,
     marginBottom: 16,
   },
@@ -2930,10 +2651,10 @@ const s = StyleSheet.create({
   pubPreviewLang: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#d1d5db',
+    color: darkColors.textSecondary,
     flex: 1,
   },
-  pubPreviewLines: { fontSize: 11, color: '#6b7280' },
+  pubPreviewLines: { fontSize: 11, color: darkColors.textMuted },
   pubActions: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   discardBtn: {
     flexDirection: 'row',
@@ -2946,18 +2667,18 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ef444440',
   },
-  discardTxt: { fontSize: 12, fontWeight: '600', color: '#ef4444' },
+  discardTxt: { fontSize: 12, fontWeight: '600', color: darkColors.danger },
   draftBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 9,
     borderRadius: 8,
-    backgroundColor: '#1a1a3e',
+    backgroundColor: darkColors.surface,
     borderWidth: 1,
-    borderColor: '#252550',
+    borderColor: darkColors.border,
   },
-  draftTxt: { fontSize: 13, fontWeight: '600', color: '#9ca3af' },
+  draftTxt: { fontSize: 13, fontWeight: '600', color: darkColors.textMuted },
   pubDialogBtn: {
     flex: 1.5,
     flexDirection: 'row',
@@ -2966,12 +2687,12 @@ const s = StyleSheet.create({
     gap: 5,
     paddingVertical: 9,
     borderRadius: 8,
-    backgroundColor: '#8b5cf6',
+    backgroundColor: darkColors.brand,
   },
   pubDialogTxt: { fontSize: 13, fontWeight: '700', color: '#fff' },
   disabled: { opacity: 0.4 },
   cancelBtn: { alignItems: 'center', paddingVertical: 10 },
-  cancelTxt: { fontSize: 13, color: '#6b7280' },
+  cancelTxt: { fontSize: 13, color: darkColors.textMuted },
 });
 
 const wS = {

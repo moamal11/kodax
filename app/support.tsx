@@ -290,7 +290,7 @@ export default function SupportScreen() {
                 {msg.message}
               </Text>
               <Text style={styles.msgTime}>
-                {new Date(msg.created_at).toLocaleString('ar-IQ', {
+                {new Date(msg.created_at).toLocaleString('ar-IQ-u-nu-latn', {
                   hour: '2-digit',
                   minute: '2-digit',
                   day: 'numeric',
@@ -377,7 +377,7 @@ export default function SupportScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.ticketSubject}>{ticket.subject}</Text>
                   <Text style={styles.ticketDate}>
-                    {new Date(ticket.updated_at).toLocaleString('ar-IQ', {
+                    {new Date(ticket.updated_at).toLocaleString('ar-IQ-u-nu-latn', {
                       day: 'numeric',
                       month: 'short',
                       hour: '2-digit',

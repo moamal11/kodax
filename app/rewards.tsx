@@ -624,7 +624,7 @@ export default function RewardsScreen() {
                     : t.reason || (positive ? 'مكافأة' : 'فتح محتوى')}
                 </Text>
                 <Text style={styles.historyDate}>
-                  {new Date(t.created_at).toLocaleDateString('ar-IQ', {
+                  {new Date(t.created_at).toLocaleDateString('ar-IQ-u-nu-latn', {
                     day: 'numeric',
                     month: 'short',
                   })}

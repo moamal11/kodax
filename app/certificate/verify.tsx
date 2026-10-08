@@ -262,7 +262,7 @@ export default function CertificateVerifyScreen() {
                       value={
                         result.issued_at
                           ? new Date(result.issued_at).toLocaleDateString(
-                              'ar-IQ',
+                              'ar-IQ-u-nu-latn',
                               {
                                 year: 'numeric',
                                 month: 'long',
@@ -317,7 +317,7 @@ export default function CertificateVerifyScreen() {
                       <Text style={styles.revokedText}>
                         تم إلغاء هذه الشهادة بتاريخ{' '}
                         {new Date(result.revoked_at).toLocaleDateString(
-                          'ar-IQ'
+                          'ar-IQ-u-nu-latn'
                         )}
                       </Text>
                       {result.revocation_reason && (
