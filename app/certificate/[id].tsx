@@ -71,37 +71,18 @@ export default function CertificateDetailScreen() {
         !cert.achievement_snapshot.total_challenges)
     ) {
       try {
-        // Call Edge Function to get fresh data
-        const response = await fetch(
-          'https://krtulodnhmfuoxjqajwl.supabase.co/functions/v1/certificate',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${user?.id}`,
-            },
-            body: JSON.stringify({
-              action: 'check_eligibility',
-              course_id: cert.field_id,
-              user_id: user?.id,
-            }),
-          }
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.progress) {
-            const enriched = {
-              ...cert.achievement_snapshot,
-              total_lessons: result.progress.lessons_total,
-              completed_lessons: result.progress.lessons_completed,
-              lessons_percent: result.progress.lessons_percent,
-              total_challenges: result.progress.challenges_total,
-              completed_challenges: result.progress.challenges_completed,
-              challenges_percent: result.progress.challenges_percent,
-            };
-            setEnrichedSnapshot(enriched);
-          }
+        // أرقام التقدم تُحسب على السيرفر (دالة certificate بجلسة المستخدم الحقيقية)
+        const result: any = await certificateService.checkEligibility(cert.field_id, cert.level);
+        if (result?.progress) {
+          setEnrichedSnapshot({
+            ...cert.achievement_snapshot,
+            total_lessons: result.progress.lessons_total,
+            completed_lessons: result.progress.lessons_completed,
+            lessons_percent: result.progress.lessons_percent,
+            total_challenges: result.progress.challenges_total,
+            completed_challenges: result.progress.challenges_completed,
+            challenges_percent: result.progress.challenges_percent,
+          });
         }
       } catch (e) {
         console.error('Failed to enrich snapshot:', e);
