@@ -4,22 +4,16 @@
  */
 
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View } from 'react-native';
+import { Surface, Row, Button, Text as DText, useTheme } from '@/design';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCoins } from '@/contexts/CoinsContext';
 import { coinMessage } from '@/services/coinService';
 import { showToast } from '@/components/ui/Toast';
-import { CoinIcon, COIN_COLORS } from './CoinIcon';
 
 export default function DailyRewardCard() {
+  const t = useTheme();
   const router = useRouter();
   const { state, claimDailyReward } = useCoins();
   const [claiming, setClaiming] = useState(false);
@@ -42,143 +36,50 @@ export default function DailyRewardCard() {
     const res = await claimDailyReward();
     setClaiming(false);
     if (res.success)
-      showToast.success(`+${res.reward} كوين — مكافأة اليوم ${res.day}`);
+      showToast.success(`استلمت ${res.reward} كوين — مكافأة اليوم ${res.day}`);
     else showToast.info(coinMessage(res.code, res));
   };
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={() => router.push('/rewards' as any)}
-    >
-      <LinearGradient
-        colors={['rgba(16,185,129,0.14)', 'rgba(245,158,11,0.08)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.card}
-      >
-        <View style={styles.topRow}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="gift" size={22} color="#10B981" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>
-              {d.claimedToday ? 'استلمت مكافأة اليوم' : 'مكافأة اليوم'}
-            </Text>
-            <Text style={styles.subtitle}>
-              {d.claimedToday
-                ? `غداً: +${reward} كوين`
-                : `اليوم ${dayNumber} من 7 — +${reward} كوين`}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={handlePress}
-            disabled={claiming || d.claimedToday}
-            style={[styles.btn, canClaim ? styles.btnActive : styles.btnMuted]}
-          >
-            {claiming ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={[styles.btnText, !canClaim && { color: '#9CA3AF' }]}>
-                {d.claimedToday ? '✓' : canClaim ? 'استلم' : 'تعلّم أولاً'}
-              </Text>
-            )}
-          </TouchableOpacity>
+    <Surface onPress={() => router.push('/rewards' as any)} accessibilityLabel="مكافأة اليوم والكوينات" padding={14}>
+      <Row gap={12}>
+        <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: t.colors.successSoft }}>
+          <Ionicons name="gift-outline" size={20} color={t.colors.successText} />
         </View>
-
-        <View style={styles.dots}>
-          {d.rewards.map((r, i) => {
-            const day = i + 1;
-            const done = d.claimedToday ? day <= d.currentDay : day < d.nextDay;
-            const today = !d.claimedToday && day === d.nextDay;
-            return (
-              <View
-                key={day}
-                style={[
-                  styles.dot,
-                  done && styles.dotDone,
-                  today && styles.dotToday,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.dotText,
-                    (done || today) && { color: '#0f0f1e' },
-                  ]}
-                >
-                  {day === 7 ? '🎁' : r}
-                </Text>
-              </View>
-            );
-          })}
+        <View style={{ flex: 1 }}>
+          <DText variant="label" weight="semibold">
+            {d.claimedToday ? 'استلمت مكافأة اليوم' : 'مكافأة اليوم'}
+          </DText>
+          <DText variant="caption" tone="muted">
+            {d.claimedToday ? `باجر: ${reward} كوين` : `اليوم ${dayNumber} من 7 · ${reward} كوين`}
+            {!d.claimedToday && !canClaim ? ' · أكمل درساً أو تحدياً أولاً' : ''}
+          </DText>
         </View>
-
-        <View style={styles.footer}>
-          <CoinIcon size={14} />
-          <Text style={styles.footerText}>اجمع المزيد من الكوينات</Text>
-          <Ionicons name="chevron-back" size={14} color={COIN_COLORS.text} />
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
+        {d.claimedToday ? (
+          <Ionicons name="checkmark-circle" size={22} color={t.colors.successText} accessibilityLabel="تم الاستلام" />
+        ) : (
+          <Button label={canClaim ? 'استلم' : 'تعلّم أولاً'} size="sm" variant={canClaim ? 'success' : 'secondary'} onPress={handlePress} loading={claiming} />
+        )}
+      </Row>
+      <Row gap={6} style={{ marginTop: 12 }}>
+        {d.rewards.map((r, i) => {
+          const day = i + 1;
+          const done = d.claimedToday ? day <= d.currentDay : day < d.nextDay;
+          const today = !d.claimedToday && day === d.nextDay;
+          return (
+            <View
+              key={day}
+              accessible
+              accessibilityLabel={`اليوم ${day}: ${r} كوين${done ? '، مستلمة' : today ? '، اليوم' : ''}`}
+              style={{ flex: 1, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: done ? t.colors.successSoft : t.colors.surfaceSunken, borderWidth: today ? 1.5 : 0, borderColor: t.colors.success }}
+            >
+              <DText variant="caption" weight="semibold" align="center" ltr tone={done ? 'success' : today ? 'default' : 'muted'} style={{ fontSize: 11 }}>
+                {r}
+              </DText>
+            </View>
+          );
+        })}
+      </Row>
+    </Surface>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.25)',
-  },
-  topRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
-  iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(16,185,129,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { color: '#fff', fontSize: 15, fontWeight: '700', textAlign: 'right' },
-  subtitle: {
-    color: '#9CA3AF',
-    fontSize: 12.5,
-    textAlign: 'right',
-    marginTop: 2,
-  },
-  btn: {
-    minWidth: 72,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  btnActive: { backgroundColor: '#10B981' },
-  btnMuted: { backgroundColor: 'rgba(255,255,255,0.06)' },
-  btnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
-  dots: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 4,
-  },
-  dot: {
-    flex: 1,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dotDone: { backgroundColor: '#10B981' },
-  dotToday: { backgroundColor: COIN_COLORS.gold },
-  dotText: { color: '#9CA3AF', fontSize: 11, fontWeight: '700' },
-  footer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 12,
-  },
-  footerText: { color: COIN_COLORS.text, fontSize: 12.5, fontWeight: '600' },
-});
