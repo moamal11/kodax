@@ -846,7 +846,7 @@ const server = http.createServer(async (req, res) => {
         const r = await fetch(`${FUNCTIONS_URL}/${parts.slice(2).join('/')}${url.search}`, {
           method: req.method,
           headers: { 'content-type': ctype || 'application/json', authorization: String(req.headers['authorization'] ?? '') },
-          body: req.method === 'GET' ? undefined : raw,
+          body: req.method === 'GET' ? undefined : new Uint8Array(raw),
         });
         const buf = Buffer.from(await r.arrayBuffer());
         return send(res, r.status, buf, { 'Content-Type': r.headers.get('content-type') ?? 'application/json' });
