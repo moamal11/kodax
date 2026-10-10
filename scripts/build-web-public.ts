@@ -3,7 +3,7 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {staticDocuments} from '../src/features/web/catalog';
 import {SUPABASE_URL,SUPABASE_ANON_KEY} from '../src/constants';
-const require=createRequire(path.resolve('scripts/build-web-public.ts')),{decorateHead,decorate,urlset}=require('../web-server/render.cjs');
+const require=createRequire(path.resolve('scripts/build-web-public.ts')),{decorateHead,decorate,urlset,ORIGIN}=require('../web-server/render.cjs');
 const out=path.resolve(process.env.KODAX_WEB_OUT||'dist');
 // Avoid a static sitemap shadowing Vercel's dynamic sitemap index.
 for(const name of ['sitemap.xml','sitemap-0.xml']){
@@ -34,6 +34,6 @@ for(const doc of docs.filter(d=>['/privacy','/terms','/delete-account'].includes
 function visit(dir:string){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,entry.name);if(entry.isDirectory())visit(file);else if(entry.name.endsWith('.html')){const rel='/'+path.relative(out,file).replace(/\\/g,'/').replace(/(?:\/index)?\.html$/,'');const isPublic=docs.some(d=>d.path===rel||rel==='/index'&&d.path==='/')||/^\/(user|code|discussion)\/\[id\]$/.test(rel)||rel==='/certificate/verify'||rel.startsWith('/privacy/')||rel.startsWith('/terms/');if(!isPublic){let text=fs.readFileSync(file,'utf8');text=text.replace(/<meta name="robots"[^>]*>/g,'<meta name="robots" content="noindex,follow">');fs.writeFileSync(file,text);}}}}
 visit(out);
 fs.writeFileSync(path.join(out,'sitemap-static.xml'),urlset(docs));
-fs.writeFileSync(path.join(out,'robots.txt'),'User-agent: *\nAllow: /\nSitemap: https://kodax.app/sitemap.xml\n');
+fs.writeFileSync(path.join(out,'robots.txt'),`User-agent: *\nAllow: /\nSitemap: ${ORIGIN}/sitemap.xml\n`);
 fs.writeFileSync(path.join(generated,'build.json'),JSON.stringify({generatedAt:new Date().toISOString(),publicPages:docs.length,counts:docs.reduce((r:any,d)=>{const kind=d.path.split('/')[1]||'home';r[kind]=(r[kind]||0)+1;return r;},{})},null,2));
 console.log('Public web pages prepared:',docs.length);

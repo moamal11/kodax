@@ -1,4 +1,4 @@
-const ORIGIN='https://kodax.app';
+const ORIGIN='https://www.kodax.app';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const json=x=>JSON.stringify(x).replace(/</g,'\\u003c');
 function markdown(text){

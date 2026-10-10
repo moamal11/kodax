@@ -1,7 +1,7 @@
 import { ALL_COURSES, ALL_LESSONS, ALL_CHALLENGES, getChallengeRequiredCourseId, getCourseTitleById } from '@/constants/courseData';
 import { PROGRAMMING_FIELDS } from '@/constants';
 export type PublicDocument = { path: string; title: string; description: string; body?: string; code?: string; language?: string; type?: 'course'|'lesson'|'challenge'|'profile'|'post'; links?: {path:string;title:string}[]; breadcrumbs?:{path:string;title:string}[]; requirement?:string; image?:string|null; updated?:string; author?:string };
-export const WEB_ORIGIN = 'https://kodax.app';
+export const WEB_ORIGIN = 'https://www.kodax.app';
 export function staticDocuments(): PublicDocument[] {
   const fields = PROGRAMMING_FIELDS.map(f => ({path:`/field/${f.id}`,title:f.nameAr,description:`تعلّم ${f.nameAr} بالعربية مع دورات ودروس Kodax.`,links:ALL_COURSES.filter(c=>c.fieldId===f.id).sort((a,b)=>a.order-b.order).map(c=>({path:`/course/${c.id}`,title:c.title}))}));
   const home = {path:'/',title:'Kodax — تعلّم البرمجة بالعربية',description:'منصة عراقية لتعلّم البرمجة بالعربية: دورات ودروس وتحديات ومجتمع للمبرمجين.',links:fields.map(f=>({path:f.path,title:f.title}))};
