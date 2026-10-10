@@ -1,3 +1,4 @@
+import { JourneyNode } from '@/features/rewards/JourneyVisuals';
 /**
  * صفحة التحدي: المطلوب + المحرر + التشغيل + التحقق على السيرفر.
  * Desktop: عمودان (المهمة | المحرر والنتائج). الهاتف: عمود واحد بترتيب العمل.
@@ -11,6 +12,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { ALL_CHALLENGES, getChallengeAccessType, getChallengeRequiredCourseId, getCourseTitleById, isCourseAccessible } from '@/constants/courseData';
 import { quickValidate, validateChallenge } from '@/services/challengeValidator';
 import { useAuth } from '@/contexts/AuthContext';
+import { requestSignIn } from '@/services/webAccess';
 import { useApp } from '@/contexts/AppContext';
 import { useCoins } from '@/contexts/CoinsContext';
 import { hybridSyncService } from '@/services/hybridSyncService';
@@ -53,14 +55,41 @@ if (Platform.OS !== 'web') {
 }
 
 function cmLanguage(lang: string): string {
-  const map: Record<string, string> = { python: 'python', javascript: 'javascript', typescript: 'typescript', java: 'java', 'c++': 'cpp', 'c#': 'csharp', html: 'html', css: 'css', react: 'tsx', sql: 'sql' };
+  const map: Record<string, string> = {
+    python: 'python',
+    javascript: 'javascript',
+    typescript: 'typescript',
+    java: 'java',
+    'c++': 'cpp',
+    'c#': 'csharp',
+    html: 'html',
+    css: 'css',
+    react: 'tsx',
+    sql: 'sql',
+  };
   return map[lang.toLowerCase()] || 'javascript';
 }
 function fileName(lang: string) {
   const l = lang.toLowerCase();
-  return l === 'python' ? 'main.py' : l === 'javascript' ? 'main.js' : l === 'java' ? 'Main.java' : l === 'c++' ? 'main.cpp' : l === 'c#' ? 'Program.cs' : l === 'typescript' ? 'main.ts' : `code.${l}`;
+  return l === 'python'
+    ? 'main.py'
+    : l === 'javascript'
+      ? 'main.js'
+      : l === 'java'
+        ? 'Main.java'
+        : l === 'c++'
+          ? 'main.cpp'
+          : l === 'c#'
+            ? 'Program.cs'
+            : l === 'typescript'
+              ? 'main.ts'
+              : `code.${l}`;
 }
-const DIFF = { easy: { label: 'سهل', tone: 'success' as const }, medium: { label: 'متوسط', tone: 'warning' as const }, hard: { label: 'صعب', tone: 'danger' as const } };
+const DIFF = {
+  easy: { label: 'سهل', tone: 'success' as const },
+  medium: { label: 'متوسط', tone: 'warning' as const },
+  hard: { label: 'صعب', tone: 'danger' as const },
+};
 
 type Outcome =
   | { kind: 'solved'; xp: number; coins: number; first: boolean }
@@ -80,6 +109,7 @@ export default function ChallengeScreen() {
   const { isDesktop } = useBreakpoint();
   const editorRef = useRef<MobileWebEditorRef>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const editorY = useRef(0);
   const resultRef = useRef<View>(null);
 
   const challenge = ALL_CHALLENGES.find((c) => c.id === id);
@@ -120,6 +150,8 @@ export default function ChallengeScreen() {
     let cancelled = false;
     setDraftLoaded(false);
     loadChallengeDraft(user?.id, challenge.id).then((draft) => {
+      return draft === null && Platform.OS === 'web' && user?.id ? loadChallengeDraft(undefined, challenge.id) : draft;
+    }).then((draft) => {
       if (cancelled) return;
       setCode(draft ?? challenge.starterCode ?? '');
       setDraftLoaded(true);
@@ -156,7 +188,9 @@ export default function ChallengeScreen() {
     if (level > 0) setHintLevel((h) => Math.max(h, level));
   }
 
-  const validateOptions = challenge ? { checks: challenge.checks, entryFunction: challenge.entryFunction, validation: challenge.validation, prelude: challenge.prelude } : undefined;
+  const validateOptions = challenge
+    ? { checks: challenge.checks, entryFunction: challenge.entryFunction, validation: challenge.validation, prelude: challenge.prelude }
+    : undefined;
 
   const verifyAICode = async (candidate: string): Promise<ChallengeRunSummary> => {
     const r = await validateChallenge(candidate, challenge!.starterCode, challenge!.language, challenge!.testCases, validateOptions);
@@ -194,7 +228,7 @@ export default function ChallengeScreen() {
     }
     const first = sub.completion.firstTime;
     const xp = first ? sub.completion.xpAwarded || 0 : 0;
-    const coins = sub.coins?.success && !sub.coins.duplicate ? sub.coins.reward ?? 0 : 0;
+    const coins = sub.coins?.success && !sub.coins.duplicate ? (sub.coins.reward ?? 0) : 0;
     setAlreadyDone(true);
     setOutcome({ kind: 'solved', xp, coins, first });
     if (coins > 0) refreshCoins().catch(() => undefined);
@@ -202,10 +236,13 @@ export default function ChallengeScreen() {
       // XP الإجمالي من السيرفر بعد المنح
       const { data } = await supabase.from('profiles').select('xp').eq('id', user.id).single();
       const after = Number((data as any)?.xp);
-      setTimeout(() => {
-        if (Number.isFinite(after)) celebrate({ key: `challenge:${challenge.id}`, xpBefore: after - xp, xpAfter: after, sourceRef: resultRef });
-        setTimeout(() => refreshProfile(), 1800);
-      }, reduced ? 0 : 280);
+      setTimeout(
+        () => {
+          if (Number.isFinite(after)) celebrate({ key: `challenge:${challenge.id}`, xpBefore: after - xp, xpAfter: after, sourceRef: resultRef });
+          setTimeout(() => refreshProfile(), 1800);
+        },
+        reduced ? 0 : 280
+      );
     }
     if (first) {
       try {
@@ -223,6 +260,7 @@ export default function ChallengeScreen() {
 
   const run = async () => {
     if (!challenge) return;
+    if (Platform.OS === 'web' && !user?.id) { await saveChallengeDraft(undefined, challenge.id, code, challenge.starterCode ?? ''); requestSignIn(); return; }
     Keyboard.dismiss();
     setNotice(null);
     setOutcome(null);
@@ -236,15 +274,30 @@ export default function ChallengeScreen() {
     try {
       const r = await validateChallenge(code, challenge.starterCode, challenge.language, challenge.testCases, validateOptions);
       setRunCode(code);
-      setSummary({ results: r.results, passedTests: r.passedTests, totalTests: r.totalTests, allPassed: r.allPassed, serviceError: r.serviceError, mode: r.mode });
+      setSummary({
+        results: r.results,
+        passedTests: r.passedTests,
+        totalTests: r.totalTests,
+        allPassed: r.allPassed,
+        serviceError: r.serviceError,
+        mode: r.mode,
+      });
       if (r.allPassed) {
         // نجاح محلي → تحقق نهائي على السيرفر (يعيد كل الاختبارات المخفية أيضاً)
         await submit();
       } else if (user?.id && !r.serviceError) {
-        coinService.recordChallengeAttempt(challenge.id, r.passedTests, r.totalTests).then((st) => st.success && applyAttemptState(st as ChallengeAttemptState));
+        coinService
+          .recordChallengeAttempt(challenge.id, r.passedTests, r.totalTests)
+          .then((st) => st.success && applyAttemptState(st as ChallengeAttemptState));
       }
     } catch {
-      setSummary({ results: [{ passed: false, message: 'حدث خطأ غير متوقع أثناء التحقق — كودك محفوظ، حاول مرة أخرى', kind: 'service_error' } as any], passedTests: 0, totalTests: 1, allPassed: false, serviceError: true });
+      setSummary({
+        results: [{ passed: false, message: 'حدث خطأ غير متوقع أثناء التحقق — كودك محفوظ، حاول مرة أخرى', kind: 'service_error' } as any],
+        passedTests: 0,
+        totalTests: 1,
+        allPassed: false,
+        serviceError: true,
+      });
     } finally {
       setRunning(false);
     }
@@ -253,11 +306,17 @@ export default function ChallengeScreen() {
   if (!challenge) {
     return (
       <Screen header={<AppBar title="التحدي" fallback={'/learn?tab=challenges' as any} />}>
-        <EmptyState icon="alert-circle-outline" title="التحدي غير موجود" body="ممكن الرابط قديم أو التحدي تغيّر اسمه." action="كل التحديات" onAction={() => router.replace('/learn?tab=challenges' as any)} />
+        <EmptyState
+          icon="alert-circle-outline"
+          title="التحدي غير موجود"
+          body="ممكن الرابط قديم أو التحدي تغيّر اسمه."
+          action="كل التحديات"
+          onAction={() => router.replace('/learn?tab=challenges' as any)}
+        />
       </Screen>
     );
   }
-  if (locked) {
+  if (locked && !(Platform.OS === 'web' && !user?.id)) {
     return (
       <Screen header={<AppBar title={challenge.title} fallback={'/learn?tab=challenges' as any} />}>
         <EmptyState
@@ -374,7 +433,7 @@ export default function ChallengeScreen() {
 
   const editor = (
     <View style={{ borderRadius: t.radius.md, borderWidth: 1, borderColor: t.colors.codeBorder, overflow: 'hidden', backgroundColor: t.colors.codeBg }}>
-      <Row justify="space-between" style={{ paddingHorizontal: 6, height: 40, borderBottomWidth: 1, borderBottomColor: t.colors.codeBorder }}>
+      <Row justify="space-between" style={{ paddingHorizontal: 6, minHeight: 48, borderBottomWidth: 1, borderBottomColor: t.colors.codeBorder }}>
         <IconButton
           icon="refresh"
           label="إرجاع الكود الابتدائي"
@@ -401,7 +460,16 @@ export default function ChallengeScreen() {
             accessibilityLabel="محرر الكود"
             autoCapitalize="none"
             autoCorrect={false}
-            style={{ flex: 1, color: t.colors.codeText, fontFamily: t.font.mono, fontSize: 14, padding: 14, textAlignVertical: 'top', textAlign: 'left', writingDirection: 'ltr' }}
+            style={{
+              flex: 1,
+              color: t.colors.codeText,
+              fontFamily: t.font.mono,
+              fontSize: 14,
+              padding: 14,
+              textAlignVertical: 'top',
+              textAlign: 'left',
+              writingDirection: 'ltr',
+            }}
           />
         )}
       </View>
@@ -410,7 +478,15 @@ export default function ChallengeScreen() {
 
   const actions = (
     <Col gap={8}>
-      <Button label={running ? 'جارٍ التشغيل…' : saving ? 'جارٍ التحقق على السيرفر…' : 'شغّل وتحقق'} icon="play" variant="success" size="lg" onPress={run} loading={busy} full />
+      <Button
+        label={running ? 'جارٍ التشغيل…' : saving ? 'جارٍ التحقق على السيرفر…' : 'شغّل وتحقق'}
+        icon="play"
+        variant="success"
+        size="lg"
+        onPress={run}
+        loading={busy}
+        full
+      />
       {!!notice && (
         <Text variant="bodySm" tone="warning" accessibilityLiveRegion="polite">
           {notice}
@@ -423,7 +499,11 @@ export default function ChallengeScreen() {
     <>
       {outcome?.kind === 'solved' && (
         <Animated.View entering={reduced ? undefined : FadeInDown.duration(260)}>
-          <Surface variant="success" padding={16} accessibilityLiveRegion="polite">
+          <Surface padding={18} accessibilityLiveRegion="polite">
+            <Row gap={12} style={{ marginBottom: 10 }}>
+              <JourneyNode state="completed" size={44} />
+              <Text variant="heading">اجتزت التحدي</Text>
+            </Row>
             <Row gap={12}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variant="heading">{outcome.first ? 'حللت التحدي!' : 'حللته مجدداً'}</Text>
@@ -432,7 +512,18 @@ export default function ChallengeScreen() {
                 </Text>
               </View>
               {outcome.xp > 0 && (
-                <View ref={resultRef} collapsable={false} style={{ paddingHorizontal: 12, height: 40, borderRadius: 12, backgroundColor: t.colors.xpSoft, alignItems: 'center', justifyContent: 'center' }}>
+                <View
+                  ref={resultRef}
+                  collapsable={false}
+                  style={{
+                    paddingHorizontal: 12,
+                    height: 40,
+                    borderRadius: 12,
+                    backgroundColor: t.colors.xpSoft,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
                   <Text variant="heading" weight="bold" tone="xp" ltr>
                     +{outcome.xp} XP
                   </Text>
@@ -440,7 +531,9 @@ export default function ChallengeScreen() {
               )}
             </Row>
             <Row gap={8} style={{ marginTop: 12 }} wrap>
-              {nextChallenge && <Button label="التحدي التالي" icon="arrow-back" iconPosition="end" onPress={() => router.replace(`/challenge/${nextChallenge.id}` as any)} />}
+              {nextChallenge && (
+                <Button label="التحدي التالي" icon="arrow-back" iconPosition="end" onPress={() => router.replace(`/challenge/${nextChallenge.id}` as any)} />
+              )}
               <Button label="كل التحديات" variant="ghost" onPress={() => router.replace('/learn?tab=challenges' as any)} />
             </Row>
           </Surface>
@@ -496,7 +589,14 @@ export default function ChallengeScreen() {
         verifyCode={verifyAICode}
         onApplyCode={applyCode}
       />
-      <SolutionReveal challengeId={challenge.id} language={challenge.language} isCompleted={alreadyDone} attemptState={attemptState} onAttemptState={setAttemptState} onApplyCode={applyCode} />
+      <SolutionReveal
+        challengeId={challenge.id}
+        language={challenge.language}
+        isCompleted={alreadyDone}
+        attemptState={attemptState}
+        onAttemptState={setAttemptState}
+        onApplyCode={applyCode}
+      />
     </Col>
   );
 
@@ -504,7 +604,7 @@ export default function ChallengeScreen() {
     <Screen
       width={isDesktop ? 'wide' : 'content'}
       scrollRef={scrollRef}
-      header={<AppBar title="تحدي" subtitle={challenge.title} fallback={'/learn?tab=challenges' as any} actions={<XpMeter />} border />}
+      header={<AppBar title="تحدي" subtitle={challenge.title} fallback={'/learn?tab=challenges' as any} actions={user?.id ? <XpMeter /> : undefined} border />}
     >
       {isDesktop ? (
         <Row align="flex-start" gap={24} style={{ paddingTop: 8 }}>
@@ -520,8 +620,20 @@ export default function ChallengeScreen() {
         </Row>
       ) : (
         <Col gap={14} style={{ paddingTop: 4 }}>
+          <Button
+            label="اكتب الحل"
+            icon="code-slash-outline"
+            variant="secondary"
+            onPress={() => scrollRef.current?.scrollTo({ y: editorY.current, animated: !reduced })}
+          />
           {task}
-          {editor}
+          <View
+            onLayout={(e) => {
+              editorY.current = e.nativeEvent.layout.y;
+            }}
+          >
+            {editor}
+          </View>
           {actions}
           {result}
           {helpers}

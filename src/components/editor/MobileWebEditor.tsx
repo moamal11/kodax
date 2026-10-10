@@ -21,6 +21,7 @@ import React, {
   useCallback,
 } from 'react';
 import { StyleSheet } from 'react-native';
+import { useTheme } from '@/design/theme';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 // ===== Public ref API =====
@@ -62,6 +63,11 @@ html,body{height:100%;background:#0d0d1a;overflow:hidden;-webkit-text-size-adjus
 #ed{color:transparent;-webkit-text-fill-color:transparent;caret-color:#8b5cf6;background:transparent;border:none;outline:none;resize:none;z-index:2;-webkit-appearance:none;line-height:20px}
 #ed::selection{background:rgba(139,92,246,0.25)}
 .kw{color:#c678dd}.s{color:#98c379}.n{color:#d19a66}.c{color:#5c6370;font-style:italic}.f{color:#61afef}.o{color:#56b6c2}.t{color:#e5c07b}.tg{color:#e06c75}.at{color:#d19a66}.pr{color:#61afef}.v{color:#e06c75}
+html.light,html.light body{background:#fff;color-scheme:light}
+html.light .lines{background:#f7f6fb;border-color:#e2dfea;color:#777184}
+html.light #hl{color:#252338}html.light #ed{caret-color:#6d28d9}
+html.light #ed::selection{background:rgba(109,40,217,.18)}
+html.light .kw{color:#6d28d9}html.light .s{color:#247242}html.light .n{color:#a64f16}html.light .c{color:#777184}html.light .f,html.light .pr{color:#1c5e9f}html.light .o{color:#535168}html.light .t{color:#8a6017}html.light .tg,html.light .at{color:#a33347}html.light .v{color:#252338}
 </style>
 </head>
 <body>
@@ -200,6 +206,7 @@ window.setCode=function(c,newVer){
   scheduleHL();
 };
 window.setLanguage=function(l){lang=l;scheduleHL()};
+window.setTheme=function(mode){document.documentElement.classList.toggle('light',mode==='light');document.documentElement.style.colorScheme=mode};
 window.doInsert=function(text,backOffset){insertAtCursor(text,backOffset)};
 window.doReplaceWord=function(replacement){
   var s=ed.selectionStart;
@@ -222,10 +229,14 @@ scheduleHL();
 }
 
 const EDITOR_HTML = buildEditorHTML();
+const EDITOR_SOURCE = { html: EDITOR_HTML };
 
 // ===== Component =====
 const MobileWebEditor = forwardRef<MobileWebEditorRef, MobileWebEditorProps>(
   ({ language, onChange, onCursorChange, onReady, initialCode }, ref) => {
+    const { mode } = useTheme();
+    const themeRef = useRef(mode);
+    themeRef.current = mode;
     const webViewRef = useRef<WebView>(null);
     const isLoaded = useRef(false);
     /** Version counter – bumped only on explicit external setCode calls */
@@ -262,6 +273,10 @@ const MobileWebEditor = forwardRef<MobileWebEditorRef, MobileWebEditorProps>(
       webViewRef.current?.injectJavaScript(`setLanguage(${escaped});true;`);
     }, [language]);
 
+    useEffect(() => {
+      if (isLoaded.current) webViewRef.current?.injectJavaScript(`setTheme(${JSON.stringify(mode)});true;`);
+    }, [mode]);
+
     // ===== Handle messages from WebView =====
     const onMessage = useCallback(
       (event: WebViewMessageEvent) => {
@@ -285,6 +300,7 @@ const MobileWebEditor = forwardRef<MobileWebEditorRef, MobileWebEditorProps>(
     // ===== Initial load =====
     const onLoad = useCallback(() => {
       isLoaded.current = true;
+      webViewRef.current?.injectJavaScript(`setTheme(${JSON.stringify(themeRef.current)});true;`);
       if (initialCode) {
         codeVersion.current += 1;
         const escapedCode = JSON.stringify(initialCode);
@@ -300,8 +316,8 @@ const MobileWebEditor = forwardRef<MobileWebEditorRef, MobileWebEditorProps>(
     return (
       <WebView
         ref={webViewRef}
-        source={{ html: EDITOR_HTML }}
-        style={styles.webview}
+        source={EDITOR_SOURCE}
+        style={[styles.webview, { backgroundColor: mode === 'light' ? '#FFFFFF' : '#0d0d1a' }]}
         originWhitelist={['*']}
         javaScriptEnabled
         domStorageEnabled

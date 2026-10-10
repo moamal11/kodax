@@ -1,0 +1,1296 @@
+{
+  "id": "V01",
+  "method": "YAMNet ONNX automated inference; not direct listening; class scores are not calibrated probabilities",
+  "top_mean_classes": [
+    {
+      "class": "Music",
+      "score": 0.454
+    },
+    {
+      "class": "Speech",
+      "score": 0.4492
+    },
+    {
+      "class": "Rapping",
+      "score": 0.0057
+    },
+    {
+      "class": "Hip hop music",
+      "score": 0.0048
+    },
+    {
+      "class": "Singing",
+      "score": 0.0026
+    },
+    {
+      "class": "Electronic music",
+      "score": 0.0025
+    },
+    {
+      "class": "Outside, rural or natural",
+      "score": 0.0023
+    },
+    {
+      "class": "Outside, urban or manmade",
+      "score": 0.0022
+    },
+    {
+      "class": "Narration, monologue",
+      "score": 0.0021
+    },
+    {
+      "class": "Exciting music",
+      "score": 0.0021
+    }
+  ],
+  "windows": [
+    {
+      "start_s": 0.0,
+      "end_s": 0.96,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.572
+        },
+        {
+          "class": "Music",
+          "score": 0.1143
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0519
+        },
+        {
+          "class": "Jingle, tinkle",
+          "score": 0.0249
+        },
+        {
+          "class": "Television",
+          "score": 0.0095
+        }
+      ]
+    },
+    {
+      "start_s": 0.48,
+      "end_s": 1.44,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.9347
+        },
+        {
+          "class": "Music",
+          "score": 0.7247
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0018
+        },
+        {
+          "class": "Conversation",
+          "score": 0.0017
+        },
+        {
+          "class": "Speech synthesizer",
+          "score": 0.0012
+        }
+      ]
+    },
+    {
+      "start_s": 0.96,
+      "end_s": 1.92,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.8764
+        },
+        {
+          "class": "Music",
+          "score": 0.7902
+        },
+        {
+          "class": "Child speech, kid speaking",
+          "score": 0.0008
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0007
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0005
+        }
+      ]
+    },
+    {
+      "start_s": 1.44,
+      "end_s": 2.4,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.9607
+        },
+        {
+          "class": "Music",
+          "score": 0.7289
+        },
+        {
+          "class": "Background music",
+          "score": 0.0018
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0017
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.0014
+        }
+      ]
+    },
+    {
+      "start_s": 1.92,
+      "end_s": 2.88,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.9408
+        },
+        {
+          "class": "Music",
+          "score": 0.0153
+        },
+        {
+          "class": "Conversation",
+          "score": 0.0104
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0066
+        },
+        {
+          "class": "Bus",
+          "score": 0.0058
+        }
+      ]
+    },
+    {
+      "start_s": 2.4,
+      "end_s": 3.36,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.5163
+        },
+        {
+          "class": "Music",
+          "score": 0.2772
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0038
+        },
+        {
+          "class": "Conversation",
+          "score": 0.0026
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0023
+        }
+      ]
+    },
+    {
+      "start_s": 2.88,
+      "end_s": 3.84,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.8591
+        },
+        {
+          "class": "Rapping",
+          "score": 0.0132
+        },
+        {
+          "class": "Speech",
+          "score": 0.0099
+        },
+        {
+          "class": "Hip hop music",
+          "score": 0.0079
+        },
+        {
+          "class": "Exciting music",
+          "score": 0.0065
+        }
+      ]
+    },
+    {
+      "start_s": 3.36,
+      "end_s": 4.32,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.2161
+        },
+        {
+          "class": "Speech",
+          "score": 0.1436
+        },
+        {
+          "class": "Explosion",
+          "score": 0.0222
+        },
+        {
+          "class": "Boom",
+          "score": 0.0111
+        },
+        {
+          "class": "Outside, rural or natural",
+          "score": 0.0071
+        }
+      ]
+    },
+    {
+      "start_s": 3.84,
+      "end_s": 4.8,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.6237
+        },
+        {
+          "class": "Music",
+          "score": 0.1454
+        },
+        {
+          "class": "Water",
+          "score": 0.0024
+        },
+        {
+          "class": "Vehicle",
+          "score": 0.0022
+        },
+        {
+          "class": "Rain",
+          "score": 0.0021
+        }
+      ]
+    },
+    {
+      "start_s": 4.32,
+      "end_s": 5.28,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.911
+        },
+        {
+          "class": "Music",
+          "score": 0.0073
+        },
+        {
+          "class": "Inside, public space",
+          "score": 0.0069
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0054
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0051
+        }
+      ]
+    },
+    {
+      "start_s": 4.8,
+      "end_s": 5.76,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.8763
+        },
+        {
+          "class": "Vehicle",
+          "score": 0.0225
+        },
+        {
+          "class": "Outside, urban or manmade",
+          "score": 0.0209
+        },
+        {
+          "class": "Outside, rural or natural",
+          "score": 0.0144
+        },
+        {
+          "class": "Motor vehicle (road)",
+          "score": 0.014
+        }
+      ]
+    },
+    {
+      "start_s": 5.28,
+      "end_s": 6.24,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.4735
+        },
+        {
+          "class": "Music",
+          "score": 0.1295
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0031
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0026
+        },
+        {
+          "class": "Conversation",
+          "score": 0.0025
+        }
+      ]
+    },
+    {
+      "start_s": 5.76,
+      "end_s": 6.72,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.7319
+        },
+        {
+          "class": "Speech",
+          "score": 0.1178
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0033
+        },
+        {
+          "class": "Exciting music",
+          "score": 0.0029
+        },
+        {
+          "class": "Soundtrack music",
+          "score": 0.0027
+        }
+      ]
+    },
+    {
+      "start_s": 6.24,
+      "end_s": 7.2,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6976
+        },
+        {
+          "class": "Speech",
+          "score": 0.0891
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0024
+        },
+        {
+          "class": "Soundtrack music",
+          "score": 0.0015
+        },
+        {
+          "class": "Background music",
+          "score": 0.0012
+        }
+      ]
+    },
+    {
+      "start_s": 6.72,
+      "end_s": 7.68,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6593
+        },
+        {
+          "class": "Speech",
+          "score": 0.1418
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0027
+        },
+        {
+          "class": "Soundtrack music",
+          "score": 0.0019
+        },
+        {
+          "class": "Rapping",
+          "score": 0.0018
+        }
+      ]
+    },
+    {
+      "start_s": 7.2,
+      "end_s": 8.16,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.5031
+        },
+        {
+          "class": "Speech",
+          "score": 0.1352
+        },
+        {
+          "class": "Hip hop music",
+          "score": 0.0063
+        },
+        {
+          "class": "Rapping",
+          "score": 0.0061
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.004
+        }
+      ]
+    },
+    {
+      "start_s": 7.68,
+      "end_s": 8.64,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.9304
+        },
+        {
+          "class": "Child speech, kid speaking",
+          "score": 0.0248
+        },
+        {
+          "class": "Music",
+          "score": 0.0242
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0153
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0136
+        }
+      ]
+    },
+    {
+      "start_s": 8.16,
+      "end_s": 9.12,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.9348
+        },
+        {
+          "class": "Music",
+          "score": 0.455
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0048
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0047
+        },
+        {
+          "class": "Child speech, kid speaking",
+          "score": 0.0018
+        }
+      ]
+    },
+    {
+      "start_s": 8.64,
+      "end_s": 9.6,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.6598
+        },
+        {
+          "class": "Music",
+          "score": 0.4541
+        },
+        {
+          "class": "Background music",
+          "score": 0.0028
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0022
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0021
+        }
+      ]
+    },
+    {
+      "start_s": 9.12,
+      "end_s": 10.08,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6322
+        },
+        {
+          "class": "Speech",
+          "score": 0.0955
+        },
+        {
+          "class": "Hip hop music",
+          "score": 0.0073
+        },
+        {
+          "class": "Exciting music",
+          "score": 0.0057
+        },
+        {
+          "class": "Rapping",
+          "score": 0.0045
+        }
+      ]
+    },
+    {
+      "start_s": 9.6,
+      "end_s": 10.56,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9656
+        },
+        {
+          "class": "Rhythm and blues",
+          "score": 0.0236
+        },
+        {
+          "class": "Pop music",
+          "score": 0.0117
+        },
+        {
+          "class": "Singing",
+          "score": 0.0083
+        },
+        {
+          "class": "Tender music",
+          "score": 0.0078
+        }
+      ]
+    },
+    {
+      "start_s": 10.08,
+      "end_s": 11.04,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.7796
+        },
+        {
+          "class": "Speech",
+          "score": 0.1432
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0099
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0042
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0025
+        }
+      ]
+    },
+    {
+      "start_s": 10.56,
+      "end_s": 11.52,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.8744
+        },
+        {
+          "class": "Rapping",
+          "score": 0.0495
+        },
+        {
+          "class": "Hip hop music",
+          "score": 0.0378
+        },
+        {
+          "class": "Singing",
+          "score": 0.018
+        },
+        {
+          "class": "Exciting music",
+          "score": 0.0139
+        }
+      ]
+    },
+    {
+      "start_s": 11.04,
+      "end_s": 12.0,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.7868
+        },
+        {
+          "class": "Singing",
+          "score": 0.0126
+        },
+        {
+          "class": "Rapping",
+          "score": 0.0084
+        },
+        {
+          "class": "Hip hop music",
+          "score": 0.0063
+        },
+        {
+          "class": "Pop music",
+          "score": 0.0046
+        }
+      ]
+    },
+    {
+      "start_s": 11.52,
+      "end_s": 12.48,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.5663
+        },
+        {
+          "class": "Speech",
+          "score": 0.1351
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0028
+        },
+        {
+          "class": "Background music",
+          "score": 0.0019
+        },
+        {
+          "class": "Hip hop music",
+          "score": 0.0018
+        }
+      ]
+    },
+    {
+      "start_s": 12.0,
+      "end_s": 12.96,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6107
+        },
+        {
+          "class": "Speech",
+          "score": 0.5478
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0025
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0018
+        },
+        {
+          "class": "Electronica",
+          "score": 0.0017
+        }
+      ]
+    },
+    {
+      "start_s": 12.48,
+      "end_s": 13.44,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6307
+        },
+        {
+          "class": "Speech",
+          "score": 0.3309
+        },
+        {
+          "class": "Exciting music",
+          "score": 0.0028
+        },
+        {
+          "class": "Pop music",
+          "score": 0.0013
+        },
+        {
+          "class": "Soundtrack music",
+          "score": 0.0011
+        }
+      ]
+    },
+    {
+      "start_s": 12.96,
+      "end_s": 13.92,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6113
+        },
+        {
+          "class": "Rapping",
+          "score": 0.1469
+        },
+        {
+          "class": "Hip hop music",
+          "score": 0.0793
+        },
+        {
+          "class": "Singing",
+          "score": 0.0449
+        },
+        {
+          "class": "Pop music",
+          "score": 0.0088
+        }
+      ]
+    },
+    {
+      "start_s": 13.44,
+      "end_s": 14.4,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.3318
+        },
+        {
+          "class": "Speech",
+          "score": 0.2905
+        },
+        {
+          "class": "Background music",
+          "score": 0.0021
+        },
+        {
+          "class": "Soundtrack music",
+          "score": 0.0016
+        },
+        {
+          "class": "Radio",
+          "score": 0.0015
+        }
+      ]
+    },
+    {
+      "start_s": 13.92,
+      "end_s": 14.88,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.9274
+        },
+        {
+          "class": "Outside, urban or manmade",
+          "score": 0.0091
+        },
+        {
+          "class": "Vehicle",
+          "score": 0.0075
+        },
+        {
+          "class": "Boat, Water vehicle",
+          "score": 0.0066
+        },
+        {
+          "class": "Outside, rural or natural",
+          "score": 0.0065
+        }
+      ]
+    },
+    {
+      "start_s": 14.4,
+      "end_s": 15.36,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.9764
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0039
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0035
+        },
+        {
+          "class": "Vehicle",
+          "score": 0.0033
+        },
+        {
+          "class": "Outside, urban or manmade",
+          "score": 0.0022
+        }
+      ]
+    },
+    {
+      "start_s": 14.88,
+      "end_s": 15.84,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.6726
+        },
+        {
+          "class": "Music",
+          "score": 0.0864
+        },
+        {
+          "class": "Inside, public space",
+          "score": 0.0042
+        },
+        {
+          "class": "Outside, urban or manmade",
+          "score": 0.0036
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0034
+        }
+      ]
+    },
+    {
+      "start_s": 15.36,
+      "end_s": 16.32,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.5187
+        },
+        {
+          "class": "Speech",
+          "score": 0.1152
+        },
+        {
+          "class": "Exciting music",
+          "score": 0.0069
+        },
+        {
+          "class": "Electronica",
+          "score": 0.0037
+        },
+        {
+          "class": "Hip hop music",
+          "score": 0.0037
+        }
+      ]
+    },
+    {
+      "start_s": 15.84,
+      "end_s": 16.8,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.9098
+        },
+        {
+          "class": "Music",
+          "score": 0.0515
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0051
+        },
+        {
+          "class": "Background music",
+          "score": 0.0017
+        },
+        {
+          "class": "Spray",
+          "score": 0.0015
+        }
+      ]
+    },
+    {
+      "start_s": 16.32,
+      "end_s": 17.28,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.9972
+        },
+        {
+          "class": "Conversation",
+          "score": 0.0112
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0058
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0051
+        },
+        {
+          "class": "Music",
+          "score": 0.0017
+        }
+      ]
+    },
+    {
+      "start_s": 16.8,
+      "end_s": 17.76,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.9472
+        },
+        {
+          "class": "Outside, rural or natural",
+          "score": 0.0194
+        },
+        {
+          "class": "Outside, urban or manmade",
+          "score": 0.0161
+        },
+        {
+          "class": "Vehicle",
+          "score": 0.0119
+        },
+        {
+          "class": "Wind",
+          "score": 0.0076
+        }
+      ]
+    },
+    {
+      "start_s": 17.28,
+      "end_s": 18.24,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.7992
+        },
+        {
+          "class": "Outside, rural or natural",
+          "score": 0.0308
+        },
+        {
+          "class": "Outside, urban or manmade",
+          "score": 0.015
+        },
+        {
+          "class": "Vehicle",
+          "score": 0.0073
+        },
+        {
+          "class": "Wind",
+          "score": 0.0065
+        }
+      ]
+    },
+    {
+      "start_s": 17.76,
+      "end_s": 18.72,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.2062
+        },
+        {
+          "class": "Speech",
+          "score": 0.1217
+        },
+        {
+          "class": "Guitar",
+          "score": 0.0305
+        },
+        {
+          "class": "Plucked string instrument",
+          "score": 0.0268
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.0226
+        }
+      ]
+    },
+    {
+      "start_s": 18.24,
+      "end_s": 19.2,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.8216
+        },
+        {
+          "class": "Music",
+          "score": 0.1218
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.001
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0006
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.0002
+        }
+      ]
+    },
+    {
+      "start_s": 18.72,
+      "end_s": 19.68,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.893
+        },
+        {
+          "class": "Speech",
+          "score": 0.3137
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0027
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0022
+        },
+        {
+          "class": "Background music",
+          "score": 0.0013
+        }
+      ]
+    },
+    {
+      "start_s": 19.2,
+      "end_s": 20.16,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9389
+        },
+        {
+          "class": "Hip hop music",
+          "score": 0.0484
+        },
+        {
+          "class": "Afrobeat",
+          "score": 0.0397
+        },
+        {
+          "class": "Music of Africa",
+          "score": 0.0379
+        },
+        {
+          "class": "Funk",
+          "score": 0.0204
+        }
+      ]
+    },
+    {
+      "start_s": 19.68,
+      "end_s": 20.64,
+      "top": [
+        {
+          "class": "Speech",
+          "score": 0.8021
+        },
+        {
+          "class": "Music",
+          "score": 0.537
+        },
+        {
+          "class": "Narration, monologue",
+          "score": 0.0083
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0066
+        },
+        {
+          "class": "Speech synthesizer",
+          "score": 0.0037
+        }
+      ]
+    },
+    {
+      "start_s": 20.16,
+      "end_s": 21.12,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.4753
+        },
+        {
+          "class": "Speech",
+          "score": 0.4116
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0088
+        },
+        {
+          "class": "Telephone",
+          "score": 0.0067
+        },
+        {
+          "class": "Frog",
+          "score": 0.0046
+        }
+      ]
+    },
+    {
+      "start_s": 20.64,
+      "end_s": 21.6,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9602
+        },
+        {
+          "class": "Speech",
+          "score": 0.1256
+        },
+        {
+          "class": "Background music",
+          "score": 0.0024
+        },
+        {
+          "class": "Tender music",
+          "score": 0.002
+        },
+        {
+          "class": "Exciting music",
+          "score": 0.0019
+        }
+      ]
+    },
+    {
+      "start_s": 21.12,
+      "end_s": 22.08,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.8369
+        },
+        {
+          "class": "Speech",
+          "score": 0.1988
+        },
+        {
+          "class": "Background music",
+          "score": 0.0064
+        },
+        {
+          "class": "Rapping",
+          "score": 0.0053
+        },
+        {
+          "class": "Soundtrack music",
+          "score": 0.005
+        }
+      ]
+    },
+    {
+      "start_s": 21.6,
+      "end_s": 22.56,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.7276
+        },
+        {
+          "class": "Heart sounds, heartbeat",
+          "score": 0.0189
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0109
+        },
+        {
+          "class": "Hip hop music",
+          "score": 0.0105
+        },
+        {
+          "class": "Dubstep",
+          "score": 0.01
+        }
+      ]
+    },
+    {
+      "start_s": 22.08,
+      "end_s": 23.04,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6263
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0645
+        },
+        {
+          "class": "Synthesizer",
+          "score": 0.0381
+        },
+        {
+          "class": "Keyboard (musical)",
+          "score": 0.0321
+        },
+        {
+          "class": "Trance music",
+          "score": 0.0242
+        }
+      ]
+    },
+    {
+      "start_s": 22.56,
+      "end_s": 23.52,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.4775
+        },
+        {
+          "class": "Video game music",
+          "score": 0.0255
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0204
+        },
+        {
+          "class": "Jingle, tinkle",
+          "score": 0.0176
+        },
+        {
+          "class": "Ping",
+          "score": 0.0156
+        }
+      ]
+    }
+  ]
+}

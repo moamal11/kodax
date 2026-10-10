@@ -1,3 +1,4 @@
+import { useReducedMotion } from '@/design/hooks';
 /**
  * نافذة الفتح المبكر لدورة بالكوينات (اختصار اختياري — الدورة تُفتح مجاناً بالتقدم في المسار)
  *
@@ -25,7 +26,7 @@ import { coinMessage } from '@/services/coinService';
 import { showToast } from '@/components/ui/Toast';
 import { CoinIcon, COIN_COLORS } from './CoinIcon';
 
-import { darkColors } from '@/design/tokens';
+import { useTheme, makeStyles } from '@/design/theme';
 const { height } = Dimensions.get('window');
 
 interface UnlockWithCoinsModalProps {
@@ -46,6 +47,10 @@ export default function UnlockWithCoinsModal({
   cost: fallbackCost,
   onUnlocked,
 }: UnlockWithCoinsModalProps) {
+  const reduced = useReducedMotion();
+  const darkColors = useTheme().colors;
+  const styles = useStyles();
+
   const router = useRouter();
   const {
     balance,
@@ -116,10 +121,10 @@ export default function UnlockWithCoinsModal({
 
   if (done) {
     return (
-      <Modal visible={visible} transparent animationType="fade">
+      <Modal visible={visible} transparent animationType={reduced ? 'none' : 'fade'}>
         <View style={styles.successBackdrop}>
           <Animated.View
-            entering={FadeInUp.springify()}
+            entering={reduced ? undefined : FadeInUp.springify()}
             style={styles.successBox}
           >
             <View style={styles.successIcon}>
@@ -137,7 +142,7 @@ export default function UnlockWithCoinsModal({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={reduced ? 'none' : 'slide'}
       onRequestClose={onClose}
     >
       <View style={styles.container}>
@@ -147,7 +152,7 @@ export default function UnlockWithCoinsModal({
           onPress={onClose}
           accessibilityLabel="إغلاق"
         />
-        <Animated.View entering={FadeInUp.springify()} style={styles.sheet}>
+        <Animated.View entering={reduced ? undefined : FadeInUp.springify()} style={styles.sheet}>
           <LinearGradient
             colors={[darkColors.surface, darkColors.surface]}
             style={styles.gradient}
@@ -212,7 +217,7 @@ export default function UnlockWithCoinsModal({
                 ].map((b, i) => (
                   <Animated.View
                     key={b.text}
-                    entering={FadeInDown.delay(i * 60)}
+                    entering={reduced ? undefined : FadeInDown.delay(i * 60)}
                     style={styles.benefit}
                   >
                     <Ionicons name={b.icon as any} size={18} color={darkColors.success} />
@@ -304,7 +309,7 @@ export default function UnlockWithCoinsModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((t) => { const darkColors = t.colors; return {
   container: { flex: 1, justifyContent: 'flex-end' },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -450,4 +455,4 @@ const styles = StyleSheet.create({
   },
   successTitle: { color: darkColors.success, fontSize: 24, fontFamily: 'Plex-700' },
   successText: { color: darkColors.textMuted, fontSize: 15, marginTop: 6, fontFamily: 'Plex-400' },
-});
+}; });

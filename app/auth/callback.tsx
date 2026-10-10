@@ -1,3 +1,4 @@
+import { consumeWebReturn } from '@/services/webAccess';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -70,7 +71,7 @@ export default function AuthCallbackScreen() {
         window.history.replaceState({}, document.title, '/');
         // Navigation will be handled by _layout.tsx onAuthStateChange
         // But as safety, redirect after a short delay
-        setTimeout(() => router.replace('/(tabs)'), 300);
+        setTimeout(() => router.replace((Platform.OS === 'web' ? consumeWebReturn() || '/(tabs)' : '/(tabs)') as any), 300);
         return;
       }
 
@@ -83,7 +84,7 @@ export default function AuthCallbackScreen() {
         } = await supabase.auth.getSession();
         if (delayedSession) {
           window.history.replaceState({}, document.title, '/');
-          router.replace('/(tabs)');
+          router.replace((Platform.OS === 'web' ? consumeWebReturn() || '/(tabs)' : '/(tabs)') as any);
           return;
         }
         throw new Error('لم يتم استلام معلومات التحقق');
@@ -102,7 +103,7 @@ export default function AuthCallbackScreen() {
 
       // onAuthStateChange in _layout.tsx will handle navigation
       // Safety fallback redirect
-      setTimeout(() => router.replace('/(tabs)'), 300);
+      setTimeout(() => router.replace((Platform.OS === 'web' ? consumeWebReturn() || '/(tabs)' : '/(tabs)') as any), 300);
     } catch (error: any) {
       console.error('❌ Callback error:', error);
       router.replace({

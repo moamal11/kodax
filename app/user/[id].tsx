@@ -17,11 +17,13 @@ import { showToast } from '@/components/ui/Toast';
 import { Screen, AppBar, Text, Row, Col, Button, IconButton, Sheet, ListGroup, ListRow, Surface, SectionHeader, EmptyState, ListSkeleton, useBreakpoint } from '@/design';
 import { ProfileHeader } from '@/features/community/ProfileHeader';
 import { SnippetCard } from '@/features/community/SnippetCard';
+import { profilePath } from '@/services/profileLinks';
+import { requestSignIn } from '@/services/webAccess';
 
 const PAGE = 10;
 
 export default function UserProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: identifier } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { isDesktop } = useBreakpoint();
   const { likedSnippets, toggleLike, syncLikes, updateLikeCounts, getLikeCount, updateViewCounts, getViewCount, updateCommentCounts, getCommentCount } = useApp();
@@ -41,29 +43,32 @@ export default function UserProfileScreen() {
   const [menu, setMenu] = useState<null | 'menu' | 'confirmBlock'>(null);
   const [report, setReport] = useState(false);
 
-  const isOwn = user?.id === id;
+  const id=profile?.id||'';
+  const isOwn = !!id&&user?.id === id;
 
   useEffect(() => {
-    if (!id) return;
-    if (isOwn) {
-      router.replace('/profile');
-      return;
-    }
+    if (!identifier) return;
+    let active=true;setProfile(null);setSnippets([]);setFollowing(false);setBlocked(false);
     (async () => {
       setLoading(true);
-      const { data } = await getPublicProfile(id);
+      const { data } = await getPublicProfile(identifier);
+      if(!active)return;
       if (data) {
+        if(data.id===user?.id){router.replace('/profile');return;}
+        if(data.username&&identifier!==data.username){router.replace(profilePath(data.id,data.username) as any);return;}
         setProfile(data);
         setFollowers(data.followers_count || 0);
       }
-      if (user?.id) {
-        const [f, b] = await Promise.all([checkIsFollowing(user.id, id), isUserBlocked(id)]);
+      if (user?.id&&data) {
+        const [f, b] = await Promise.all([checkIsFollowing(user.id, data.id), isUserBlocked(data.id)]);
+        if(!active)return;
         setFollowing(f);
         setBlocked(b);
       }
       setLoading(false);
     })();
-  }, [id, user?.id]);
+    return()=>{active=false;};
+  }, [identifier, user?.id]);
 
   const loadSnippets = useCallback(
     async (p = 0, append = false) => {
@@ -128,7 +133,7 @@ export default function UserProfileScreen() {
 
   const share = async () => {
     setMenu(null);
-    const url = `https://kodax.app/user/${id}`;
+    const url = `https://kodax.app${profilePath(id!,profile?.username)}`;
     try {
       await Share.share({ message: `شاهد ملف ${name} في Kodax: ${url}`, url, title: `ملف ${name}` });
     } catch {
@@ -159,7 +164,7 @@ export default function UserProfileScreen() {
       <Button label="إلغاء الحظر" variant="secondary" onPress={toggleBlock} loading={busy} style={{ alignSelf: 'flex-start' }} />
     </Surface>
   ) : user?.id ? (
-    <Col gap={8}>
+    <Col gap={8} style={{ alignSelf: 'stretch' }}>
       <Row gap={8}>
         <View style={{ flex: 1 }}>
           <FollowButton
@@ -183,15 +188,15 @@ export default function UserProfileScreen() {
         </Text>
       )}
     </Col>
-  ) : null;
+  ) : <Row gap={8}><Button label="متابعة" icon="person-add-outline" onPress={() => requestSignIn()} /><Button label="مراسلة" icon="chatbubble-ellipses-outline" variant="secondary" onPress={() => requestSignIn()} /></Row>;
 
   return (
-    <Screen width="reading" header={<AppBar title={name} fallback="/code" actions={<IconButton icon="ellipsis-horizontal" label="خيارات: مشاركة، إبلاغ، حظر" onPress={() => setMenu('menu')} />} />}>
+    <Screen width="reading" padded={false} contentStyle={{ paddingTop: 0 }} header={<AppBar title={name} fallback="/code" actions={<IconButton icon="ellipsis-horizontal" label="خيارات: مشاركة، إبلاغ، حظر" onPress={() => setMenu('menu')} />} />}>
       <Col gap={20}>
-        <ProfileHeader id={profile.id} name={name} username={profile.username} avatarUrl={profile.avatar_url} verified={profile.is_verified} province={profile.province} createdAt={profile.created_at} xp={profile.xp || 0} followers={followers} following={profile.following_count || 0} actions={actions} />
+        <ProfileHeader id={profile.id} name={name} username={profile.username} avatarUrl={profile.avatar_url} coverUrl={profile.cover_url} bio={profile.bio} followersVisible={profile.followers_visible} followingVisible={profile.following_visible} verified={profile.is_verified} province={profile.province} createdAt={profile.created_at} xp={profile.xp || 0} followers={followers} following={profile.following_count || 0} actions={actions} />
 
         {!blocked && (
-          <View>
+          <View style={{ paddingHorizontal: 16 }}>
             <SectionHeader title="أكواده المنشورة" />
             {snippetsLoading ? (
               <ListSkeleton rows={2} />
@@ -249,11 +254,11 @@ export default function UserProfileScreen() {
               subtitle="يراجعه فريق الإشراف"
               onPress={() => {
                 setMenu(null);
-                setReport(true);
+                if (user?.id) setReport(true); else requestSignIn();
               }}
               chevron={false}
             />
-            <ListRow icon="ban-outline" title={blocked ? 'إلغاء الحظر' : 'حظر'} danger={!blocked} onPress={() => (blocked ? toggleBlock() : setMenu('confirmBlock'))} chevron={false} last />
+            <ListRow icon="ban-outline" title={blocked ? 'إلغاء الحظر' : 'حظر'} danger={!blocked} onPress={() => { if (!user?.id) { setMenu(null); requestSignIn(); return; } blocked ? toggleBlock() : setMenu('confirmBlock'); }} chevron={false} last />
           </ListGroup>
         )}
       </Sheet>

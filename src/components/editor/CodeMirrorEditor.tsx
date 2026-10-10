@@ -5,6 +5,7 @@
  */
 import React, { useEffect, useRef, useCallback, memo } from 'react';
 import { Platform } from 'react-native';
+import { useTheme } from '@/design/theme';
 
 // CodeMirror core
 import {
@@ -227,6 +228,41 @@ const kodaxTheme = EditorView.theme(
   { dark: true }
 );
 
+const kodaxLightTheme = EditorView.theme({
+  '&': { backgroundColor: '#FFFFFF', color: '#252338', fontSize: '14px', fontFamily: 'JetBrains Mono, Fira Code, Menlo, Monaco, monospace', height: '100%', direction: 'ltr' },
+  '.cm-content': { caretColor: '#6D28D9', padding: '8px 0', minHeight: '100%', direction: 'ltr', textAlign: 'left' },
+  '.cm-scroller': { overflow: 'auto', fontFamily: 'JetBrains Mono, Fira Code, Menlo, Monaco, monospace', direction: 'ltr', textAlign: 'left' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#6D28D9', borderLeftWidth: '2px' },
+  '.cm-selectionBackground, .cm-content ::selection': { backgroundColor: '#DDD3F2 !important' },
+  '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: '#F1EDF8' },
+  '.cm-gutters': { backgroundColor: '#F7F6FB', color: '#777184', borderRight: '1px solid #E2DFEA', minWidth: '40px' },
+  '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 4px', minWidth: '32px', fontSize: '12px' },
+  '.cm-foldGutter .cm-gutterElement': { padding: '0 4px', cursor: 'pointer' },
+  '.cm-tooltip, .cm-tooltip-hover': { backgroundColor: '#FFFFFF', color: '#252338', border: '1px solid #CBC7DC', borderRadius: '8px', boxShadow: '0 8px 24px #25233818' },
+  '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: '#EEE7FA', color: '#4C2389' },
+  '.cm-matchingBracket': { backgroundColor: '#EEE7FA', outline: '1px solid #9C7DD1', color: '#4C2389 !important' },
+  '.cm-nonmatchingBracket': { color: '#B42336 !important' },
+  '.cm-searchMatch': { backgroundColor: '#FFF0BF', outline: '1px solid #DDB35E' },
+  '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: '#FFE397' },
+  '.cm-selectionMatch': { backgroundColor: '#E0EBFA' },
+  '.cm-foldPlaceholder': { backgroundColor: '#F1EDF8', border: '1px solid #CBC7DC', color: '#5B2A9C', padding: '0 6px', borderRadius: '4px' },
+  '.cm-panels': { backgroundColor: '#F7F6FB', color: '#252338', borderTop: '1px solid #E2DFEA' },
+  '.cm-panel.cm-search': { padding: '8px 12px' },
+  '.cm-panel.cm-search input, .cm-panel.cm-search button': { backgroundColor: '#FFFFFF', color: '#252338', border: '1px solid #CBC7DC', borderRadius: '4px', padding: '4px 8px' },
+  '&.cm-focused': { outline: 'none' },
+}, { dark: false });
+const lightHighlight = syntaxHighlighting(HighlightStyle.define([
+  { tag: tags.keyword, color: '#6D28D9' },
+  { tag: [tags.string, tags.regexp], color: '#247242' },
+  { tag: [tags.number, tags.bool, tags.null], color: '#A64F16' },
+  { tag: tags.comment, color: '#777184', fontStyle: 'italic' },
+  { tag: tags.function(tags.variableName), color: '#1C5E9F' },
+  { tag: [tags.operator, tags.punctuation], color: '#535168' },
+  { tag: [tags.typeName, tags.className], color: '#8A6017' },
+  { tag: [tags.tagName, tags.attributeName], color: '#A33347' },
+  { tag: [tags.variableName, tags.propertyName], color: '#252338' },
+]));
+
 interface CodeMirrorEditorProps {
   code: string;
   language: string;
@@ -242,10 +278,12 @@ function CodeMirrorEditorInner({
   readOnly = false,
   height = '100%',
 }: CodeMirrorEditorProps) {
+  const { mode } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorView | null>(null);
   const languageCompartment = useRef(new Compartment());
   const readOnlyCompartment = useRef(new Compartment());
+  const themeCompartment = useRef(new Compartment());
   const onChangeRef = useRef(onChange);
   const isExternalUpdate = useRef(false);
 
@@ -318,8 +356,7 @@ function CodeMirrorEditorInner({
         readOnlyCompartment.current.of(EditorState.readOnly.of(readOnly)),
 
         // Theme
-        kodaxTheme,
-        oneDark,
+        themeCompartment.current.of(mode === 'light' ? [kodaxLightTheme, lightHighlight] : [kodaxTheme, oneDark]),
 
         // Change listener
         updateListener,
@@ -341,6 +378,13 @@ function CodeMirrorEditorInner({
       editorRef.current = null;
     };
   }, []); // Only create once
+
+  // Reconfigure colours without recreating the document, undo history, or selection.
+  useEffect(() => {
+    editorRef.current?.dispatch({ effects: themeCompartment.current.reconfigure(
+      mode === 'light' ? [kodaxLightTheme, lightHighlight] : [kodaxTheme, oneDark]
+    ) });
+  }, [mode]);
 
   // Update language when it changes
   useEffect(() => {

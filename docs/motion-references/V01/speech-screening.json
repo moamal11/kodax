@@ -1,0 +1,48 @@
+{
+  "method": "Whisper small.en plus VAD; automated speech screening; no transcript retained",
+  "vad_speech_duration_s": 23.10525,
+  "candidate_segments": [
+    {
+      "start_s": 0.0,
+      "end_s": 5.76,
+      "avg_logprob": -0.241,
+      "no_speech_prob": 0.029,
+      "character_count": 120
+    },
+    {
+      "start_s": 5.76,
+      "end_s": 7.76,
+      "avg_logprob": -0.241,
+      "no_speech_prob": 0.029,
+      "character_count": 26
+    },
+    {
+      "start_s": 7.76,
+      "end_s": 13.04,
+      "avg_logprob": -0.241,
+      "no_speech_prob": 0.029,
+      "character_count": 97
+    },
+    {
+      "start_s": 13.04,
+      "end_s": 17.68,
+      "avg_logprob": -0.241,
+      "no_speech_prob": 0.029,
+      "character_count": 102
+    },
+    {
+      "start_s": 17.68,
+      "end_s": 20.88,
+      "avg_logprob": -0.241,
+      "no_speech_prob": 0.029,
+      "character_count": 39
+    },
+    {
+      "start_s": 20.88,
+      "end_s": 22.88,
+      "avg_logprob": -0.241,
+      "no_speech_prob": 0.029,
+      "character_count": 14
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text as RNText, type TextProps, type TextStyle, type StyleProp } from 'react-native';
+import { Text as RNText, Platform, StyleSheet, useWindowDimensions, type TextProps, type TextStyle, type StyleProp } from 'react-native';
 import { useTheme } from '../theme';
 import type { TextVariant } from '../tokens';
 
@@ -65,14 +65,27 @@ export function toneColor(colors: ReturnType<typeof useTheme>['colors'], tone: T
  */
 export function Text({ variant = 'body', tone = 'default', weight, align, ltr, mono, tabular, style, ...rest }: AppTextProps) {
   const t = useTheme();
+  const { fontScale } = useWindowDimensions();
   const scale = t.type[variant];
   const w = weight ?? scale.weight;
   const family = mono ? (w === 'bold' || w === 'semibold' ? t.font.monoBold : t.font.mono) : t.font[w];
   const textAlign = align ?? (ltr ? 'left' : 'right');
+  const custom = StyleSheet.flatten(style);
+  const android = Platform.OS === 'android';
+  const limit = rest.maxFontSizeMultiplier ?? 1.6;
+  const multiplier = rest.allowFontScaling === false ? 1 : limit >= 1 ? Math.min(fontScale, limit) : fontScale;
+  // RN 0.81 can retain old paragraph measurements during a live font change.
+  // Explicit dp sizes update both the measurement cache and painted glyphs;
+  // keeping this Text node mounted preserves selections and surrounding state.
+  const androidType = android ? {
+    fontSize: (custom?.fontSize ?? (mono && variant === 'body' ? 14 : scale.size)) * multiplier,
+    lineHeight: (custom?.lineHeight ?? (mono && variant === 'body' ? 22 : scale.line)) * multiplier,
+  } : undefined;
   return (
     <RNText
       maxFontSizeMultiplier={1.6}
       {...rest}
+      allowFontScaling={android ? false : rest.allowFontScaling}
       style={[
         {
           fontFamily: family,
@@ -83,7 +96,9 @@ export function Text({ variant = 'body', tone = 'default', weight, align, ltr, m
           writingDirection: ltr ? 'ltr' : 'rtl',
           fontVariant: tabular ? ['tabular-nums'] : undefined,
         },
+        Platform.OS === 'web' ? ({ overflowWrap: 'anywhere', ...(ltr ? { direction: 'ltr', unicodeBidi: 'isolate' } : {}) } as any) : null,
         style,
+        androidType,
       ]}
     />
   );

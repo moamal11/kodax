@@ -17,6 +17,8 @@ export interface Message {
   is_read: boolean;
   is_deleted: boolean;
   is_edited: boolean;
+  shared_type?: 'code'|'discussion'|null;
+  shared_id?: string|null;
 }
 
 export interface Conversation {

@@ -11,15 +11,10 @@ export default function Root({ children }: PropsWithChildren) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, shrink-to-fit=no"
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 
         {/* SEO Meta Tags */}
-        <title>
-          KODAX - منصة تعليم البرمجة العراقية | تعلّم البرمجة بالعربية
-        </title>
+        <title>KODAX - منصة تعليم البرمجة العراقية | تعلّم البرمجة بالعربية</title>
         <meta
           name="description"
           content="KODAX منصة تعليم برمجة عراقية - تعلّم البرمجة بالعربية من خلال دورات تفاعلية، تحديات برمجية، محرر أكواد متقدم، ومساعد ذكاء اصطناعي. انضم لمجتمع المبرمجين العراقيين!"
@@ -34,10 +29,7 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* Open Graph Tags */}
         <meta property="og:type" content="website" />
-        <meta
-          property="og:title"
-          content="KODAX - منصة تعليم البرمجة العراقية"
-        />
+        <meta property="og:title" content="KODAX - منصة تعليم البرمجة العراقية" />
         <meta
           property="og:description"
           content="تعلّم البرمجة بالعربية من خلال دورات تفاعلية، تحديات برمجية، ومحرر أكواد متقدم. انضم لمجتمع المبرمجين العراقيين!"
@@ -47,22 +39,13 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta
-          name="twitter:title"
-          content="KODAX - منصة تعليم البرمجة العراقية"
-        />
-        <meta
-          name="twitter:description"
-          content="تعلّم البرمجة بالعربية مع KODAX - دورات، تحديات، محرر أكواد، وذكاء اصطناعي"
-        />
+        <meta name="twitter:title" content="KODAX - منصة تعليم البرمجة العراقية" />
+        <meta name="twitter:description" content="تعلّم البرمجة بالعربية مع KODAX - دورات، تحديات، محرر أكواد، وذكاء اصطناعي" />
 
         {/* SPA - prevent browser from reloading on navigation */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta
-          name="apple-mobile-web-app-status-bar-style"
-          content="black-translucent"
-        />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="KODAX" />
 
         {/* PWA Manifest */}
@@ -70,21 +53,9 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* Apple Touch Icons — required for iOS Add to Home Screen */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link
-          rel="apple-touch-icon"
-          sizes="180x180"
-          href="/apple-touch-icon.png"
-        />
-        <link
-          rel="apple-touch-icon"
-          sizes="152x152"
-          href="/apple-touch-icon.png"
-        />
-        <link
-          rel="apple-touch-icon"
-          sizes="120x120"
-          href="/apple-touch-icon.png"
-        />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon.png" />
 
         {/* Standard favicon */}
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico" />
@@ -96,7 +67,9 @@ export default function Root({ children }: PropsWithChildren) {
         {/* Prevent scroll restoration issues */}
         <ScrollViewStyleReset />
 
-        <style dangerouslySetInnerHTML={{ __html: responsiveCSS }} />
+        <style dangerouslySetInnerHTML={{ __html: __DEV__
+          ? responsiveCSS.replace(/(\/Fonts\/\w+)\.[a-f0-9]+(\.ttf)/g, '$1$2')
+          : responsiveCSS }} />
       </head>
       <body>{children}</body>
     </html>
@@ -104,6 +77,13 @@ export default function Root({ children }: PropsWithChildren) {
 }
 
 const responsiveCSS = `
+  html { color-scheme: dark; }
+  * { scrollbar-width: thin; scrollbar-color: var(--kx-scroll-thumb, #454553) transparent; }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-track, *::-webkit-scrollbar-corner { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: var(--kx-scroll-thumb, #454553); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+  *::-webkit-scrollbar-thumb:hover { background-color: var(--kx-scroll-hover, #777788); }
+
   /* ── Vector Icons Font Faces ── */
   /* font-display:block prevents "rectangles" before fonts load */
   @font-face { font-family:'AntDesign'; src:url('/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.3f78af31cca60105799838a1a7a59fbd.ttf') format('truetype'); font-display:block; }

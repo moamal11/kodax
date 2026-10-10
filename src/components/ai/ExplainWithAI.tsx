@@ -1,3 +1,5 @@
+import { ChatMarkdown } from './chat/ChatMarkdown';
+import { AssistantIcon } from './AssistantIcon';
 /**
  * ExplainWithAI.tsx
  *
@@ -149,6 +151,7 @@ export const ExplainWithAI: React.FC<ExplainWithAIProps> = ({
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [explanation, setExplanation] = useState<string>('');
+  const [helpError, setHelpError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [level, setLevel] = useState<HelpLevel | null>(null);
   const [quota, setQuota] = useState<AIQuota | null>(null);
@@ -249,6 +252,7 @@ export const ExplainWithAI: React.FC<ExplainWithAIProps> = ({
     async (lv: HelpLevel, forceRefresh = false) => {
       const key = cacheKey(lv);
       setLevel(lv);
+      setHelpError(null);
       setSuggestedCode(null);
       setVerification(null);
 
@@ -307,7 +311,7 @@ export const ExplainWithAI: React.FC<ExplainWithAIProps> = ({
           error instanceof AIServiceError
             ? error.message
             : AI_UNAVAILABLE_MESSAGE;
-        setExplanation(
+        setHelpError(
           `${message}\n\n` +
             (isChallenge
               ? 'نصيحة: يمكنك استخدام زر "تلميحات" في التحدي للحصول على مساعدة فورية.'
@@ -323,6 +327,7 @@ export const ExplainWithAI: React.FC<ExplainWithAIProps> = ({
   );
 
   const handleOpen = async () => {
+    setHelpError(null);
     setModalVisible(true);
     if (!isChallenge) {
       await fetchHelp('explain');
@@ -376,7 +381,7 @@ export const ExplainWithAI: React.FC<ExplainWithAIProps> = ({
         })}
       >
         <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: t.colors.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="sparkles" size={18} color={t.colors.brandText} />
+          <AssistantIcon size={18} color={t.colors.brandText} />
         </View>
         <View style={{ flex: 1 }}>
           <DText variant="label" weight="semibold">
@@ -397,8 +402,9 @@ export const ExplainWithAI: React.FC<ExplainWithAIProps> = ({
         footer={
           !isLoading ? (
             <Row gap={8}>
-              {explanation && level ? <Button label="إجابة ثانية" variant="ghost" icon="refresh" onPress={() => fetchHelp(level, true)} /> : null}
-              <Button label="جربها بنفسك" variant="secondary" onPress={() => setModalVisible(false)} style={{ flex: 1 }} />
+              {helpError && level ? <Button label="أعد المحاولة" variant="secondary" icon="refresh" onPress={() => fetchHelp(level, true)} /> : null}
+              {explanation && !helpError && level ? <Button label="إجابة ثانية" variant="ghost" icon="refresh" onPress={() => fetchHelp(level, true)} /> : null}
+              <Button label={helpError ? "إغلاق" : "جربها بنفسك"} variant="secondary" onPress={() => setModalVisible(false)} style={{ flex: 1 }} />
             </Row>
           ) : undefined
         }
@@ -457,9 +463,11 @@ export const ExplainWithAI: React.FC<ExplainWithAIProps> = ({
               المساعد يقرأ {isChallenge ? 'التحدي وكودك' : 'الدرس'}…
             </DText>
           </View>
+        ) : helpError ? (
+          <Surface variant="danger" padding={14}><DText tone="danger" accessibilityLiveRegion="polite">{helpError}</DText></Surface>
         ) : explanation ? (
           <Animated.View entering={FadeIn.delay(100)} style={{ gap: 12 }}>
-            <AIMessageRenderer content={explanation} isUser={false} />
+            <ChatMarkdown content={explanation} />
             {suggestedCode && verification && (
               <Surface variant={verification.status === 'verified' ? 'success' : verification.status === 'failed' ? 'danger' : 'warning'} padding={12}>
                 {verification.status === 'checking' ? (

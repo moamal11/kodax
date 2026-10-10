@@ -70,7 +70,7 @@ const dark: ColorTokens = {
 
   text: '#EDEDF4',
   textSecondary: '#B6B6C8',
-  textMuted: '#8C8CA3',
+  textMuted: '#A2A2B8',
   textOnAccent: '#FFFFFF',
 
   brand: '#8B5CF6',
@@ -100,12 +100,12 @@ const dark: ColorTokens = {
   codeBg: '#0B0B12',
   codeBorder: '#22222F',
   codeText: '#E4E4EF',
-  codeMuted: '#5E5E78',
+  codeMuted: '#85859E',
   codeKeyword: '#C792EA',
   codeString: '#A8D68A',
   codeNumber: '#F78C6C',
   codeFunction: '#82AAFF',
-  codeComment: '#6E7191',
+  codeComment: '#8B8EAD',
 };
 
 const light: ColorTokens = {
@@ -119,13 +119,13 @@ const light: ColorTokens = {
   borderStrong: '#CBC7DC',
 
   text: '#16141F',
-  textSecondary: '#46435A',
-  textMuted: '#67647C',
+  textSecondary: '#403D51',
+  textMuted: '#57546B',
   textOnAccent: '#FFFFFF',
 
   brand: '#7C3AED',
   brandStrong: '#6D28D9',
-  brandText: '#6D28D9',
+  brandText: '#5B2A9C',
   brandSoft: 'rgba(124, 58, 237, 0.10)',
   focus: '#7C3AED',
 
@@ -142,7 +142,7 @@ const light: ColorTokens = {
   infoText: '#0369A1',
   infoSoft: 'rgba(2, 132, 199, 0.08)',
 
-  xp: '#B7791F',
+  xp: '#8C5B12',
   xpSoft: 'rgba(183, 121, 31, 0.12)',
   coin: '#C2780A',
   streak: '#EA580C',
@@ -151,12 +151,12 @@ const light: ColorTokens = {
   codeBg: '#17151F',
   codeBorder: '#2A2737',
   codeText: '#E4E4EF',
-  codeMuted: '#6A6A84',
+  codeMuted: '#9393AD',
   codeKeyword: '#C792EA',
   codeString: '#A8D68A',
   codeNumber: '#F78C6C',
   codeFunction: '#82AAFF',
-  codeComment: '#7C7FA0',
+  codeComment: '#9699B7',
 };
 
 export const palettes = { dark, light } as const;
@@ -204,9 +204,9 @@ export const typeScale: Record<TextVariant, { size: number; line: number; weight
   title: { size: 22, line: 32, weight: 'bold' },
   heading: { size: 18, line: 28, weight: 'semibold' },
   body: { size: 16, line: 26, weight: 'regular' },
-  bodySm: { size: 14, line: 22, weight: 'regular' },
-  label: { size: 14, line: 20, weight: 'medium' },
-  caption: { size: 12, line: 18, weight: 'regular' },
+  bodySm: { size: 15, line: 24, weight: 'regular' },
+  label: { size: 15, line: 23, weight: 'medium' },
+  caption: { size: 13, line: 21, weight: 'regular' },
   number: { size: 16, line: 22, weight: 'semibold' },
 };
 

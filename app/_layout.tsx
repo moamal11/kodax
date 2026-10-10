@@ -1,5 +1,8 @@
+import { BrandMark } from '@/components/ui/BrandMark';
 import React, { useEffect, useState, useRef } from 'react';
-import { Stack, useRouter, useSegments, SplashScreen } from 'expo-router';
+import { Stack, useRouter, useSegments, usePathname, SplashScreen } from 'expo-router';
+import { consumeWebReturn, isPublicWebPath, requestSignIn } from '@/services/webAccess';
+import WebSEO from '@/features/web/WebSEO';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -10,7 +13,7 @@ import {
   Platform,
   I18nManager,
 } from 'react-native';
-import { ThemeProvider, useAppFonts, darkColors } from '@/design';
+import { ThemeProvider, useAppFonts, darkColors, useTheme } from '@/design';
 import { CoinsProvider, useCoins } from '@/contexts/CoinsContext';
 import { BadgeProvider } from '@/contexts/BadgeContext';
 import { AppProvider, useApp } from '@/contexts/AppContext';
@@ -49,14 +52,14 @@ function BadgeProviderConnected({
   userId?: string;
   children: React.ReactNode;
 }) {
-  const { state, unlockedCourses } = useCoins();
+  const { state } = useCoins();
 
   return (
     <BadgeProvider
       userId={userId}
       lifetimeCoins={state?.lifetimeEarned ?? 0}
-      unlockedCoursesCount={unlockedCourses.length}
-      hasUnlockedWithCoins={unlockedCourses.length > 0}
+      unlockedCoursesCount={state?.purchasedCourses?.length ?? 0}
+      hasUnlockedWithCoins={(state?.purchasedCourses?.length ?? 0) > 0}
     >
       {children}
     </BadgeProvider>
@@ -84,6 +87,7 @@ function NavigationGuard() {
   const { session, isInitializing, isAuthenticated } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+  const pathname = usePathname();
   const hasNavigatedRef = useRef(false);
 
   useEffect(() => {
@@ -94,9 +98,12 @@ function NavigationGuard() {
     if (session?.user && !isAuthenticated) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    // Recovery must stay on its form even after Supabase creates a session.
+    if (inAuthGroup && segments[1] === 'reset-password') return;
+    if (Platform.OS === 'web' && pathname === '/auth/callback') return;
     const inDownload = segments[0] === 'download';
     // صفحات عامة (سياسة الخصوصية، الشروط، حذف الحساب) تعمل بلا تسجيل دخول
-    const inPublic = PUBLIC_ROUTES.has(String(segments[0] ?? ''));
+    const inPublic = PUBLIC_ROUTES.has(String(segments[0] ?? '')) || (segments[0] === 'certificate' && segments[1] === 'verify');
     const hasSegments = segments.length > 0;
 
     // انتظر حتى يكون الراوتر جاهز
@@ -107,7 +114,11 @@ function NavigationGuard() {
     if (!isAuthenticated) hasNavigatedRef.current = false;
 
     // على الويب، تجنب إعادة التوجيه المتكررة
-    if (Platform.OS === 'web' && hasNavigatedRef.current) return;
+    if (Platform.OS === 'web') {
+      if (isAuthenticated && (inAuthGroup || inDownload)) router.replace((consumeWebReturn() || '/(tabs)') as any);
+      else if (!isAuthenticated && !inAuthGroup && !isPublicWebPath(pathname)) requestSignIn();
+      return;
+    }
 
     if (isAuthenticated) {
       // مسجل دخول — إذا كان في auth أو download، انقل للتطبيق
@@ -120,16 +131,10 @@ function NavigationGuard() {
       // غير مسجل دخول
       if (!inAuthGroup && !inDownload && !inPublic) {
         console.log('[AUTH] navigating to login');
-        if (Platform.OS === 'web') {
-          // الويب: صفحة التحميل أولاً
-          router.replace('/download');
-        } else {
-          // موبايل: صفحة تسجيل الدخول
-          router.replace('/(auth)/login');
-        }
+        router.replace('/(auth)/login');
       }
     }
-  }, [isAuthenticated, segments, isInitializing, session?.user]);
+  }, [isAuthenticated, segments, isInitializing, session?.user, pathname]);
 
   return null;
 }
@@ -142,11 +147,16 @@ function NavigationGuard() {
  * هذا يضمن أن جميع الاستعلامات تعمل بشكل صحيح (RLS).
  */
 function HydratedInnerLayout() {
+  const theme = useTheme();
   const { userId, isInitializing, fullName } = useAuth();
   const fontsReady = useAppFonts();
   const [showMandatoryData, setShowMandatoryData] = useState(false);
   const [broadcastUserName, setBroadcastUserName] = useState('');
   const deepLinkListenerInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && !isInitializing && fontsReady) document.getElementById('kx-public-content')?.remove();
+  }, [isInitializing, fontsReady]);
 
   // حالة التحديث الذكي (موبايل فقط)
   const [showUpdate, setShowUpdate] = useState(false);
@@ -229,29 +239,31 @@ function HydratedInnerLayout() {
   // شاشة التحميل: فقط على الويب أثناء التهيئة
   if (isInitializing && Platform.OS === 'web') {
     return (
-      <View style={[styles.container, styles.loadingContainer]} accessibilityLabel="جارٍ التحميل">
-        <ActivityIndicator size="large" color={darkColors.brand} />
+      <View style={[styles.container, styles.loadingContainer, { backgroundColor: theme.colors.bg }]} accessibilityLabel="جارٍ التحميل">
+        <BrandMark width={200} />
+        <ActivityIndicator size="small" color={theme.colors.brand} style={{ marginTop: 24 }} />
       </View>
     );
   }
-  if (!fontsReady) return <View style={styles.container} />;
+  if (!fontsReady) return <View style={[styles.container, { backgroundColor: theme.colors.bg }]} />;
 
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: theme.colors.bg }]}>
       {/* userId من AuthContext — آمن لاستعلامات RLS */}
       <AppProvider userId={userId}>
         <CoinsProvider userId={userId}>
           <BadgeProviderConnected userId={userId}>
            <RewardProviderConnected>
-            <StatusBar style="light" backgroundColor={darkColors.bg} />
+            <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} backgroundColor={theme.colors.bg} />
 
             {/* Navigation Guard */}
             <NavigationGuard />
+            <WebSEO />
 
             <Stack
               screenOptions={{
                 headerShown: false,
-                contentStyle: { backgroundColor: darkColors.bg },
+                contentStyle: { backgroundColor: theme.colors.bg },
                 animation: 'fade',
               }}
             >

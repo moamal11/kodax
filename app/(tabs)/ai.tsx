@@ -1,3 +1,7 @@
+import { useLearningSnapshot } from '@/features/learn/useLearningSnapshot';
+import { AssistantIcon } from '@/components/ai/AssistantIcon';
+import { useReducedMotion } from '@/design';
+import { makeStyles } from '@/design/theme';
 /**
  * صفحة مساعد Kodax
  * - الهاتف: محادثة بعرض الشاشة، حقل الكتابة ثابت أسفلها فوق الكيبورد، والمحادثات في نافذة.
@@ -35,11 +39,14 @@ import { Composer } from '@/components/ai/chat/Composer';
 import { QuotaBar } from '@/components/ai/chat/QuotaBar';
 import { EmptyChat, TypingIndicator } from '@/components/ai/chat/EmptyChat';
 import { ConversationPanel } from '@/components/ai/chat/ConversationPanel';
-import { C, breakpointFor } from '@/components/ai/chat/theme';
+import { useChatColors, chatColors, breakpointFor } from '@/components/ai/chat/theme';
 
 const SIDEBAR_WIDTH = 290;
 
 export default function AIScreen() {
+  const C = useChatColors();
+  const styles = useStyles();
+
   const { width } = useWindowDimensions();
   const bp = breakpointFor(width);
   const isPhone = bp === 'phone';
@@ -48,6 +55,8 @@ export default function AIScreen() {
   const tabBar = useTabBarMetrics();
   const { user: authUser } = useAuth();
   const userId = authUser?.id ?? '';
+  const { data: learning, error: learningError } = useLearningSnapshot(userId);
+  const reduced = useReducedMotion();
 
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState('');
@@ -94,9 +103,12 @@ export default function AIScreen() {
     return () => clearTimeout(t);
   }, [notice]);
 
-  const scrollToEnd = useCallback((animated = true) => {
-    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated }));
-  }, []);
+  const scrollToEnd = useCallback(
+    (animated = true) => {
+      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: animated && !reduced }));
+    },
+    [reduced]
+  );
 
   const openConversation = useCallback(
     async (id: string) => {
@@ -141,7 +153,7 @@ export default function AIScreen() {
 
   // ===== الإرسال =====
   const send = useCallback(
-    async (textArg?: string) => {
+    async (textArg?: string, retryHistory?: UIMessage[]) => {
       const text = (textArg ?? input).trim();
       if (!text || loading) return;
       if (!userId) {
@@ -150,7 +162,7 @@ export default function AIScreen() {
       }
       setInput('');
       // سياق المحادثة: آخر الرسائل الحقيقية فقط (بدون رسائل الخطأ)
-      const history: ChatMessage[] = messages
+      const history: ChatMessage[] = (retryHistory ?? messages)
         .filter((m) => m.role !== 'error')
         .map((m) => ({ id: m.id, role: m.role as 'user' | 'assistant', content: m.content, created_at: '' }));
       const userMsg: UIMessage = { id: `u-${Date.now()}`, role: 'user', content: text };
@@ -204,15 +216,12 @@ export default function AIScreen() {
 
   const retry = useCallback(
     (text: string) => {
-      // إزالة رسالة المستخدم الفاشلة الأخيرة حتى لا تتكرر
-      setMessages((m) => {
-        const copy = m.filter((x) => x.role !== 'error');
-        if (copy.length && copy[copy.length - 1].role === 'user' && copy[copy.length - 1].content === text) copy.pop();
-        return copy;
-      });
-      setTimeout(() => send(text), 0);
+      const copy = messages.filter((x) => x.role !== 'error');
+      if (copy.length && copy[copy.length - 1].role === 'user' && copy[copy.length - 1].content === text) copy.pop();
+      setMessages(copy);
+      send(text, copy);
     },
-    [send]
+    [send, messages]
   );
 
   // ===== الإعلانات =====
@@ -254,26 +263,35 @@ export default function AIScreen() {
     <View style={[styles.header, { paddingHorizontal: sidePad }]}>
       <View style={[styles.headerInner, column]}>
         <View style={styles.headerTitleWrap}>
-          <AssistantAvatar size={isPhone ? 34 : 38} />
-          <View>
-            <Text style={styles.headerTitle}>مساعد Kodax</Text>
+          <AssistantIcon size={25} color={C.accent} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              مساعد Kodax
+            </Text>
             <View style={styles.statusRow}>
-              <Text style={styles.statusText}>{loading ? 'يكتب…' : 'للدروس والكود · يعرف مناهج Kodax'}</Text>
+              <Text style={styles.statusText} numberOfLines={1}>
+                {loading ? 'يكتب…' : 'للدروس والكود · يعرف مناهج Kodax'}
+              </Text>
             </View>
           </View>
         </View>
         <View style={styles.headerActions}>
-          <QuotaBar quota={quota} adsSupported={adsSupported} adLoading={adLoading} onWatchAd={watchAd} compact={isPhone} />
+          {!isPhone && <QuotaBar quota={quota} adsSupported={adsSupported} adLoading={adLoading} onWatchAd={watchAd} compact={isPhone} />}
           {!isDesktop && (
-            <TouchableOpacity style={styles.iconBtn} onPress={() => setShowPanel(true)} accessibilityLabel="المحادثات">
+            <TouchableOpacity accessibilityRole="button" style={styles.iconBtn} onPress={() => setShowPanel(true)} accessibilityLabel="المحادثات">
               <Ionicons name="chatbubbles-outline" size={20} color={C.text} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.iconBtn} onPress={newConversation} accessibilityLabel="محادثة جديدة">
+          <TouchableOpacity accessibilityRole="button" style={styles.iconBtn} onPress={newConversation} accessibilityLabel="محادثة جديدة">
             <Ionicons name="create-outline" size={20} color={C.text} />
           </TouchableOpacity>
         </View>
       </View>
+      {isPhone && quota && (
+        <View style={[column, { paddingTop: 8, alignItems: 'flex-start' }]}>
+          <QuotaBar quota={quota} adsSupported={adsSupported} adLoading={adLoading} onWatchAd={watchAd} compact />
+        </View>
+      )}
     </View>
   );
 
@@ -281,46 +299,69 @@ export default function AIScreen() {
     <View style={styles.chatCol}>
       {header}
       <View style={styles.listWrap}>
-      <FlatList
-        ref={listRef}
-        data={messages}
-        keyExtractor={(m) => m.id}
-        renderItem={({ item }) => (
-          <View style={column}>
-            <MessageItem message={item} compact={isPhone} onRetry={retry} onWatchAd={watchAd} canWatchAd={adsSupported && !!quota?.ads.can_watch} />
-          </View>
-        )}
-        ListEmptyComponent={<View style={column}><EmptyChat onPick={(t) => send(t)} bp={bp} /></View>}
-        ListFooterComponent={loading && lastIsUser ? <View style={column}><TypingIndicator label="المساعد يكتب…" /></View> : null}
-        contentContainerStyle={[styles.listContent, { paddingHorizontal: sidePad }]}
-        onScroll={onScroll}
-        scrollEventThrottle={64}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        onScrollBeginDrag={() => {
-          pinnedRef.current = false;
-        }}
-        onContentSizeChange={() => pinnedRef.current && scrollToEnd()}
-      />
-      {!atBottom && messages.length > 0 && (
-        <TouchableOpacity
-          style={styles.toBottom}
-          onPress={() => {
-            pinnedRef.current = true;
-            scrollToEnd();
+        <FlatList
+          ref={listRef}
+          data={messages}
+          keyExtractor={(m) => m.id}
+          renderItem={({ item }) => (
+            <View style={column}>
+              <MessageItem message={item} compact={isPhone} onRetry={retry} onWatchAd={watchAd} canWatchAd={adsSupported && !!quota?.ads.can_watch} />
+            </View>
+          )}
+          ListEmptyComponent={
+            <View style={column}>
+              <EmptyChat
+                onPick={(t) => {
+                  setInput(t);
+                }}
+                bp={bp}
+                lessonTitle={!learningError && learning?.next && !learning.next.locked ? learning.next.lesson.title : undefined}
+                lastTitle={conversations.find((c) => c.total_messages > 0)?.title}
+                onResume={
+                  conversations.find((c) => c.total_messages > 0) ? () => openConversation(conversations.find((c) => c.total_messages > 0)!.id) : undefined
+                }
+              />
+            </View>
+          }
+          ListFooterComponent={
+            loading && lastIsUser ? (
+              <View style={column}>
+                <TypingIndicator label="المساعد يكتب…" />
+              </View>
+            ) : null
+          }
+          contentContainerStyle={[styles.listContent, { paddingHorizontal: sidePad }]}
+          onScroll={onScroll}
+          scrollEventThrottle={64}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          onScrollBeginDrag={() => {
+            pinnedRef.current = false;
           }}
-          accessibilityLabel="الانتقال لآخر رسالة"
-        >
-          <Ionicons name="arrow-down" size={18} color="#fff" />
-        </TouchableOpacity>
-      )}
+          onContentSizeChange={() => pinnedRef.current && scrollToEnd()}
+        />
+        {!atBottom && messages.length > 0 && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            style={styles.toBottom}
+            onPress={() => {
+              pinnedRef.current = true;
+              scrollToEnd();
+            }}
+            accessibilityLabel="الانتقال لآخر رسالة"
+          >
+            <Ionicons name="arrow-down" size={18} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
       {notice && (
         <View style={styles.noticeWrap} pointerEvents="none">
           <Text style={styles.notice}>{notice}</Text>
         </View>
       )}
-      <View style={[styles.composerWrap, { paddingHorizontal: sidePad, paddingBottom: 10 + (keyboardOverlap > 0 ? keyboardOverlap + insets.bottom : bottomSpace) }]}>
+      <View
+        style={[styles.composerWrap, { paddingHorizontal: sidePad, paddingBottom: 10 + (keyboardOverlap > 0 ? keyboardOverlap + insets.bottom : bottomSpace) }]}
+      >
         <View style={column}>
           <Composer value={input} onChange={setInput} onSend={() => send()} loading={loading} mode={mode} onModeChange={setMode} compact={isPhone} />
         </View>
@@ -350,9 +391,9 @@ export default function AIScreen() {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-      <Modal visible={showPanel && !isDesktop} transparent animationType="fade" onRequestClose={() => setShowPanel(false)}>
+      <Modal visible={showPanel && !isDesktop} transparent animationType={reduced ? 'none' : 'fade'} onRequestClose={() => setShowPanel(false)}>
         <View style={styles.modalBackdrop}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowPanel(false)} accessibilityLabel="إغلاق" />
+          <TouchableOpacity accessibilityRole="button" style={StyleSheet.absoluteFill} onPress={() => setShowPanel(false)} accessibilityLabel="إغلاق" />
           <View style={[styles.sheet, { width: Math.min(360, width * 0.86), paddingTop: insets.top }]}>
             <ConversationPanel
               conversations={conversations}
@@ -369,49 +410,62 @@ export default function AIScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
-  safe: { flex: 1 },
-  body: { flex: 1, flexDirection: 'row-reverse' },
-  sidebar: { borderLeftWidth: 1, borderLeftColor: C.border, backgroundColor: C.bg },
-  chatCol: { flex: 1, minWidth: 0 },
-  header: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.bg },
-  headerInner: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  headerTitleWrap: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, flexShrink: 1 },
-  headerTitle: { color: '#fff', fontSize: 16.5,  textAlign: 'right', fontFamily: 'Plex-700' },
-  statusRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5, marginTop: 2 },
-  statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.success },
-  statusText: { color: C.muted, fontSize: 11.5, fontFamily: 'Plex-400' },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
-  listContent: { paddingTop: 12, paddingBottom: 12, flexGrow: 1 },
-  composerWrap: { paddingTop: 8, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.bg },
-  listWrap: { flex: 1 },
-  toBottom: {
-    position: 'absolute',
-    bottom: 12,
-    alignSelf: 'center',
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: C.userA,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  noticeWrap: { position: 'absolute', top: 70, left: 0, right: 0, alignItems: 'center' },
-  notice: {
-    color: '#fff',
-    backgroundColor: C.surfaceStrong,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 12,
-    overflow: 'hidden',
-    fontSize: 13.5,
-    textAlign: 'center',
-    maxWidth: 420,
-    fontFamily: 'Plex-400' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', flexDirection: 'row' },
-  sheet: { position: 'absolute', right: 0, top: 0, bottom: 0, backgroundColor: C.surfaceStrong, borderLeftWidth: 1, borderLeftColor: C.border },
+const useStyles = makeStyles((t) => {
+  const C = chatColors(t.colors);
+  return {
+    root: { flex: 1, backgroundColor: C.bg },
+    safe: { flex: 1 },
+    body: { flex: 1, flexDirection: 'row-reverse' },
+    sidebar: { borderLeftWidth: 1, borderLeftColor: C.border, backgroundColor: C.bg },
+    chatCol: { flex: 1, minWidth: 0 },
+    header: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.bg },
+    headerInner: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+    headerTitleWrap: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 },
+    headerTitle: { color: C.text, fontSize: 16.5, textAlign: 'right', fontFamily: 'Plex-700' },
+    statusRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5, marginTop: 2 },
+    statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.success },
+    statusText: { color: C.muted, fontSize: 12.5, fontFamily: 'Plex-400' },
+    headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    iconBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    listContent: { paddingTop: 12, paddingBottom: 12, flexGrow: 1 },
+    composerWrap: { paddingTop: 8, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.bg },
+    listWrap: { flex: 1 },
+    toBottom: {
+      position: 'absolute',
+      bottom: 12,
+      alignSelf: 'center',
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: C.userA,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    noticeWrap: { position: 'absolute', top: 70, left: 0, right: 0, alignItems: 'center' },
+    notice: {
+      color: '#fff',
+      backgroundColor: C.surfaceStrong,
+      borderWidth: 1,
+      borderColor: C.borderStrong,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: 12,
+      overflow: 'hidden',
+      fontSize: 13.5,
+      textAlign: 'center',
+      maxWidth: 420,
+      fontFamily: 'Plex-400',
+    },
+    modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', flexDirection: 'row' },
+    sheet: { position: 'absolute', right: 0, top: 0, bottom: 0, backgroundColor: C.surfaceStrong, borderLeftWidth: 1, borderLeftColor: C.border },
+  };
 });

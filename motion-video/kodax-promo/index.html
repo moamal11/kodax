@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080, height=1920">
+<title>Kodax — رحلتك تبدأ بكود</title>
+<script src="assets/gsap.min.js"></script>
+<style>
+@font-face{font-family:Cairo;src:url('assets/Cairo.ttf') format('truetype');font-weight:200 1000;font-display:block}
+*{box-sizing:border-box;margin:0;padding:0}html,body{width:1080px;height:1920px;overflow:hidden;background:#100D20}
+body{font-family:Cairo,sans-serif;color:#F7F2FF}#root{width:1080px;height:1920px;position:relative;overflow:hidden}
+.scene{position:absolute;inset:0;width:1080px;height:1920px;background:#100D20;overflow:hidden}.scene:not(:first-of-type){opacity:0}
+.scene-content{width:100%;height:100%;padding:182px 84px 174px;display:flex;flex-direction:column;gap:32px;position:relative;z-index:2;direction:rtl}
+.bg{position:absolute;inset:0;pointer-events:none;overflow:hidden}.glow{position:absolute;right:-280px;top:170px;width:1100px;height:1100px;border-radius:50%;background:radial-gradient(circle,rgba(133,37,250,.30),rgba(133,37,250,0) 68%)}
+.orbit{position:absolute;left:-300px;bottom:70px;width:1120px;height:1120px;border:2px solid #38284F;border-radius:50%}.orbit:after{content:'';position:absolute;inset:100px;border:1px solid #38284F;border-radius:50%}
+.ghost{position:absolute;left:40px;top:510px;font:600 460px Consolas,monospace;direction:ltr;color:#38284F;opacity:.36}.grid-line{position:absolute;left:50px;top:0;width:1px;height:1920px;background:#241C36}
+.brandbar{position:absolute;inset:62px 84px auto;display:flex;justify-content:space-between;align-items:center;z-index:30;direction:ltr}.brand{display:flex;align-items:center;gap:18px;font:700 38px Consolas,monospace;letter-spacing:-1px}.brand img{width:62px;height:62px;border-radius:16px}.flag{font-family:Cairo;font-size:25px;display:flex;gap:14px;align-items:center;color:#C2B7D9;direction:rtl}.iraq-flag{display:flex;width:72px;height:48px;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border-radius:4px;background:linear-gradient(#CE1126 0 33.333%,#FFFFFF 33.333% 66.666%,#000000 66.666%);border:1px solid #786a94}.iraq-flag span{font-family:Cairo,sans-serif;color:#007A3D;font-size:11px;line-height:16px;font-weight:900;font-style:normal;direction:rtl;white-space:nowrap}
+.footbar{position:absolute;bottom:65px;left:84px;right:84px;z-index:30;display:flex;flex-direction:column;gap:18px}.foot-text{display:flex;justify-content:space-between;align-items:center;font-size:24px;color:#C2B7D9;direction:ltr}.foot-text span:last-child{direction:rtl}.film-progress{height:4px;width:100%;background:#38284F;border-radius:4px;overflow:hidden}.film-progress i{display:block;width:100%;height:100%;background:#C4A4FF;transform-origin:left center}
+.eyebrow{display:flex;align-items:center;gap:15px;color:#C4A4FF;font-size:29px;font-weight:700}.eyebrow .n{font:400 27px Consolas,monospace;color:#C2B7D9}.eyebrow:after{content:'';width:70px;height:2px;background:#8525FA}
+h1,h2{font-weight:900;line-height:1.35;letter-spacing:0}h2{font-size:88px;max-width:920px}.accent{color:#C4A4FF}.sub{font-size:37px;font-weight:400;line-height:1.7;color:#C2B7D9;max-width:900px}.hero{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:30px;min-height:0}
+.device{width:626px;border-radius:42px;padding:12px;background:#0B0913;border:3px solid #766889;box-shadow:0 38px 75px #090710;position:relative;flex-shrink:0;transform-origin:center center}.device-top{height:32px;display:flex;gap:9px;align-items:center;justify-content:center}.device-top i{width:8px;height:8px;border-radius:50%;background:#403649}.device-top i:nth-child(2){width:12px;height:12px}.screen{display:block;width:100%;height:auto;border-radius:24px}.device.small{width:440px;border-radius:34px}.device.small .screen{border-radius:20px}
+.pill{padding:18px 30px;background:#2F214B;border:2px solid #644785;border-radius:25px;font-size:32px;line-height:1.5;font-weight:700;display:flex;align-items:center;gap:15px;white-space:nowrap}.pill svg{width:34px;height:34px;flex-shrink:0}.pill.gold{color:#FFD88A;background:#382B28;border-color:#79613A}.pill.green{color:#8AE0C2;background:#192D2B;border-color:#365C50}
+.icon{width:64px;height:64px;fill:none;stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.intro .scene-content{gap:20px;align-items:center;text-align:center;padding-top:210px}.intro .eyebrow{font-size:28px}.logo-hero{width:172px;height:172px;border-radius:40px;box-shadow:0 0 65px #8525FA50}.wordmark{font:900 136px Consolas,monospace;letter-spacing:-10px;direction:ltr;line-height:1.12}.intro h1{font-size:83px;max-width:910px}.intro .sub{font-size:34px}.intro .hero{justify-content:flex-start;padding-top:20px}.intro-product{display:flex;gap:44px;align-items:center;width:860px;justify-content:center;direction:ltr}.code-stack{display:flex;flex-direction:column;gap:22px;width:305px;text-align:left;direction:ltr;font:32px Consolas,monospace}.code-stack .brace{font-size:108px;color:#C4A4FF;line-height:1}.code-stack .line{color:#C2B7D9;padding:14px 0}.intro .device{width:448px}.intro-caption{font-size:30px;color:#C4A4FF;text-align:center;margin-top:14px}
+.course-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;width:100%}.course-card{border:2px solid #4A365F;background:#201A38;border-radius:25px;padding:24px 27px;display:flex;align-items:center;gap:20px;min-height:132px;font-size:35px;font-weight:700}.course-card .icon{width:53px;height:53px;color:#C4A4FF}.course-card:first-child{background:#322050;border-color:#8525FA}.course-view{display:flex;align-items:center;justify-content:center;gap:45px;width:100%;direction:ltr}.course-note{width:320px;display:flex;flex-direction:column;gap:24px;direction:rtl}.step-number{font:700 90px Consolas,monospace;color:#C4A4FF}.course-note p{font-size:39px;line-height:1.6;font-weight:700}.course-note .rule{height:5px;width:180px;background:#8525FA;transform-origin:right center}.course-note .micro{font-size:28px;color:#C2B7D9;font-weight:400}
+.editor-box{width:100%;background:#151123;border:2px solid #4A365F;border-radius:30px;padding:30px;direction:ltr;box-shadow:0 28px 55px #090710}.editor-toolbar{display:flex;justify-content:space-between;align-items:center;padding-bottom:25px;border-bottom:1px solid #40334F;font:28px Consolas,monospace;color:#C2B7D9}.dots{display:flex;gap:12px}.dots i{width:13px;height:13px;border-radius:50%;background:#8525FA}.dots i:nth-child(2){background:#C4A4FF}.dots i:nth-child(3){background:#8AE0C2}.code-body{padding:30px 0;display:flex;flex-direction:column;gap:14px;font:28px/1.5 Consolas,monospace}.code-line{white-space:pre;color:#F7F2FF}.code-line .purple{color:#C4A4FF}.code-line .green{color:#8AE0C2}.code-line .num{color:#FFD88A}.code-line .ln{display:inline-block;width:45px;color:#9B8CAC}.editor-output{padding:20px;border:1px solid #365C50;border-radius:15px;color:#8AE0C2;background:#192D2B;font:28px/1.5 Consolas,monospace;display:flex;justify-content:space-between}.editor-bottom{display:flex;align-items:center;justify-content:space-between;gap:28px;width:100%}.editor-bottom .device{width:364px}.editor-summary{width:440px;display:flex;flex-direction:column;gap:24px}.editor-summary .pill{white-space:normal;font-size:31px}.editor-summary p{font-size:32px;color:#C2B7D9;line-height:1.6}
+.challenge-hero{position:relative;width:100%;display:flex;align-items:center;justify-content:center}.challenge-hero .device{width:614px}.challenge-badge{position:absolute;left:0;top:118px;z-index:3;box-shadow:0 20px 40px #090710}.xp-float{position:absolute;right:0;bottom:185px;z-index:3}.xp-card{width:100%;padding:28px 32px;background:#201A38;border:2px solid #4A365F;border-radius:25px;display:flex;flex-direction:column;gap:18px}.xp-info{display:flex;align-items:center;justify-content:space-between;font-size:29px}.xp-value{font:700 45px Consolas,monospace;color:#FFD88A;direction:ltr}.xp-track{height:18px;border-radius:20px;background:#40334F;overflow:hidden;direction:ltr}.xp-fill{height:100%;width:100%;background:#C4A4FF;transform-origin:left center}.xp-label{font-size:29px;color:#8AE0C2}
+.ranking-tabs{display:flex;gap:15px;justify-content:center}.ranking-tabs .pill{font-size:29px;padding:12px 32px}.ranking-tabs .active{background:#8525FA;border-color:#C4A4FF;color:#F7F2FF}.podium{display:flex;gap:17px;align-items:flex-end;justify-content:center;direction:ltr;width:100%;height:350px}.podium-col{width:238px;background:#2F214B;border-radius:24px 24px 8px 8px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;transform-origin:center bottom;border:2px solid #644785}.podium-col.two{height:210px}.podium-col.one{height:310px;background:#422363;border-color:#C4A4FF}.podium-col.three{height:165px}.podium-num{font:700 76px Consolas,monospace;color:#C4A4FF;line-height:1.2}.podium-col.one .podium-num{color:#FFD88A}.podium-col p{font-size:28px;direction:rtl}.podium-col svg{width:47px;height:47px;color:#FFD88A}.ranking-view{width:100%;display:flex;align-items:center;justify-content:center;gap:28px;direction:ltr}.ranking-view .device{width:385px}.ranking-text{width:350px;display:flex;flex-direction:column;gap:30px;direction:rtl}.ranking-text strong{font-size:45px;line-height:1.6}.ranking-text p{font-size:31px;line-height:1.7;color:#C2B7D9}
+.social-device{position:relative;display:flex;justify-content:center;width:100%;}.social-device .device{width:610px}.social-bubble{position:absolute;z-index:3;border:2px solid #644785;background:#2F214B;padding:18px 25px;border-radius:25px;display:flex;align-items:center;gap:14px;box-shadow:0 15px 35px #090710;font-size:31px;font-weight:700;direction:rtl}.social-bubble svg{width:34px;height:34px;color:#C4A4FF}.social-bubble.like{top:90px;left:-10px}.social-bubble.comment{top:346px;right:-8px}.social-bubble.follow{bottom:105px;left:8px;background:#8525FA;border-color:#C4A4FF}.social-caption{display:flex;gap:16px;justify-content:center;font-size:32px;color:#C2B7D9}.social-caption span{padding:8px 18px;border-bottom:2px solid #644785}
+.assistant-layout{width:100%;display:flex;align-items:center;gap:34px;justify-content:center;direction:ltr}.assistant-layout .device{width:470px}.chat{display:flex;flex-direction:column;gap:25px;width:365px;direction:rtl}.chat-bubble{padding:23px;border-radius:26px;background:#201A38;border:2px solid #4A365F;font-size:32px;line-height:1.6}.chat-bubble.answer{background:#2F214B;border-color:#8525FA}.bot{width:112px;height:112px;background:#8525FA;border:2px solid #C4A4FF;border-radius:35px;display:flex;align-items:center;justify-content:center;color:#F7F2FF}.bot .icon{width:70px;height:70px}.chat-bubble small{display:block;font-size:24px;color:#C4A4FF;margin-bottom:8px}.assistant-layout .code-inline{font:25px Consolas,monospace;display:block;direction:ltr;color:#8AE0C2;padding-top:10px}
+.certificate-layout{display:flex;flex-direction:column;align-items:center;gap:28px;width:100%;position:relative}.certificate-display{border:2px solid #C4A4FF;border-radius:24px;padding:45px 32px;background:#201A38;width:100%;display:flex;flex-direction:column;gap:15px;align-items:center;text-align:center;position:relative;box-shadow:0 25px 50px #090710}.cert-small{font:22px Consolas,monospace;letter-spacing:3px;color:#C2B7D9}.cert-title{font-size:58px;font-weight:900}.cert-rule{width:85%;height:2px;background:#644785;transform-origin:center}.cert-course{font-size:37px;color:#C4A4FF}.seal{width:118px;height:118px;border:3px solid #FFD88A;background:#382B28;color:#FFD88A;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:10px}.seal .icon{width:66px;height:66px}.certificate-reference{display:flex;align-items:center;justify-content:center;gap:42px;direction:ltr;width:100%}.certificate-reference .device{width:357px}.certificate-reference p{width:370px;font-size:40px;line-height:1.6;font-weight:700;direction:rtl}
+.outro .scene-content{align-items:center;justify-content:center;text-align:center;gap:32px;padding-top:180px}.outro .logo-hero{width:245px;height:245px;border-radius:60px}.outro .wordmark{font-size:168px}.outro h2{font-size:93px;max-width:930px}.outro .sub{font-size:38px}.verbs{display:flex;gap:17px;justify-content:center;margin-top:15px}.verbs span{padding:18px 29px;border:2px solid #644785;background:#2F214B;border-radius:24px;font-size:40px;font-weight:700}.cta{padding:24px 55px;background:#8525FA;border:2px solid #C4A4FF;border-radius:25px;font-size:43px;font-weight:900;margin-top:18px}.outro .mini{color:#C2B7D9;font-size:29px;margin-top:18px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-code" viewBox="0 0 48 48"><path d="m16 13-11 11 11 11m16-22 11 11-11 11M27 7l-6 34"/></symbol>
+<symbol id="i-brain" viewBox="0 0 48 48"><path d="M24 9v31M24 11C17 3 10 11 12 17 3 18 3 31 11 32 10 41 19 44 24 38M24 11c7-8 14 0 12 6 9 1 9 14 1 15 1 9-8 12-13 6M12 18l6 3m-7 11 7-3m18-11-6 3m7 11-7-3"/></symbol>
+<symbol id="i-shield" viewBox="0 0 48 48"><path d="M24 4 41 11v13c0 11-17 20-17 20S7 35 7 24V11Z"/><path d="m16 24 6 6 11-13"/></symbol>
+<symbol id="i-web" viewBox="0 0 48 48"><rect x="5" y="8" width="38" height="33" rx="4"/><path d="M5 18h38m-30-5h1m5 0h1m5 0h1m-5 12-5 5 5 5m9-10 5 5-5 5"/></symbol>
+<symbol id="i-python" viewBox="0 0 48 48"><path d="M24 4H14c-5 0-7 3-7 8v9h19v5H7v8c0 6 3 10 10 10h8M24 44h10c5 0 7-3 7-8v-9H22v-5h19v-8c0-6-3-10-10-10h-7"/><circle cx="16" cy="11" r="1.5"/><circle cx="32" cy="37" r="1.5"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 48 48"><path d="M14 6h20v11c0 9-5 14-10 14s-10-5-10-14ZM14 10H5v7c0 6 4 8 10 8m19-15h9v7c0 6-4 8-10 8M24 31v10m-9 2h18"/></symbol>
+<symbol id="i-check" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><path d="m13 24 8 8 15-16"/></symbol>
+<symbol id="i-star" viewBox="0 0 48 48"><path d="m24 4 6 13 14 2-10 10 3 15-13-7-13 7 3-15L4 19l14-2Z"/></symbol>
+<symbol id="i-heart" viewBox="0 0 48 48"><path d="M24 41S4 29 4 16C4 3 20 4 24 13c4-9 20-10 20 3 0 13-20 25-20 25Z"/></symbol>
+<symbol id="i-comment" viewBox="0 0 48 48"><path d="M6 7h36v27H18L7 43l3-9H6Z"/><path d="M14 17h20M14 25h13"/></symbol>
+<symbol id="i-follow" viewBox="0 0 48 48"><circle cx="18" cy="15" r="8"/><path d="M4 42v-5c0-9 28-9 28 0v5M38 14v16m-8-8h16"/></symbol>
+<symbol id="i-bot" viewBox="0 0 48 48"><rect x="7" y="15" width="34" height="27" rx="8"/><path d="M24 15V7M3 25v8m42-8v8m-29-1h16"/><circle cx="24" cy="5" r="3"/><circle cx="17" cy="25" r="2"/><circle cx="31" cy="25" r="2"/></symbol>
+<symbol id="i-medal" viewBox="0 0 48 48"><circle cx="24" cy="18" r="13"/><path d="m15 29-6 15 15-6 15 6-6-15m-9-19 3 5 6 1-5 4 1 6-5-3-5 3 1-6-5-4 6-1Z"/></symbol>
+</defs></svg>
+<div id="root" data-composition-id="kodax" data-start="0" data-duration="52" data-width="1080" data-height="1920" data-fps="30">
+<div class="brandbar"><div class="brand"><img src="assets/logo-header.png" alt="Kodax"><span>Kodax</span></div><div class="flag"><i class="iraq-flag" role="img" aria-label="علم العراق"><span>الله أكبر</span></i><span>منصة عراقية</span></div></div>
+
+<section id="s1" class="scene intro"><div class="bg" data-layout-ignore><div class="glow"></div><div class="orbit"></div><div class="ghost">{ }</div><div class="grid-line"></div></div><div class="scene-content">
+<div class="eyebrow enter">من أول سطر… لأبعد فكرة</div><img class="logo-hero enter" src="assets/logo.png" alt="شعار كوداكس"><div class="wordmark enter">Kodax</div><h1 class="enter">ابدأ رحلتك <span class="accent">بالبرمجة</span></h1><p class="sub enter">تعلّم. جرّب. وخلّي كودك يحچي.</p>
+<div class="hero"><div class="intro-product"><div class="code-stack"><span class="brace enter">{ }</span><span class="line enter">learn();</span><span class="line enter">build();</span><span class="line enter">level_up();</span></div><div class="device enter"><div class="device-top"><i></i><i></i><i></i></div><img class="screen" src="assets/home.jpg" alt="واجهة Kodax الرئيسية"></div></div><p class="intro-caption enter">كل رحلتك… بتطبيق واحد</p></div>
+</div></section>
+
+<section id="s2" class="scene"><div class="bg" data-layout-ignore><div class="glow"></div><div class="orbit"></div><div class="ghost">01</div><div class="grid-line"></div></div><div class="scene-content">
+<div class="eyebrow enter"><span class="n">01</span> تعلّم</div><h2 class="enter">كورسات <span class="accent">تفتحلك الطريق</span></h2><p class="sub enter">دروس منظّمة، تتقدّم بيها خطوة بخطوة.</p>
+<div class="course-grid"><div class="course-card enter"><svg class="icon"><use href="#i-python"/></svg><span>بايثون</span></div><div class="course-card enter"><svg class="icon"><use href="#i-brain"/></svg><span>الذكاء الاصطناعي</span></div><div class="course-card enter"><svg class="icon"><use href="#i-shield"/></svg><span>الأمن السيبراني</span></div><div class="course-card enter"><svg class="icon"><use href="#i-web"/></svg><span>تطوير الويب</span></div></div>
+<div class="hero"><div class="course-view"><div class="device small enter"><div class="device-top"><i></i><i></i><i></i></div><img class="screen" src="assets/courses.jpg" alt="دروس كورس الأمن السيبراني"></div><div class="course-note"><div class="step-number enter">01 →</div><p class="enter">اختار مجالك وابدأ التعلّم</p><div class="rule enter"></div><p class="micro enter">من الأساسيات إلى التطبيق</p></div></div></div>
+</div></section>
+
+<section id="s3" class="scene"><div class="bg" data-layout-ignore><div class="glow"></div><div class="orbit"></div><div class="ghost">&lt;/&gt;</div><div class="grid-line"></div></div><div class="scene-content">
+<div class="eyebrow enter"><span class="n">02</span> طبّق</div><h2 class="enter">اكتب كودك <span class="accent">وشغّله</span></h2><p class="sub enter">محرّر أكواد داخل التطبيق، حتى تطبّق اللي تتعلّمه.</p>
+<div class="hero"><div class="editor-box enter"><div class="editor-toolbar"><span>main.py</span><span class="dots"><i></i><i></i><i></i></span></div><div class="code-body"><div class="code-line"><span class="ln">1</span><span class="purple">def</span> learn_to_code():</div><div class="code-line"><span class="ln">2</span>    skills = [<span class="green">"Python"</span>, <span class="green">"Web"</span>]</div><div class="code-line"><span class="ln">3</span>    <span class="purple">for</span> skill <span class="purple">in</span> skills:</div><div class="code-line"><span class="ln">4</span>        print(<span class="green">"Let's build!"</span>)</div><div class="code-line"><span class="ln">5</span></div><div class="code-line"><span class="ln">6</span>learn_to_code()</div></div><div class="editor-output"><span>✓ Let's build!</span><span>Python</span></div></div>
+<div class="editor-bottom"><div class="editor-summary"><div class="pill enter"><svg class="icon"><use href="#i-code"/></svg>من الفكرة… إلى كود</div><p class="enter">جرّب، عدّل، وطوّر مهارتك بالممارسة.</p><div class="pill green editor-success"><svg class="icon"><use href="#i-check"/></svg>اشتغل الكود!</div></div><div class="device enter"><div class="device-top"><i></i><i></i><i></i></div><img class="screen" src="assets/editor.jpg" alt="محرر الكود في تحدي Kodax"></div></div></div>
+</div></section>
+
+<section id="s4" class="scene"><div class="bg" data-layout-ignore><div class="glow"></div><div class="orbit"></div><div class="ghost">XP</div><div class="grid-line"></div></div><div class="scene-content">
+<div class="eyebrow enter"><span class="n">03</span> تحدّى</div><h2 class="enter">حلّ التحديات <span class="accent">واكسب خبرة</span></h2><p class="sub enter">تحديات برمجية بمجالات مختلفة، وكل حل يطوّرك.</p>
+<div class="hero"><div class="challenge-hero"><div class="device enter"><div class="device-top"><i></i><i></i><i></i></div><img class="screen" src="assets/challenges.jpg" alt="قائمة التحديات البرمجية"></div><div class="pill green challenge-badge"><svg class="icon"><use href="#i-check"/></svg>تحدّي مكتمل</div><div class="pill gold xp-float"><svg class="icon"><use href="#i-star"/></svg><span dir="ltr">+ XP</span></div></div><div class="xp-card enter"><div class="xp-info"><span>كل تحدّي… خطوة لقدّام</span><span class="xp-value">LEVEL UP</span></div><div class="xp-track"><div class="xp-fill"></div></div><div class="xp-label">خبرتك تزيد، ومستواك يصعد</div></div></div>
+</div></section>
+
+<section id="s5" class="scene"><div class="bg" data-layout-ignore><div class="glow"></div><div class="orbit"></div><div class="ghost">#1</div><div class="grid-line"></div></div><div class="scene-content">
+<div class="eyebrow enter"><span class="n">04</span> نافس</div><h2 class="enter">شوف مكانك <span class="accent">بين المبرمجين</span></h2><p class="sub enter">تصنيفك حسب تقدّمك ونقاط خبرتك.</p>
+<div class="ranking-tabs"><div class="pill active enter">على العراق</div><div class="pill enter">على محافظتك</div></div>
+<div class="hero"><div class="podium"><div class="podium-col two"><span class="podium-num">2</span><p>نافس</p></div><div class="podium-col one"><svg class="icon"><use href="#i-trophy"/></svg><span class="podium-num">1</span><p>اصعد بالتصنيف</p></div><div class="podium-col three"><span class="podium-num">3</span><p>تقدّم</p></div></div><div class="ranking-view"><div class="device enter"><div class="device-top"><i></i><i></i><i></i></div><img class="screen" src="assets/ranking.jpg" alt="تصنيفات Kodax على العراق والمحافظات"></div><div class="ranking-text"><strong class="enter">تعلّم أكثر، تقدّم أكثر.</strong><p class="enter">نافس مبرمجين من محافظتك ومن كل العراق.</p><div class="pill gold enter"><svg class="icon"><use href="#i-trophy"/></svg>خلّ طموحك أعلى</div></div></div></div>
+</div></section>
+
+<section id="s6" class="scene"><div class="bg" data-layout-ignore><div class="glow"></div><div class="orbit"></div><div class="ghost">{ }</div><div class="grid-line"></div></div><div class="scene-content">
+<div class="eyebrow enter"><span class="n">05</span> شارك</div><h2 class="enter">كودك يجمعك <span class="accent">بمجتمع</span></h2><p class="sub enter">انشر أكوادك، تبادل الأفكار، وتواصل ويا المبرمجين.</p>
+<div class="hero"><div class="social-device"><div class="device enter"><div class="device-top"><i></i><i></i><i></i></div><img class="screen" src="assets/community.jpg" alt="منشورات الأكواد وتفاعلات المجتمع"></div><div class="social-bubble like"><svg class="icon"><use href="#i-heart"/></svg><span>إعجاب بكودك</span></div><div class="social-bubble comment"><svg class="icon"><use href="#i-comment"/></svg><span>فكرة حلوة!</span></div><div class="social-bubble follow"><svg class="icon"><use href="#i-follow"/></svg><span>متابعة جديدة</span></div></div><div class="social-caption"><span class="enter">لايك</span><span class="enter">تعليق</span><span class="enter">فولو</span><span class="enter">تواصل</span></div></div>
+</div></section>
+
+<section id="s7" class="scene"><div class="bg" data-layout-ignore><div class="glow"></div><div class="orbit"></div><div class="ghost">AI</div><div class="grid-line"></div></div><div class="scene-content">
+<div class="eyebrow enter"><span class="n">06</span> اسأل</div><h2 class="enter">تحتاج مساعدة؟ <span class="accent">Kodax وياك</span></h2><p class="sub enter">مساعد يرافقك بالتعلّم وفهم الأكواد.</p>
+<div class="hero"><div class="assistant-layout"><div class="device enter"><div class="device-top"><i></i><i></i><i></i></div><img class="screen" src="assets/assistant.jpg" alt="مساعد Kodax الذكي"></div><div class="chat"><div class="bot enter"><svg class="icon"><use href="#i-bot"/></svg></div><div class="chat-bubble question"><small>أنت</small>شلون أكتب أول كود؟</div><div class="chat-bubble answer"><small>مساعد Kodax</small>نبدأ خطوة بخطوة.<span class="code-inline">print("Hello!")</span></div></div></div><div class="pill enter"><svg class="icon"><use href="#i-code"/></svg>تعلّم، وجرّب بنفسك</div></div>
+</div></section>
+
+<section id="s8" class="scene"><div class="bg" data-layout-ignore><div class="glow"></div><div class="orbit"></div><div class="ghost">✓</div><div class="grid-line"></div></div><div class="scene-content">
+<div class="eyebrow enter"><span class="n">07</span> أنجز</div><h2 class="enter">تعبك يصير <span class="accent">إنجاز</span></h2><p class="sub enter">شهادات تقديرية تحتفي بتقدّمك.</p>
+<div class="hero"><div class="certificate-layout"><div class="certificate-display enter"><span class="cert-small enter">KODAX / ACHIEVEMENT</span><span class="cert-title enter">شهادة إنجاز</span><div class="cert-rule"></div><span class="cert-course enter">تعلّمك يستاهل التقدير</span><div class="seal"><svg class="icon"><use href="#i-medal"/></svg></div></div><div class="certificate-reference"><div class="device enter"><div class="device-top"><i></i><i></i><i></i></div><img class="screen" src="assets/certificate.jpg" alt="شهادة تطوير الويب داخل Kodax"></div><p class="enter">تعلّم مهارة. حقّق إنجاز. وافتخر بتقدّمك.</p></div></div></div>
+</div></section>
+
+<section id="s9" class="scene outro"><div class="bg" data-layout-ignore><div class="glow"></div><div class="orbit"></div><div class="ghost">{ }</div><div class="grid-line"></div></div><div class="scene-content">
+<img class="logo-hero enter" src="assets/logo-outro.png" alt="Kodax"><div class="wordmark enter">Kodax</div><h2 class="enter">رحلتك تبدأ <span class="accent">بكود</span></h2><p class="sub enter">منصة عراقية لتعلّم البرمجة وبناء مهاراتك.</p><div class="verbs"><span class="enter">تعلّم</span><span class="enter">تحدّى</span><span class="enter">شارك</span></div><div class="cta enter">اكتب أول سطر بمستقبلك</div><p class="mini enter">كل خطوة تعلّم… تفتحلك فرصة</p>
+</div></section>
+
+<audio id="sound-effects" class="clip" data-start="0" data-duration="52" data-track-index="2" data-volume="1" src="assets/kodax-sound-effects.wav"></audio>
+<div class="footbar"><div class="foot-text"><span>LEARN / BUILD / LEVEL UP</span><span>رحلتك تبدأ بكود</span></div><div class="film-progress"><i></i></div></div>
+</div>
+<script>
+window.__timelines=window.__timelines||{};
+const tl=gsap.timeline({paused:true});
+const starts=[0,6,13,19,25,31,38,43,48], ends=[6,13,19,25,31,38,43,48,52];
+const entranceModes=[{y:45,opacity:0,duration:.6,ease:'power3.out'},{scale:.84,opacity:0,duration:.7,ease:'back.out(1.25)'},{x:55,opacity:0,duration:.55,ease:'expo.out'},{y:24,opacity:0,duration:.75,ease:'sine.out'},{x:-42,opacity:0,duration:.62,ease:'power4.out'}];
+starts.forEach((start,i)=>{
+ const scene='#s'+(i+1);
+ tl.from(scene+' .glow',{scale:.7,opacity:0,duration:1.2,ease:'sine.out'},start+.12);
+ tl.from(scene+' .orbit',{rotation:-14,scale:.88,opacity:0,duration:1.6,ease:'power2.out'},start+.2);
+ tl.from(scene+' .ghost',{x:45,opacity:0,duration:1.1,ease:'expo.out'},start+.17);
+ tl.from(scene+' .grid-line',{scaleY:0,transformOrigin:'top',duration:.8,ease:'circ.out'},start+.22);
+ document.querySelectorAll(scene+' .enter').forEach((el,j)=>{
+   let at=start+.18+j*(i===0?.12:i===1?.075:.065); if(i===8) at=start+.15+j*.055;
+   tl.from(el,{...entranceModes[(j+i)%entranceModes.length],immediateRender:true},at);
+ });
+ tl.to(scene+' .glow',{x:-35,y:35,scale:1.08,duration:ends[i]-start-1.7,ease:'sine.inOut'},start+1.4);
+ tl.to(scene+' .orbit',{rotation:8,duration:ends[i]-start-1.5,ease:'none'},start+1.3);
+ if(i===0||i===3||i===5) tl.to(scene+' .device',{y:-14,rotation:i===5?-1.1:1.1,duration:1.2,repeat:1,yoyo:true,ease:'sine.inOut'},start+2.3);
+ if(i>0){
+   const old='#s'+i,T=start-.45;
+   if(i===3||i===6){tl.set(scene,{opacity:1},T);tl.fromTo(scene,{clipPath:'circle(0% at 50% 50%)'},{clipPath:'circle(120% at 50% 50%)',duration:.48,ease:'power3.out',immediateRender:false},T);tl.set(old,{opacity:0},start+.05);}
+   else if(i===8){tl.to(old,{opacity:0,duration:.5,ease:'sine.inOut'},T);tl.fromTo(scene,{opacity:0},{opacity:1,duration:.5,ease:'sine.inOut',immediateRender:false},T);}
+   else{const direction=i%2===0?-1:1;tl.to(old,{x:-1080*direction,duration:.45,ease:'power3.inOut'},T);tl.fromTo(scene,{x:1080*direction,opacity:1},{x:0,opacity:1,duration:.45,ease:'power3.inOut',immediateRender:false},T);tl.set(old,{opacity:0},start+.01);}
+ }
+});
+tl.from('#s3 .code-line',{x:16,opacity:0,duration:.25,stagger:.33,ease:'power2.out'},14.15);
+tl.from('#s3 .editor-output',{y:12,opacity:0,duration:.4,ease:'expo.out'},16.45);
+tl.from('#s3 .editor-success',{scale:.6,opacity:0,rotation:-5,duration:.6,ease:'back.out(1.8)'},16.65);
+tl.from('#s4 .challenge-badge',{x:-90,opacity:0,duration:.6,ease:'back.out(1.5)'},20.2);
+tl.from('#s4 .xp-float',{y:70,scale:.5,opacity:0,duration:.6,ease:'elastic.out(1,.55)'},20.8);
+tl.fromTo('#s4 .xp-fill',{scaleX:.16},{scaleX:.91,duration:2.4,ease:'power2.inOut',immediateRender:false},20.4);
+tl.from('#s4 .xp-label',{y:15,opacity:0,duration:.5,ease:'sine.out'},22.3);
+tl.from('#s5 .podium-col',{scaleY:.1,opacity:0,duration:.75,stagger:.12,ease:'back.out(1.2)'},26.0);
+tl.from('#s5 .podium-col.one .icon',{scale:.1,rotation:-18,opacity:0,duration:.7,ease:'elastic.out(1,.6)'},26.8);
+tl.from('#s6 .like',{x:-65,rotation:-6,opacity:0,duration:.6,ease:'back.out(1.4)'},32.2);
+tl.from('#s6 .comment',{x:70,opacity:0,duration:.6,ease:'expo.out'},33.2);
+tl.from('#s6 .follow',{y:40,scale:.8,opacity:0,duration:.6,ease:'elastic.out(1,.65)'},34.2);
+tl.to('#s6 .like svg',{scale:1.25,duration:.2,repeat:3,yoyo:true,ease:'sine.inOut'},34.75);
+tl.from('#s7 .question',{x:-35,opacity:0,duration:.5,ease:'power3.out'},39.1);
+tl.from('#s7 .answer',{y:38,opacity:0,duration:.7,ease:'expo.out'},40.0);
+tl.from('#s8 .cert-rule',{scaleX:0,duration:1.,ease:'power2.out'},43.8);
+tl.from('#s8 .seal',{scale:1.8,rotation:18,opacity:0,duration:.7,ease:'back.out(1.4)'},44.5);
+tl.to('#s9 .cta',{scale:1.035,duration:.6,repeat:1,yoyo:true,ease:'sine.inOut'},50.1);
+tl.from('.brandbar',{y:-25,opacity:0,duration:.7,ease:'power3.out'},.12);
+tl.from('.footbar',{opacity:0,duration:.8,ease:'sine.out'},.3);
+tl.fromTo('.film-progress i',{scaleX:0},{scaleX:1,duration:52,ease:'none'},0);
+window.__timelines.kodax=tl;
+</script>
+</body>
+</html>

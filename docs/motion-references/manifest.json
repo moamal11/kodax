@@ -1,0 +1,497 @@
+[
+  {
+    "id": "V01",
+    "source": "C:\\Users\\moamal\\Downloads\\oUZquYDVQBBEse5mfvEgIItFE07EtkW0SDC9pT.mp4",
+    "sha256": "7e4c47b3d645672a0b733e97872c8e6411f3689d4a2f4aa037cf1b0486ccbe3e",
+    "duration_s": 23.1,
+    "width": 1024,
+    "height": 576,
+    "fps": 30.0,
+    "audio": {
+      "sample_rate_analysis": 16000,
+      "peak_dbfs": -0.00026507636037961915,
+      "rms_dbfs": -14.160833509268864,
+      "samples": 369684
+    },
+    "largest_frame_changes": [
+      {
+        "time_s": 5.767,
+        "mean_rgb_change": 234.43
+      },
+      {
+        "time_s": 20.9,
+        "mean_rgb_change": 200.85
+      },
+      {
+        "time_s": 3.6,
+        "mean_rgb_change": 194.81
+      },
+      {
+        "time_s": 3.667,
+        "mean_rgb_change": 140.12
+      },
+      {
+        "time_s": 3.633,
+        "mean_rgb_change": 134.36
+      },
+      {
+        "time_s": 3.7,
+        "mean_rgb_change": 57.62
+      },
+      {
+        "time_s": 7.7,
+        "mean_rgb_change": 29.96
+      },
+      {
+        "time_s": 7.667,
+        "mean_rgb_change": 28.98
+      },
+      {
+        "time_s": 7.733,
+        "mean_rgb_change": 28.63
+      },
+      {
+        "time_s": 7.633,
+        "mean_rgb_change": 27.35
+      },
+      {
+        "time_s": 7.6,
+        "mean_rgb_change": 25.28
+      },
+      {
+        "time_s": 1.333,
+        "mean_rgb_change": 23.17
+      },
+      {
+        "time_s": 7.567,
+        "mean_rgb_change": 22.01
+      },
+      {
+        "time_s": 11.433,
+        "mean_rgb_change": 20.54
+      },
+      {
+        "time_s": 11.467,
+        "mean_rgb_change": 20.4
+      },
+      {
+        "time_s": 7.533,
+        "mean_rgb_change": 18.97
+      },
+      {
+        "time_s": 17.733,
+        "mean_rgb_change": 18.7
+      },
+      {
+        "time_s": 1.3,
+        "mean_rgb_change": 17.71
+      },
+      {
+        "time_s": 7.8,
+        "mean_rgb_change": 17.68
+      },
+      {
+        "time_s": 7.767,
+        "mean_rgb_change": 17.67
+      }
+    ]
+  },
+  {
+    "id": "V02",
+    "source": "C:\\Users\\moamal\\Downloads\\o4PCBxfDcQifVLqC4t3ciOrVDBiA2Eq5FgCkIg (1).mp4",
+    "sha256": "9a3403daea966b28b8846029ae2dfd0458d3608b979cc70345b83805fd7b7cb5",
+    "duration_s": 16.15,
+    "width": 1280,
+    "height": 720,
+    "fps": 30.0,
+    "audio": {
+      "sample_rate_analysis": 16000,
+      "peak_dbfs": -2.062476256269484,
+      "rms_dbfs": -26.676654147729934,
+      "samples": 258578
+    },
+    "largest_frame_changes": [
+      {
+        "time_s": 16.1,
+        "mean_rgb_change": 15.37
+      },
+      {
+        "time_s": 9.1,
+        "mean_rgb_change": 11.03
+      },
+      {
+        "time_s": 7.667,
+        "mean_rgb_change": 10.75
+      },
+      {
+        "time_s": 5.233,
+        "mean_rgb_change": 7.47
+      },
+      {
+        "time_s": 5.267,
+        "mean_rgb_change": 7.39
+      },
+      {
+        "time_s": 5.4,
+        "mean_rgb_change": 7.34
+      },
+      {
+        "time_s": 5.2,
+        "mean_rgb_change": 7.32
+      },
+      {
+        "time_s": 5.367,
+        "mean_rgb_change": 7.3
+      },
+      {
+        "time_s": 5.333,
+        "mean_rgb_change": 7.28
+      },
+      {
+        "time_s": 4.0,
+        "mean_rgb_change": 7.11
+      },
+      {
+        "time_s": 4.033,
+        "mean_rgb_change": 7.11
+      },
+      {
+        "time_s": 5.3,
+        "mean_rgb_change": 7.11
+      },
+      {
+        "time_s": 5.433,
+        "mean_rgb_change": 7.1
+      },
+      {
+        "time_s": 4.133,
+        "mean_rgb_change": 6.97
+      },
+      {
+        "time_s": 4.167,
+        "mean_rgb_change": 6.73
+      },
+      {
+        "time_s": 1.267,
+        "mean_rgb_change": 6.66
+      },
+      {
+        "time_s": 1.3,
+        "mean_rgb_change": 6.51
+      },
+      {
+        "time_s": 5.167,
+        "mean_rgb_change": 6.51
+      },
+      {
+        "time_s": 4.1,
+        "mean_rgb_change": 6.49
+      },
+      {
+        "time_s": 1.333,
+        "mean_rgb_change": 6.39
+      }
+    ]
+  },
+  {
+    "id": "V03",
+    "source": "C:\\Users\\moamal\\Downloads\\oYekeS9W8ACvAMMTIfi2vERAqWjZ32LEEoQgDs.mp4",
+    "sha256": "a956701d4e58815e3b3d5e64719f1ce1cae71dd68db63709ec5508ef8321bf2c",
+    "duration_s": 20.23,
+    "width": 1024,
+    "height": 576,
+    "fps": 30.0,
+    "audio": {
+      "sample_rate_analysis": 16000,
+      "peak_dbfs": -9.123032851032933,
+      "rms_dbfs": -25.704890926632608,
+      "samples": 323616
+    },
+    "largest_frame_changes": [
+      {
+        "time_s": 10.233,
+        "mean_rgb_change": 230.95
+      },
+      {
+        "time_s": 9.367,
+        "mean_rgb_change": 209.23
+      },
+      {
+        "time_s": 9.3,
+        "mean_rgb_change": 200.79
+      },
+      {
+        "time_s": 19.167,
+        "mean_rgb_change": 198.47
+      },
+      {
+        "time_s": 9.333,
+        "mean_rgb_change": 198.16
+      },
+      {
+        "time_s": 1.267,
+        "mean_rgb_change": 191.33
+      },
+      {
+        "time_s": 1.367,
+        "mean_rgb_change": 120.24
+      },
+      {
+        "time_s": 2.4,
+        "mean_rgb_change": 102.47
+      },
+      {
+        "time_s": 1.3,
+        "mean_rgb_change": 98.82
+      },
+      {
+        "time_s": 1.333,
+        "mean_rgb_change": 97.68
+      },
+      {
+        "time_s": 2.367,
+        "mean_rgb_change": 33.35
+      },
+      {
+        "time_s": 5.367,
+        "mean_rgb_change": 33.26
+      },
+      {
+        "time_s": 1.167,
+        "mean_rgb_change": 32.16
+      },
+      {
+        "time_s": 1.2,
+        "mean_rgb_change": 28.08
+      },
+      {
+        "time_s": 5.333,
+        "mean_rgb_change": 25.81
+      },
+      {
+        "time_s": 5.4,
+        "mean_rgb_change": 24.99
+      },
+      {
+        "time_s": 13.5,
+        "mean_rgb_change": 23.02
+      },
+      {
+        "time_s": 2.333,
+        "mean_rgb_change": 22.92
+      },
+      {
+        "time_s": 20.167,
+        "mean_rgb_change": 20.65
+      },
+      {
+        "time_s": 1.4,
+        "mean_rgb_change": 20.61
+      }
+    ]
+  },
+  {
+    "id": "V04",
+    "source": "C:\\Users\\moamal\\Downloads\\o8IjitIA4hKfGeGWCAe6L7A4K9QtU4ZBDBQUII.mp4",
+    "sha256": "714ac02d21b6751cfbde71bbbdcb61fcceda0a31e66906dd7a5bb33a31f9a6c3",
+    "duration_s": 14.42,
+    "width": 1024,
+    "height": 576,
+    "fps": 30.0,
+    "audio": {
+      "sample_rate_analysis": 16000,
+      "peak_dbfs": -0.00026507636037961915,
+      "rms_dbfs": -21.293530746731697,
+      "samples": 230736
+    },
+    "largest_frame_changes": [
+      {
+        "time_s": 8.867,
+        "mean_rgb_change": 132.16
+      },
+      {
+        "time_s": 6.067,
+        "mean_rgb_change": 126.6
+      },
+      {
+        "time_s": 10.433,
+        "mean_rgb_change": 67.09
+      },
+      {
+        "time_s": 10.467,
+        "mean_rgb_change": 51.9
+      },
+      {
+        "time_s": 4.367,
+        "mean_rgb_change": 40.15
+      },
+      {
+        "time_s": 6.033,
+        "mean_rgb_change": 18.54
+      },
+      {
+        "time_s": 3.7,
+        "mean_rgb_change": 17.07
+      },
+      {
+        "time_s": 10.5,
+        "mean_rgb_change": 16.12
+      },
+      {
+        "time_s": 6.0,
+        "mean_rgb_change": 15.71
+      },
+      {
+        "time_s": 5.867,
+        "mean_rgb_change": 15.54
+      },
+      {
+        "time_s": 5.767,
+        "mean_rgb_change": 15.36
+      },
+      {
+        "time_s": 6.8,
+        "mean_rgb_change": 14.61
+      },
+      {
+        "time_s": 5.967,
+        "mean_rgb_change": 14.59
+      },
+      {
+        "time_s": 5.8,
+        "mean_rgb_change": 12.93
+      },
+      {
+        "time_s": 5.833,
+        "mean_rgb_change": 12.56
+      },
+      {
+        "time_s": 5.933,
+        "mean_rgb_change": 12.44
+      },
+      {
+        "time_s": 6.267,
+        "mean_rgb_change": 12.06
+      },
+      {
+        "time_s": 7.633,
+        "mean_rgb_change": 11.96
+      },
+      {
+        "time_s": 7.667,
+        "mean_rgb_change": 11.84
+      },
+      {
+        "time_s": 10.4,
+        "mean_rgb_change": 11.68
+      }
+    ]
+  },
+  {
+    "id": "V05",
+    "source": "C:\\Users\\moamal\\Downloads\\oY8oBbguEwnFXLyAygkI271tRoDFDFIkEfGEek.mp4",
+    "sha256": "6a0edc6e49b2490716295cfbf27a4719f0069a1b2d9956556b686cd632786dc0",
+    "duration_s": 10.87,
+    "width": 1024,
+    "height": 576,
+    "fps": 30.0,
+    "audio": {
+      "sample_rate_analysis": 16000,
+      "peak_dbfs": -5.5732167110085,
+      "rms_dbfs": -20.07166917196439,
+      "samples": 173522
+    },
+    "largest_frame_changes": [
+      {
+        "time_s": 5.467,
+        "mean_rgb_change": 31.76
+      },
+      {
+        "time_s": 5.367,
+        "mean_rgb_change": 31.54
+      },
+      {
+        "time_s": 1.367,
+        "mean_rgb_change": 31.15
+      },
+      {
+        "time_s": 1.5,
+        "mean_rgb_change": 31.06
+      },
+      {
+        "time_s": 1.4,
+        "mean_rgb_change": 30.48
+      },
+      {
+        "time_s": 1.433,
+        "mean_rgb_change": 30.46
+      },
+      {
+        "time_s": 5.433,
+        "mean_rgb_change": 30.37
+      },
+      {
+        "time_s": 5.4,
+        "mean_rgb_change": 30.34
+      },
+      {
+        "time_s": 1.467,
+        "mean_rgb_change": 29.4
+      },
+      {
+        "time_s": 1.3,
+        "mean_rgb_change": 29.35
+      },
+      {
+        "time_s": 1.333,
+        "mean_rgb_change": 28.78
+      },
+      {
+        "time_s": 1.267,
+        "mean_rgb_change": 28.16
+      },
+      {
+        "time_s": 5.5,
+        "mean_rgb_change": 21.24
+      },
+      {
+        "time_s": 5.333,
+        "mean_rgb_change": 18.59
+      },
+      {
+        "time_s": 2.533,
+        "mean_rgb_change": 18.23
+      },
+      {
+        "time_s": 5.567,
+        "mean_rgb_change": 17.58
+      },
+      {
+        "time_s": 5.6,
+        "mean_rgb_change": 16.6
+      },
+      {
+        "time_s": 6.433,
+        "mean_rgb_change": 15.67
+      },
+      {
+        "time_s": 6.4,
+        "mean_rgb_change": 15.67
+      },
+      {
+        "time_s": 5.533,
+        "mean_rgb_change": 15.4
+      }
+    ]
+  },
+  {
+    "id": "V06",
+    "source": "C:\\Users\\moamal\\Downloads\\o4PCBxfDcQifVLqC4t3ciOrVDBiA2Eq5FgCkIg.mp4",
+    "sha256": "9a3403daea966b28b8846029ae2dfd0458d3608b979cc70345b83805fd7b7cb5",
+    "duration_s": 16.15,
+    "width": 1280,
+    "height": 720,
+    "fps": 30.0,
+    "identical_to": "V02"
+  }
+]

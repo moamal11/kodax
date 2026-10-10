@@ -1,9 +1,11 @@
+import { profilePath } from '@/services/profileLinks';
+import { requestSignIn } from '@/services/webAccess';
 /**
  * صفحة كود من المجتمع: الكاتب، الكود (أو ملفات مشروع الويب مع معاينة)، التشغيل، التعليقات.
  * التعديل للمالك ونسخة خاصة لغيره عبر المحرر. الأعداد من النظام المركزي (AppContext).
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, View, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState,useRef } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, View, ActivityIndicator,ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -12,15 +14,36 @@ import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
-import { getSnippetById, getComments, addComment, incrementViews, getSnippetCounts, type FeedSnippet, type SnippetComment } from '@/services/codeFeedService';
+import { getSnippetById, incrementViews, getSnippetCounts, type FeedSnippet } from '@/services/codeFeedService';
 import { checkIsFollowing } from '@/services/followService';
 import { executeCode } from '@/services/codeExecution';
+import { SnippetComments } from '@/features/community/SnippetComments';
+import { SocialActions } from '@/features/community/SocialActions';
 import FollowButton from '@/components/ui/FollowButton';
 import SnippetModerationSheet from '@/components/editor/SnippetModerationSheet';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import { timeAgo } from '@/components/editor/NotificationButton';
 import { languageLabel } from '@/features/community/SnippetCard';
-import { Screen, AppBar, Text, Row, Col, Avatar, Button, IconButton, CodeView, Field, Segmented, Surface, Tag, EmptyState, ListSkeleton, SectionHeader, useTheme, useBreakpoint } from '@/design';
+import {
+  Screen,
+  AppBar,
+  Text,
+  Row,
+  Col,
+  Avatar,
+  Button,
+  IconButton,
+  CodeView,
+  Field,
+  Segmented,
+  Surface,
+  Tag,
+  EmptyState,
+  ListSkeleton,
+  SectionHeader,
+  useTheme,
+  useBreakpoint,
+} from '@/design';
 
 interface ProjectFiles {
   html: string;
@@ -44,7 +67,12 @@ function previewDoc(p: ProjectFiles): string {
 function runJs(code: string): string {
   const logs: string[] = [];
   const fmt = (a: any[]) => a.map((x) => (typeof x === 'object' ? JSON.stringify(x, null, 2) : String(x))).join(' ');
-  const c = { log: (...a: any[]) => logs.push(fmt(a)), error: (...a: any[]) => logs.push('خطأ: ' + fmt(a)), warn: (...a: any[]) => logs.push('تحذير: ' + fmt(a)), info: (...a: any[]) => logs.push(fmt(a)) };
+  const c = {
+    log: (...a: any[]) => logs.push(fmt(a)),
+    error: (...a: any[]) => logs.push('خطأ: ' + fmt(a)),
+    warn: (...a: any[]) => logs.push('تحذير: ' + fmt(a)),
+    info: (...a: any[]) => logs.push(fmt(a)),
+  };
   try {
     const r = new Function('__c', code.replace(/console\.(log|error|warn|info)/g, '__c.$1'))(c);
     if (r !== undefined && !logs.length) logs.push('→ ' + String(r));
@@ -58,18 +86,16 @@ type Run = { state: 'running' } | { state: 'done'; ok: boolean; output: string }
 
 export default function SnippetScreen() {
   const t = useTheme();
+  const scroll=useRef<ScrollView>(null),commentsTop=useRef(0);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { isDesktop } = useBreakpoint();
-  const { likedSnippets, toggleLike, syncLikes, updateLikeCounts, getLikeCount, updateViewCounts, getViewCount, updateCommentCounts, getCommentCount } = useApp();
+  const { isDesktop, height, gutter } = useBreakpoint();
+  const codeHeight = Math.max(180, Math.min(420, height * 0.42));
+  const { likedSnippets, toggleLike, syncLikes, updateLikeCounts, getLikeCount, updateViewCounts, getViewCount, updateCommentCounts, getCommentCount } =
+    useApp();
 
   const [snippet, setSnippet] = useState<FeedSnippet | null>(null);
   const [loading, setLoading] = useState(true);
-  const [comments, setComments] = useState<SnippetComment[]>([]);
-  const [loadingComments, setLoadingComments] = useState(true);
-  const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState(false);
   const [copied, setCopied] = useState(false);
   const [following, setFollowing] = useState(false);
   const [tab, setTab] = useState<keyof ProjectFiles>('html');
@@ -95,25 +121,25 @@ export default function SnippetScreen() {
           updateViewCounts({ [id]: data.views_count || 0 });
           updateCommentCounts({ [id]: data.comments_count || 0 });
         }
-        incrementViews(id, user?.id).then(() => updateViewCounts({ [id]: getViewCount(id, data.views_count || 0) + 1 }));
+        if (Platform.OS !== 'web' || user?.id) {
+          incrementViews(id, user?.id).then(() => updateViewCounts({ [id]: getViewCount(id, data.views_count || 0) + 1 }));
+        }
         if (user?.id && data.user_id !== user.id) setFollowing(await checkIsFollowing(user.id, data.user_id));
       }
       setLoading(false);
-    })();
-    (async () => {
-      setLoadingComments(true);
-      const { data } = await getComments(id);
-      setComments(data);
-      setLoadingComments(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user?.id]);
 
   const project = useMemo(() => (snippet ? parseProject(snippet.code) : null), [snippet?.code]);
-  const previewHtml = useMemo(() => (project ? previewDoc(project) : snippet?.language === 'html' ? snippet.code : ''), [project, snippet?.code, snippet?.language]);
+  const previewHtml = useMemo(
+    () => (project ? previewDoc(project) : snippet?.language === 'html' ? snippet.code : ''),
+    [project, snippet?.code, snippet?.language]
+  );
 
   const like = async () => {
-    if (!user?.id || !id) return;
+    if (!user?.id) { requestSignIn(); return; }
+    if (!id) return;
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
     await toggleLike(id);
   };
@@ -122,19 +148,6 @@ export default function SnippetScreen() {
     await Clipboard.setStringAsync(snippet.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-  const send = async () => {
-    if (!user?.id || !id || !draft.trim()) return;
-    setSending(true);
-    setSendError(false);
-    const { success } = await addComment(user.id, id, draft.trim());
-    if (success) {
-      setDraft('');
-      const { data } = await getComments(id);
-      setComments(data);
-      updateCommentCounts({ [id]: data.length });
-    } else setSendError(true);
-    setSending(false);
   };
   const execute = useCallback(async () => {
     if (!snippet) return;
@@ -153,7 +166,18 @@ export default function SnippetScreen() {
   }, [snippet, project]);
   const openEditor = () => {
     if (!snippet) return;
-    router.push({ pathname: '/code/add', params: { editId: snippet.id, ownerId: snippet.user_id, code: snippet.code, editLang: snippet.language, editTitle: snippet.title || '', editDesc: snippet.description || '', lang: snippet.language } } as any);
+    router.push({
+      pathname: '/code/add',
+      params: {
+        editId: snippet.id,
+        ownerId: snippet.user_id,
+        code: snippet.code,
+        editLang: snippet.language,
+        editTitle: snippet.title || '',
+        editDesc: snippet.description || '',
+        lang: snippet.language,
+      },
+    } as any);
   };
 
   if (loading) {
@@ -166,7 +190,13 @@ export default function SnippetScreen() {
   if (!snippet) {
     return (
       <Screen header={<AppBar title="كود" fallback="/code" />}>
-        <EmptyState icon="document-outline" title="الكود غير موجود" body="ممكن صاحبه حذفه أو جعله خاصاً." action="المجتمع" onAction={() => router.replace('/code')} />
+        <EmptyState
+          icon="document-outline"
+          title="الكود غير موجود"
+          body="ممكن صاحبه حذفه أو جعله خاصاً."
+          action="المجتمع"
+          onAction={() => router.replace('/code')}
+        />
       </Screen>
     );
   }
@@ -191,79 +221,89 @@ export default function SnippetScreen() {
           { value: 'js', label: 'script.js' },
         ]}
       />
-      <CodeView code={project[tab]} language={tab === 'js' ? 'javascript' : tab} />
+      <CodeView
+        scrollHeight={codeHeight}
+        code={project[tab]}
+        language={tab === 'js' ? 'javascript' : tab}
+        title={tab === 'html' ? 'index.html' : tab === 'css' ? 'style.css' : 'script.js'}
+        actions={
+          <IconButton
+            icon={copied ? 'checkmark' : 'copy-outline'}
+            label={copied ? 'تم النسخ' : 'نسخ المشروع'}
+            size={18}
+            onPress={copy}
+            color={t.colors.codeMuted}
+          />
+        }
+      />
     </Col>
   ) : (
     <CodeView
+      scrollHeight={codeHeight}
       code={snippet.code}
       language={snippet.language}
       title={languageLabel(snippet.language)}
-      actions={<IconButton icon={copied ? 'checkmark' : 'copy-outline'} label={copied ? 'تم النسخ' : 'نسخ الكود'} size={18} onPress={copy} color={copied ? t.colors.successText : t.colors.codeMuted} />}
+      actions={
+        <IconButton
+          icon={copied ? 'checkmark' : 'copy-outline'}
+          label={copied ? 'تم النسخ' : 'نسخ الكود'}
+          size={18}
+          onPress={copy}
+          color={copied ? t.colors.successText : t.colors.codeMuted}
+        />
+      }
     />
   );
 
-  const commentsBlock = (
-    <View>
-      <SectionHeader title={`التعليقات${commentCount ? ` (${commentCount})` : ''}`} />
-      {user?.id ? (
-        <Row gap={8} align="flex-end" style={{ marginBottom: 12 }}>
-          <Field label="اكتب تعليقاً" hideLabel placeholder="سؤال، فكرة، أو تشجيع…" value={draft} onChangeText={setDraft} multiline minHeight={48} maxLength={1000} style={{ flex: 1 }} error={sendError ? 'لم يُرسل التعليق. حاول مرة أخرى.' : null} />
-          <IconButton icon="send" label="إرسال التعليق" variant="brand" onPress={send} disabled={!draft.trim() || sending} style={{ marginBottom: sendError ? 26 : 2, transform: [{ scaleX: -1 }] }} />
-        </Row>
-      ) : null}
-      {loadingComments ? (
-        <ListSkeleton rows={2} />
-      ) : comments.length === 0 ? (
-        <Text variant="bodySm" tone="muted" style={{ paddingVertical: 8 }}>
-          ماكو تعليقات بعد. كن أول من يعلّق.
-        </Text>
-      ) : (
-        <Col gap={14}>
-          {comments.map((c) => {
-            const name = c.profiles?.full_name || c.profiles?.username || 'عضو';
-            return (
-              <Row key={c.id} gap={10} align="flex-start">
-                <Pressable onPress={() => router.push(c.user_id === user?.id ? '/profile' : (`/user/${c.user_id}` as any))} accessibilityRole="link" accessibilityLabel={`ملف ${name}`}>
-                  <Avatar uri={c.profiles?.avatar_url} name={name} size={32} />
-                </Pressable>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Row gap={6} style={{ justifyContent: 'flex-start' }}>
-                    <Text variant="label" weight="semibold" numberOfLines={1} style={{ flexShrink: 1 }}>
-                      {name}
-                    </Text>
-                    <VerifiedBadge verified={c.profiles?.is_verified} size={13} />
-                    <Text variant="caption" tone="muted">
-                      {timeAgo(new Date(c.created_at))}
-                    </Text>
-                  </Row>
-                  <Text variant="body" tone="secondary" selectable>
-                    {c.content}
-                  </Text>
-                </View>
-              </Row>
-            );
-          })}
-        </Col>
-      )}
-    </View>
-  );
+  const commentsBlock = <View onLayout={e=>{commentsTop.current=e.nativeEvent.layout.y;}}><SnippetComments snippetId={snippet.id} count={commentCount} onCount={n => updateCommentCounts({ [snippet.id]: n })} /></View>;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: t.colors.bg }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
+      style={{ flex: 1, backgroundColor: t.colors.bg }}
+    >
       <Screen
         width="reading"
+        scrollRef={scroll}
+        footer={
+          <View style={{ borderTopWidth: 1, borderTopColor: t.colors.border, backgroundColor: t.colors.bg, paddingVertical: 10 }}>
+            <Row gap={8} style={{ width: '100%', maxWidth: t.layout.readingWidth, alignSelf: 'center', paddingHorizontal: gutter }}>
+              <Button
+                label={runnable ? 'معاينة' : 'شغّل'}
+                icon={runnable ? 'eye-outline' : 'play'}
+                variant="success"
+                onPress={execute}
+                style={{ flex: 1 }}
+                loading={run?.state === 'running'}
+              />
+              <Button
+                label={isOwner ? 'تعديل' : 'نسخة لي'}
+                icon={isOwner ? 'create-outline' : 'git-branch-outline'}
+                variant="secondary"
+                style={{ flex: 1 }}
+                onPress={openEditor}
+                accessibilityHint={isOwner ? undefined : 'يفتح الكود في المحرر لتحفظ نسختك الخاصة'}
+              />
+            </Row>
+          </View>
+        }
         header={
           <AppBar
             title={snippet.title}
             subtitle={languageLabel(snippet.language)}
             fallback="/code"
-            actions={<IconButton icon="ellipsis-horizontal" label={isOwner ? 'خيارات الكود' : 'إبلاغ أو حظر'} onPress={() => setModeration(true)} />}
+            actions={<IconButton icon="ellipsis-horizontal" label={isOwner ? 'خيارات الكود' : 'إبلاغ أو حظر'} onPress={() => user?.id ? setModeration(true) : requestSignIn()} />}
           />
         }
       >
         <Col gap={18}>
           <Row gap={10}>
-            <Pressable onPress={() => router.push(isOwner ? '/profile' : (`/user/${snippet.user_id}` as any))} accessibilityRole="link" accessibilityLabel={`ملف ${authorName}`} style={{ flex: 1 }}>
+            <Pressable
+              onPress={() => router.push(isOwner ? '/profile' : (profilePath(snippet.user_id,author?.username) as any))}
+              accessibilityRole="link"
+              accessibilityLabel={`ملف ${authorName}`}
+              style={{ flex: 1 }}
+            >
               <Row gap={10}>
                 <Avatar uri={author?.avatar_url} name={authorName} size={40} />
                 <View style={{ flex: 1 }}>
@@ -280,7 +320,9 @@ export default function SnippetScreen() {
                 </View>
               </Row>
             </Pressable>
-            {user?.id && !isOwner && <FollowButton currentUserId={user.id} targetUserId={snippet.user_id} isFollowing={following} onToggle={setFollowing} compact />}
+            {user?.id && !isOwner && (
+              <FollowButton currentUserId={user.id} targetUserId={snippet.user_id} isFollowing={following} onToggle={setFollowing} compact />
+            )}
           </Row>
 
           <View style={{ gap: 6 }}>
@@ -294,42 +336,29 @@ export default function SnippetScreen() {
 
           {codeArea}
 
-          <Row gap={8} wrap>
-            <Button label={runnable ? 'معاينة' : 'شغّل'} icon={runnable ? 'eye-outline' : 'play'} variant="success" onPress={execute} loading={run?.state === 'running'} />
-            <Button label={isOwner ? 'تعديل' : 'نسخة لي'} icon={isOwner ? 'create-outline' : 'git-branch-outline'} variant="secondary" onPress={openEditor} accessibilityHint={isOwner ? undefined : 'يفتح الكود في المحرر لتحفظ نسختك الخاصة'} />
-            <View style={{ flex: 1 }} />
-            <Pressable
-              onPress={like}
-              disabled={!user?.id}
-              accessibilityRole="button"
-              accessibilityState={{ selected: liked }}
-              accessibilityLabel={liked ? `إلغاء الإعجاب، ${likes}` : `إعجاب، ${likes}`}
-              style={(s: any) => ({ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 10, borderRadius: t.radius.md, backgroundColor: s.hovered || s.pressed ? t.colors.surfacePressed : 'transparent' })}
-            >
-              <Ionicons name={liked ? 'heart' : 'heart-outline'} size={20} color={liked ? t.colors.dangerText : t.colors.textSecondary} />
-              <Text variant="label" tabular>
-                {likes}
-              </Text>
-            </Pressable>
-            <Row gap={6} style={{ paddingHorizontal: 6 }} accessible accessibilityLabel={`${views} مشاهدة`}>
-              <Ionicons name="eye-outline" size={18} color={t.colors.textMuted} />
-              <Text variant="label" tone="muted" tabular>
-                {views}
-              </Text>
-            </Row>
-          </Row>
+          <SocialActions item={{type:'code',id:snippet.id,title:snippet.title}} likes={likes} comments={commentCount} views={views} liked={liked} onLike={like} onComments={()=>scroll.current?.scrollTo({y:commentsTop.current,animated:false})}/>
 
           {run && (
             <Surface padding={0} style={{ overflow: 'hidden' }} accessibilityLiveRegion="polite">
               <Row justify="space-between" style={{ paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
                 <Row gap={6}>
-                  {run.state === 'running' ? <ActivityIndicator size="small" color={t.colors.brand} /> : <Ionicons name={run.ok ? 'checkmark-circle' : 'alert-circle'} size={16} color={run.ok ? t.colors.successText : t.colors.dangerText} />}
+                  {run.state === 'running' ? (
+                    <ActivityIndicator size="small" color={t.colors.brand} />
+                  ) : (
+                    <Ionicons name={run.ok ? 'checkmark-circle' : 'alert-circle'} size={16} color={run.ok ? t.colors.successText : t.colors.dangerText} />
+                  )}
                   <Text variant="label">{run.state === 'running' ? 'جارٍ التشغيل…' : 'الناتج'}</Text>
                 </Row>
                 <IconButton icon="close" label="إغلاق الناتج" size={18} onPress={() => setRun(null)} />
               </Row>
               {run.state === 'done' && (
-                <Text mono ltr variant="bodySm" selectable style={{ padding: 12, color: run.ok ? t.colors.codeText : t.colors.dangerText, backgroundColor: t.colors.codeBg }}>
+                <Text
+                  mono
+                  ltr
+                  variant="bodySm"
+                  selectable
+                  style={{ padding: 12, color: run.ok ? t.colors.codeText : t.colors.dangerText, backgroundColor: t.colors.codeBg }}
+                >
                   {run.output}
                 </Text>
               )}
@@ -342,13 +371,30 @@ export default function SnippetScreen() {
 
       <Modal visible={preview} animationType="slide" onRequestClose={() => setPreview(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg }}>
-          <AppBar title="معاينة" subtitle={snippet.title} back={false} actions={<IconButton icon="close" label="إغلاق المعاينة" onPress={() => setPreview(false)} />} border />
+          <AppBar
+            title="معاينة"
+            subtitle={snippet.title}
+            back={false}
+            actions={<IconButton icon="close" label="إغلاق المعاينة" onPress={() => setPreview(false)} />}
+            border
+          />
           <View style={{ flex: 1, margin: isDesktop ? 24 : 8, borderRadius: t.radius.md, overflow: 'hidden', backgroundColor: '#fff' }}>
             {Platform.OS === 'web' ? (
               // @ts-ignore — عنصر DOM على الويب فقط
-              <iframe srcDoc={previewHtml} style={{ width: '100%', height: '100%', border: 'none' }} sandbox="allow-scripts allow-same-origin" title="معاينة المشروع" />
+              <iframe
+                srcDoc={previewHtml}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                sandbox="allow-scripts allow-same-origin"
+                title="معاينة المشروع"
+              />
             ) : (
-              <WebView originWhitelist={['*']} source={{ html: previewHtml }} style={{ flex: 1, backgroundColor: '#fff' }} javaScriptEnabled domStorageEnabled />
+              <WebView
+                originWhitelist={['*']}
+                source={{ html: previewHtml }}
+                style={{ flex: 1, backgroundColor: '#fff' }}
+                javaScriptEnabled
+                domStorageEnabled
+              />
             )}
           </View>
         </SafeAreaView>

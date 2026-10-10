@@ -284,7 +284,7 @@ export function BadgeProvider({
     await notificationService.markAllAsRead();
     const notifs = await notificationService.getNotifications();
     setNotifications(notifs);
-    setUnreadCount(0);
+    setUnreadCount(notifs.filter((n) => !n.read).length);
   }, []);
 
   const refreshNotifications = useCallback(async () => {

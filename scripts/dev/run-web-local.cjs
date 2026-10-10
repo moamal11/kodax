@@ -16,6 +16,9 @@ const port = process.env.PORT || '8095';
 // node scripts/dev/run-web-local.cjs --export <dir>  → نسخة ثابتة (expo export) على الـbackend المحلي
 const exp = process.argv.indexOf('--export');
 const args = exp >= 0 ? ['expo', 'export', '-p', 'web', '--output-dir', process.argv[exp + 1] || 'dist-local'] : ['expo', 'start', '--web', '--port', port];
+if (exp < 0 && process.env.LOCAL_NATIVE_ONLY === '1') args.splice(2, 1, '--dev-client');
+if (process.env.LOCAL_MAX_WORKERS) args.push('--max-workers', process.env.LOCAL_MAX_WORKERS);
+if (exp < 0 && process.env.LOCAL_RESET_CACHE === '1') args.push('--clear');
 const child = spawn('npx', args, {
   stdio: 'inherit',
   shell: true,
@@ -27,7 +30,7 @@ const child = spawn('npx', args, {
     NODE_OPTIONS: '--max-old-space-size=8192',
     EXPO_PUBLIC_THEME_PREVIEW: '1',
     BROWSER: 'none',
-    CI: '1',
+    CI: process.env.LOCAL_WEB_WATCH === '1' ? '0' : '1',
   },
 });
 child.on('exit', (c) => process.exit(c ?? 0));

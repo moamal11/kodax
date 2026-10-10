@@ -1,10 +1,12 @@
+import { JourneyNode } from '@/features/rewards/JourneyVisuals';
 /**
  * صفحة الدرس: قراءة مريحة، مثال كود، ثم «اختبر فهمك» في نفس الصفحة.
  * الإكمال يوثَّق على السيرفر؛ النتيجة تظهر داخل الصفحة (لا نافذة تحجب المتابعة) وشرارات XP تطير
  * من بطاقة النتيجة إلى عداد XP بقيمة السيرفر (xp_awarded / xp).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { requestSignIn } from '@/services/webAccess';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -79,13 +81,20 @@ export default function LessonScreen() {
   const quiz = useMemo(() => {
     if (!lesson?.quiz) return null;
     const { shuffled, indexMap } = shuffle(lesson.quiz.options);
-    return { question: lesson.quiz.question, options: shuffled, correct: indexMap.indexOf(lesson.quiz.correctAnswer), indexMap, explanation: lesson.quiz.explanation };
+    return {
+      question: lesson.quiz.question,
+      options: shuffled,
+      correct: indexMap.indexOf(lesson.quiz.correctAnswer),
+      indexMap,
+      explanation: lesson.quiz.explanation,
+    };
   }, [lesson?.id]);
 
   const correct = quiz ? checked && selected === quiz.correct : true;
 
   const complete = useCallback(async () => {
     if (!lesson || busy) return;
+    if (Platform.OS === 'web' && !user?.id) { requestSignIn(); return; }
     setBusy(true);
     const original = quiz && selected !== null ? quiz.indexMap[selected] : null;
     const res = await markLessonComplete(lesson.id, lesson.xpReward, undefined, original);
@@ -97,10 +106,13 @@ export default function LessonScreen() {
       const after = Number(res.server?.xp);
       setOutcome({ kind: 'done', xp: awarded, nextLessonId: res.server?.next_lesson_id });
       // الشرارات تنطلق بعد ظهور بطاقة النتيجة
-      setTimeout(() => {
-        if (awarded > 0 && Number.isFinite(after)) celebrate({ key: `lesson:${lesson.id}`, xpBefore: after - awarded, xpAfter: after, sourceRef: resultRef });
-        setTimeout(() => refreshProfile(), 1800);
-      }, reduced ? 0 : 280);
+      setTimeout(
+        () => {
+          if (awarded > 0 && Number.isFinite(after)) celebrate({ key: `lesson:${lesson.id}`, xpBefore: after - awarded, xpAfter: after, sourceRef: resultRef });
+          setTimeout(() => refreshProfile(), 1800);
+        },
+        reduced ? 0 : 280
+      );
     } else if (res.queued) {
       setOutcome({ kind: 'queued' });
     } else {
@@ -108,21 +120,32 @@ export default function LessonScreen() {
         setChecked(false);
         setSelected(null);
       }
-      setOutcome({ kind: 'error', title: res.code === 'previous_required' ? 'خطوة واحدة قبلها' : 'لم يُحفظ التقدم', message: res.error || 'حاول مرة أخرى.', code: res.code });
+      setOutcome({
+        kind: 'error',
+        title: res.code === 'previous_required' ? 'خطوة واحدة قبلها' : 'لم يُحفظ التقدم',
+        message: res.error || 'حاول مرة أخرى.',
+        code: res.code,
+      });
     }
-  }, [lesson, busy, quiz, selected, markLessonComplete, celebrate, refreshProfile, reduced]);
+  }, [lesson, busy, quiz, selected, markLessonComplete, celebrate, refreshProfile, reduced, user?.id]);
 
   if (!lesson) {
     return (
       <Screen header={<AppBar title="الدرس" fallback={'/learn' as any} />}>
-        <EmptyState icon="alert-circle-outline" title="الدرس غير موجود" body="ممكن الرابط قديم." action="الدورات" onAction={() => router.replace('/learn' as any)} />
+        <EmptyState
+          icon="alert-circle-outline"
+          title="الدرس غير موجود"
+          body="ممكن الرابط قديم."
+          action="الدورات"
+          onAction={() => router.replace('/learn' as any)}
+        />
       </Screen>
     );
   }
 
   // الدورات المتقدمة تُفتح بالتقدم؛ الدرس الأول معاينة مجانية
   const isPreview = course ? getPreviewLessonId(course.id) === lesson.id : false;
-  if (course && course.pointsCost > 0 && course.isLocked && !isCourseUnlocked(course.id) && !isPreview) {
+  if (!(Platform.OS === 'web' && !user?.id) && course && course.pointsCost > 0 && course.isLocked && !isCourseUnlocked(course.id) && !isPreview) {
     return <LockedCourseScreen course={course} onBack={() => router.back()} lockedLessonTitle={lesson.title} />;
   }
 
@@ -145,7 +168,7 @@ export default function LessonScreen() {
           title={course?.title ?? 'الدرس'}
           subtitle={index >= 0 ? `الدرس ${index + 1} من ${courseLessons.length}` : undefined}
           fallback={`/course/${lesson.courseId}` as any}
-          actions={<XpMeter />}
+          actions={user?.id ? <XpMeter /> : undefined}
           border
         />
       }
@@ -167,7 +190,14 @@ export default function LessonScreen() {
 
         {!!lesson.codeExample && <CodeView code={lesson.codeExample} language={lesson.language || 'javascript'} title={`مثال · ${lesson.language ?? ''}`} />}
 
-        <ExplainWithAI challengeId={lesson.id} challengeTitle={lesson.title} challengeDescription={lesson.content} starterCode={lesson.codeExample} language={lesson.language || 'javascript'} contentType="lesson" />
+        <ExplainWithAI
+          challengeId={lesson.id}
+          challengeTitle={lesson.title}
+          challengeDescription={lesson.content}
+          starterCode={lesson.codeExample}
+          language={lesson.language || 'javascript'}
+          contentType="lesson"
+        />
 
         {/* ===== اختبر فهمك / الإكمال ===== */}
         {!finished && (
@@ -188,6 +218,7 @@ export default function LessonScreen() {
                         key={i}
                         disabled={checked && correct}
                         onPress={() => {
+                          if (Platform.OS === 'web' && !user?.id) { requestSignIn(); return; }
                           setSelected(i);
                           setChecked(false);
                           if (outcome?.kind === 'error') setOutcome(null);
@@ -205,11 +236,38 @@ export default function LessonScreen() {
                           borderRadius: t.radius.md,
                           borderWidth: 1.5,
                           borderColor: showRight ? t.colors.success : showWrong ? t.colors.danger : on ? t.colors.brand : t.colors.border,
-                          backgroundColor: showRight ? t.colors.successSoft : showWrong ? t.colors.dangerSoft : on ? t.colors.brandSoft : s.hovered ? t.colors.surfacePressed : t.colors.surfaceSunken,
+                          backgroundColor: showRight
+                            ? t.colors.successSoft
+                            : showWrong
+                              ? t.colors.dangerSoft
+                              : on
+                                ? t.colors.brandSoft
+                                : s.hovered
+                                  ? t.colors.surfacePressed
+                                  : t.colors.surfaceSunken,
                         })}
                       >
-                        <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: on ? t.colors.brand : t.colors.borderStrong, alignItems: 'center', justifyContent: 'center' }}>
-                          {on && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: showWrong ? t.colors.danger : showRight ? t.colors.success : t.colors.brand }} />}
+                        <View
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: 10,
+                            borderWidth: 2,
+                            borderColor: on ? t.colors.brand : t.colors.borderStrong,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {on && (
+                            <View
+                              style={{
+                                width: 10,
+                                height: 10,
+                                borderRadius: 5,
+                                backgroundColor: showWrong ? t.colors.danger : showRight ? t.colors.success : t.colors.brand,
+                              }}
+                            />
+                          )}
                         </View>
                         <Text variant="body" style={{ flex: 1 }}>
                           {o}
@@ -302,18 +360,27 @@ export default function LessonScreen() {
           <Animated.View entering={reduced ? undefined : FadeInDown.duration(260)}>
             <Surface variant={outcome?.kind === 'done' ? 'success' : 'surface'} padding={18} accessibilityLiveRegion="polite">
               <Row gap={14} align="center">
+                <JourneyNode state="completed" size={48} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text variant="heading">{outcome?.kind === 'done' ? 'أحسنت! أكملت الدرس' : 'راجعت هذا الدرس'}</Text>
                   <Text variant="bodySm" tone="secondary">
-                    {outcome?.kind === 'done'
-                      ? nextLesson
-                        ? `التالي: ${nextLesson.title}`
-                        : 'هذا آخر درس في الدورة.'
-                      : 'الدرس مكتمل من قبل، فلا XP إضافية.'}
+                    {outcome?.kind === 'done' ? (nextLesson ? `التالي: ${nextLesson.title}` : 'هذا آخر درس في الدورة.') : 'الدرس مكتمل من قبل، فلا XP إضافية.'}
                   </Text>
                 </View>
                 {outcome?.kind === 'done' && outcome.xp > 0 && (
-                  <View ref={resultRef} collapsable={false} style={{ paddingHorizontal: 12, height: 40, borderRadius: 12, backgroundColor: t.colors.xpSoft, alignItems: 'center', justifyContent: 'center' }}>
+                  <View
+                    ref={resultRef}
+                    collapsable={false}
+                    style={{
+                      paddingHorizontal: 12,
+                      minHeight: 40,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                      backgroundColor: t.colors.xpSoft,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
                     <Text variant="heading" weight="bold" tone="xp" ltr>
                       +{outcome.xp} XP
                     </Text>

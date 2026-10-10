@@ -72,6 +72,7 @@ const ANDROID_CHANNEL: Record<string, string> = {
   like: 'social',
   comment: 'social',
   follow: 'social',
+  new_post: 'social',
   daily_goal: 'reminders',
   streak: 'reminders',
   admin: 'announcements',

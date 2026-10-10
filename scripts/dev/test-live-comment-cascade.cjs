@@ -1,0 +1,44 @@
+const fs=require('node:fs'),crypto=require('node:crypto'),q=require('./live-profile-client.cjs');
+const checks=[];const check=(name,ok,detail)=>{checks.push({name,ok:!!ok,detail});console.log((ok?'PASS ':'FAIL ')+name);};
+const must=r=>{if(r.error)throw r.error;return r.data;};
+(async()=>{const s=JSON.parse(fs.readFileSync(q.PRIVATE)),{client,admin}=q.clients(),a=client(),b=client(),anon=client();await q.login(a,s.accounts[0]);await q.login(b,s.accounts[1]);
+const aid=s.accounts[0].id,bid=s.accounts[1].id,snippet=crypto.randomUUID(),post=crypto.randomUUID();
+try{
+must(await a.from('code_snippets').insert({id:snippet,user_id:aid,title:'اختبار مخصص · حذف سلسلة التعليقات',code:'print("QA")',language:'python',is_public:true}));
+const root=crypto.randomUUID(),reply=crypto.randomUUID(),other=crypto.randomUUID();
+must(await a.from('code_comments').insert({id:root,user_id:aid,snippet_id:snippet,content:'أصل اختبار الحذف'}));
+must(await b.from('code_comments').insert({id:reply,user_id:bid,snippet_id:snippet,parent_id:root,content:'رد الحساب الثاني'}));
+must(await b.from('code_comments').insert({id:other,user_id:bid,snippet_id:snippet,content:'تعليق مستقل يبقى'}));
+check('Foreign code root deletion denied',!!(await b.rpc('delete_code_comment',{p_id:root})).error);
+must(await a.rpc('delete_code_comment',{p_id:root}));
+const thread=must(await b.from('code_comments').select('id,content,deleted_at').in('id',[root,reply]));
+check('Code root and foreign reply content both removed',thread.length===2&&thread.every(c=>c.deleted_at&&c.content===''));
+check('Code count retains only unrelated live comment',must(await a.from('code_snippets').select('comments_count').eq('id',snippet).single()).comments_count===1);
+check('Code delete retry is safe',!(await a.rpc('delete_code_comment',{p_id:root})).error);
+check('Foreign deleted root is still protected',!!(await b.rpc('delete_code_comment',{p_id:root})).error);
+check('Anonymous code deletion denied',!!(await anon.rpc('delete_code_comment',{p_id:other})).error);
+const rawRoot=crypto.randomUUID(),rawReply=crypto.randomUUID();
+must(await a.from('code_comments').insert({id:rawRoot,user_id:aid,snippet_id:snippet,content:'حذف مباشر'}));must(await b.from('code_comments').insert({id:rawReply,user_id:bid,snippet_id:snippet,parent_id:rawRoot,content:'رد مباشر'}));
+must(await a.from('code_comments').update({deleted_at:new Date().toISOString()}).eq('id',rawRoot));
+check('Permitted owner PATCH also cascades in database',!!must(await b.from('code_comments').select('deleted_at').eq('id',rawReply).single()).deleted_at);
+const concurrentRoot=crypto.randomUUID(),concurrentReply=crypto.randomUUID();must(await a.from('code_comments').insert({id:concurrentRoot,user_id:aid,snippet_id:snippet,content:'اختبار تزامن'}));
+await Promise.all([a.rpc('delete_code_comment',{p_id:concurrentRoot}).then(must),b.from('code_comments').insert({id:concurrentReply,user_id:bid,snippet_id:snippet,parent_id:concurrentRoot,content:'رد متزامن'})]);
+const late=must(await admin.from('code_comments').select('deleted_at').eq('id',concurrentReply));check('Concurrent reply cannot survive deleted code root',late.length===0||!!late[0].deleted_at);
+
+must(await a.rpc('save_community_post',{p_id:post,p_title:'اختبار حذف النقاش',p_body:'حسابات اختبار مخصصة',p_kind:'question'}));
+const cr=crypto.randomUUID(),ca=crypto.randomUUID(),cb=crypto.randomUUID(),co=crypto.randomUUID();
+must(await b.rpc('save_community_comment',{p_id:cr,p_post:post,p_content:'أصل الحساب الثاني'}));must(await a.rpc('save_community_comment',{p_id:ca,p_post:post,p_content:'رد صاحب المنشور',p_parent:cr}));must(await b.rpc('save_community_comment',{p_id:cb,p_post:post,p_content:'رد آخر',p_parent:cr}));must(await a.rpc('save_community_comment',{p_id:co,p_post:post,p_content:'تعليق مستقل'}));
+must(await a.rpc('set_community_solution',{p_post:post,p_comment:ca}));
+check('Post ownership does not grant deletion of foreign root',!!(await a.rpc('delete_community_comment',{p_id:cr})).error);
+must(await b.rpc('delete_community_comment',{p_id:cr}));
+const ct=must(await a.from('community_comments').select('content,deleted_at').in('id',[cr,ca,cb]));
+check('Discussion root deletes all replies regardless of reply owner',ct.length===3&&ct.every(c=>c.deleted_at&&c.content===''));
+const cp=must(await a.from('community_posts').select('comments_count,accepted_comment_id').eq('id',post).single());check('Cascade clears selected reply solution and adjusts count',cp.comments_count===1&&cp.accepted_comment_id===null);
+check('Community delete retry is safe',!(await b.rpc('delete_community_comment',{p_id:cr})).error);
+check('Community foreign delete and edit remain denied',!!(await b.rpc('delete_community_comment',{p_id:co})).error&&!!(await b.rpc('edit_community_comment',{p_id:co,p_content:'غير مسموح'})).error);
+check('Anonymous community delete denied',!!(await anon.rpc('delete_community_comment',{p_id:co})).error);
+}finally{
+await a.from('code_snippets').update({is_public:false}).eq('id',snippet);await a.rpc('delete_community_post',{p_id:post});
+fs.writeFileSync('reports/community-discussions-20261010/live-cascade-checks.json',JSON.stringify({project:q.REF,accounts:[aid,bid],snippet,post,checks},null,2));
+}if(checks.some(c=>!c.ok))process.exitCode=1;
+})().catch(e=>{console.error(e.message);process.exitCode=1;});

@@ -393,7 +393,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await processSession(newSession, version);
         // Always complete init after INITIAL_SESSION, regardless of result
         markInitComplete();
-      } else if (event === 'SIGNED_IN' && newSession) {
+      } else if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && newSession) {
         // ---- New sign-in (e.g., after Google OAuth deep link) ----
         // Always process SIGNED_IN.
         // Supabase may emit multiple events in native OAuth flows and skipping

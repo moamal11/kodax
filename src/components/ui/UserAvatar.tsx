@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { openUserProfile } from '@/services/profileLinks';
 
 interface UserAvatarProps {
   userId?: string;
@@ -61,7 +62,7 @@ export default function UserAvatar({
     if (onPress) {
       onPress();
     } else if (userId) {
-      router.push(`/user/${userId}` as any);
+      void openUserProfile(userId);
     }
   };
 

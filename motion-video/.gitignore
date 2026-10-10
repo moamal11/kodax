@@ -1,0 +1,11 @@
+.npm-cache/
+tools/
+**/.hyperframes/
+**/review-frames/
+**/snapshots/
+**/.hyperframes-preview*
+**/node_modules/
+**/renders/
+*.zip
+**/*.mp4
+**/animation-map.mjs

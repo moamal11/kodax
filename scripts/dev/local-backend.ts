@@ -793,15 +793,36 @@ const server = http.createServer(async (req, res) => {
       if (rest[0] === 'object' && rest[1] === 'public') {
         const key = rest.slice(2).join('/');
         const o = OBJECTS.get(decodeURIComponent(key));
-        if (!o) return send(res, 404, { error: 'not_found' });
+        const [bucket, ...path] = decodeURIComponent(key).split('/');
+        const allowed = await env.one(`SELECT 1 FROM storage.objects o JOIN storage.buckets b ON b.id=o.bucket_id WHERE o.bucket_id=$1 AND o.name=$2 AND b.public`, [bucket, path.join('/')]);
+        if (!o || !allowed) return send(res, 404, { error: 'not_found' });
         return send(res, 200, o.data, { 'Content-Type': o.type });
       }
       if (rest[0] === 'object' && (req.method === 'POST' || req.method === 'PUT')) {
         const key = decodeURIComponent(rest.slice(1).join('/'));
+        const [bucket, ...path] = key.split('/');
+        const name = path.join('/');
+        const config = await env.one('SELECT * FROM storage.buckets WHERE id=$1', [bucket]);
+        if (!config) return send(res, 404, { error: 'bucket_not_found' });
+        if (!config.allowed_mime_types?.includes(ctype) || raw.length > Number(config.file_size_limit)) return send(res, 400, { error: 'invalid_type_or_size' });
+        const magic = ctype === 'image/png' ? raw.subarray(0,4).equals(Buffer.from([137,80,78,71])) : ctype === 'image/jpeg' ? raw[0]===255 && raw[1]===216 && raw[2]===255 : ctype === 'image/webp' ? raw.toString('ascii',0,4)==='RIFF' && raw.toString('ascii',8,12)==='WEBP' : false;
+        if (!magic || name.includes('..')) return send(res, 400, { error: 'invalid_image' });
+        await withTx(claims, q => q('INSERT INTO storage.objects(bucket_id,name,owner) VALUES($1,$2,$3)', [bucket,name,claims.sub]));
         OBJECTS.set(key, { type: ctype || 'application/octet-stream', data: raw });
         return send(res, 200, { Key: key, Id: crypto.randomUUID() });
       }
-      if (rest[0] === 'object' && req.method === 'DELETE') return send(res, 200, []);
+      if (rest[0] === 'object' && req.method === 'DELETE') {
+        const bucket = rest[1];
+        const paths = body?.prefixes;
+        if (!Array.isArray(paths) || !claims.sub) return send(res, 403, { error: 'unauthorized' });
+        if (paths.some(p => typeof p !== 'string' || !p.startsWith(claims.sub + '/') || p.includes('..'))) return send(res,403,{ error:'storage_not_owned' });
+        const rows = await withTx(claims, async q => {
+          const r = await q('DELETE FROM storage.objects WHERE bucket_id=$1 AND name=ANY($2::text[]) RETURNING name', [bucket,paths]);
+          return r.rows;
+        });
+        for (const row of rows) OBJECTS.delete(`${bucket}/${row.name}`);
+        return send(res, 200, rows);
+      }
       return send(res, 200, []);
     }
     // ---- verify-challenge: المنطق الحقيقي (core.ts) على قاعدة PGlite ----
@@ -839,6 +860,20 @@ const server = http.createServer(async (req, res) => {
         body
       );
       return send(res, r.status, r.body);
+    }
+    // Local certificate reads use the real database RPCs; no production access.
+    if (parts[0] === 'functions' && parts[1] === 'v1' && parts[2] === 'certificate') {
+      if (!claims.sub) return send(res, 401, { error: 'Not authenticated' });
+      const svc = { role: 'service_role' as const, sub: claims.sub };
+      if (body?.action === 'get_user_certs') {
+        const data = await handleRpc(svc, 'get_user_certificates_summary', { p_user_id: claims.sub }, new URLSearchParams());
+        return send(res, 200, data);
+      }
+      if (body?.action === 'verify') {
+        const data = await handleRpc(svc, 'verify_certificate', { cert_id: body.certificate_id }, new URLSearchParams());
+        return send(res, 200, data);
+      }
+      return send(res, 501, { error: 'Certificate issuance/eligibility is not simulated by this local adapter.' });
     }
     // ---- بقية الدوال → local-functions (ai-chat بـ Gemini وهمي) ----
     if (parts[0] === 'functions' && parts[1] === 'v1') {

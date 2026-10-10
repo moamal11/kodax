@@ -1,9 +1,10 @@
+import { JourneyNode } from '@/features/rewards/JourneyVisuals';
 /**
  * صفحة الدورة: رأس مختصر بالتقدم، زر «تابع»، الدروس كخط زمني مقسّم بالأقسام، وشهادة المسار.
  * التقدم من السيرفر (useHybridProgress)، والقفل بالتسلسل كما هو.
  */
 import React, { useCallback, useEffect, useMemo } from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ALL_COURSES, getLessonsByCourse } from '@/constants/courseData';
@@ -17,7 +18,11 @@ import CertificateProgressCard from '@/components/certificate/CertificateProgres
 import { Screen, AppBar, Text, Row, Col, Surface, Button, ProgressBar, Tag, SectionHeader, EmptyState, ListSkeleton, useTheme, useBreakpoint } from '@/design';
 import { XpMeter } from '@/features/rewards/XpMeter';
 
-const DIFF = { beginner: { label: 'مبتدئ', tone: 'success' as const }, intermediate: { label: 'متوسط', tone: 'warning' as const }, advanced: { label: 'متقدم', tone: 'danger' as const } };
+const DIFF = {
+  beginner: { label: 'مبتدئ', tone: 'success' as const },
+  intermediate: { label: 'متوسط', tone: 'warning' as const },
+  advanced: { label: 'متقدم', tone: 'danger' as const },
+};
 
 export default function CourseDetailScreen() {
   const t = useTheme();
@@ -38,7 +43,8 @@ export default function CourseDetailScreen() {
     isProgressLoading: progressLoading,
   });
 
-  const isCourseLocked = !!course && course.pointsCost > 0 && course.isLocked && !isUnlocked && !alreadyUnlocked(course.id);
+  const webGuest = Platform.OS === 'web' && !user?.id;
+  const isCourseLocked = !webGuest && !!course && course.pointsCost > 0 && course.isLocked && !isUnlocked && !alreadyUnlocked(course.id);
 
   // مكافأة إكمال الدورة بالكوينات (السيرفر يتحقق من الإكمال ويمنع التكرار)
   useEffect(() => {
@@ -57,14 +63,20 @@ export default function CourseDetailScreen() {
 
   // قفل بالتسلسل — لا يُقفل درس أكمله المستخدم أو يقع قبل أبعد درس وصل إليه
   const furthest = useMemo(() => lessons.reduce((max, l, i) => (completedIds.includes(l.id) ? i : max), -1), [lessons, completedIds]);
-  const isLocked = (i: number) => i > 0 && i > furthest && !completedIds.includes(lessons[i].id) && !completedIds.includes(lessons[i - 1].id);
+  const isLocked = (i: number) => !webGuest && i > 0 && i > furthest && !completedIds.includes(lessons[i].id) && !completedIds.includes(lessons[i - 1].id);
   const nextIndex = lessons.findIndex((l, i) => !completedIds.includes(l.id) && !isLocked(i));
   const done = lessons.filter((l) => completedIds.includes(l.id)).length;
 
   if (!course) {
     return (
       <Screen header={<AppBar title="الدورة" fallback={'/learn' as any} />}>
-        <EmptyState icon="alert-circle-outline" title="الدورة غير موجودة" body="ممكن الرابط قديم." action="كل الدورات" onAction={() => router.replace('/learn' as any)} />
+        <EmptyState
+          icon="alert-circle-outline"
+          title="الدورة غير موجودة"
+          body="ممكن الرابط قديم."
+          action="كل الدورات"
+          onAction={() => router.replace('/learn' as any)}
+        />
       </Screen>
     );
   }
@@ -75,6 +87,15 @@ export default function CourseDetailScreen() {
 
   const summary = (
     <Surface padding={18}>
+      <Row gap={12} style={{ marginBottom: 12 }}>
+        <JourneyNode state={done === lessons.length ? 'completed' : 'current'} size={48} number={course.order} />
+        <Col flex={1}>
+          <Text variant="heading">{done === lessons.length ? 'مرحلة مكتملة' : 'مرحلتك في المسار'}</Text>
+          <Text variant="caption" tone="secondary">
+            {done} من {lessons.length} درس
+          </Text>
+        </Col>
+      </Row>
       <Row gap={6} style={{ justifyContent: 'flex-start' }} wrap>
         <Tag label={d.label} tone={d.tone} />
         <Tag label={`${lessons.length} درس`} />
@@ -93,7 +114,14 @@ export default function CourseDetailScreen() {
         <ProgressBar value={done / Math.max(1, lessons.length)} tone={done === lessons.length ? 'success' : 'brand'} label="تقدم الدورة" />
       </View>
       {next ? (
-        <Button label={done > 0 ? `تابع: ${next.title}` : `ابدأ: ${next.title}`} icon="play" size="lg" onPress={() => router.push(`/lesson/${next.id}` as any)} style={{ marginTop: 16 }} full />
+        <Button
+          label={done > 0 ? `تابع: ${next.title}` : `ابدأ: ${next.title}`}
+          icon="play"
+          size="lg"
+          onPress={() => router.push(`/lesson/${next.id}` as any)}
+          style={{ marginTop: 16 }}
+          full
+        />
       ) : done === lessons.length && lessons.length > 0 ? (
         <Surface variant="success" padding={12} style={{ marginTop: 14 }}>
           <Text variant="label" tone="success">
@@ -119,7 +147,16 @@ export default function CourseDetailScreen() {
             return (
               <View key={l.id}>
                 {section && (
-                  <View style={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 6, backgroundColor: t.colors.surfaceSunken, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: t.colors.border }}>
+                  <View
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingTop: 14,
+                      paddingBottom: 6,
+                      backgroundColor: t.colors.surfaceSunken,
+                      borderTopWidth: i === 0 ? 0 : 1,
+                      borderTopColor: t.colors.border,
+                    }}
+                  >
                     <Text variant="caption" weight="semibold" tone="secondary">
                       {section}
                     </Text>
@@ -131,36 +168,22 @@ export default function CourseDetailScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ disabled: locked }}
                   accessibilityLabel={`${i + 1}. ${l.title}${completed ? '، مكتمل' : locked ? '، مقفل حتى تكمل الدرس السابق' : current ? '، الدرس الحالي' : ''}`}
-                  style={(s: any) => ({ backgroundColor: current ? t.colors.brandSoft : !locked && (s.hovered || s.pressed) ? t.colors.surfacePressed : 'transparent' })}
+                  style={(s: any) => ({
+                    backgroundColor: current ? t.colors.brandSoft : !locked && (s.hovered || s.pressed) ? t.colors.surfacePressed : 'transparent',
+                  })}
                 >
-                  <Row gap={12} style={{ paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: section || i === 0 ? 0 : 1, borderTopColor: t.colors.border }}>
-                    <View
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 14,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: completed ? t.colors.successSoft : current ? t.colors.brand : t.colors.surfaceSunken,
-                      }}
-                    >
-                      {completed ? (
-                        <Ionicons name="checkmark" size={15} color={t.colors.successText} />
-                      ) : locked ? (
-                        <Ionicons name="lock-closed" size={12} color={t.colors.textMuted} />
-                      ) : (
-                        <Text variant="caption" weight="bold" align="center" ltr style={{ color: current ? '#fff' : t.colors.textSecondary }}>
-                          {i + 1}
-                        </Text>
-                      )}
-                    </View>
+                  <Row
+                    gap={12}
+                    style={{ paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: section || i === 0 ? 0 : 1, borderTopColor: t.colors.border }}
+                  >
+                    <JourneyNode state={completed ? 'completed' : locked ? 'locked' : current ? 'current' : 'upcoming'} number={i + 1} size={36} />
                     <View style={{ flex: 1 }}>
-                      <Text variant="body" weight={current ? 'semibold' : 'regular'} numberOfLines={2} tone={locked ? 'muted' : 'default'}>
+                      <Text variant="body" weight={current ? 'semibold' : 'regular'} numberOfLines={2} tone={locked ? 'secondary' : 'default'}>
                         {l.title}
                       </Text>
-                      {current && (
+                      {(current || locked || completed) && (
                         <Text variant="caption" tone="brand">
-                          {done > 0 ? 'التالي' : 'ابدأ هنا'}
+                          {completed ? 'مكتمل' : locked ? `أكمل «${lessons[i - 1]?.title}» أولًا` : done > 0 ? 'التالي' : 'ابدأ هنا'}
                         </Text>
                       )}
                     </View>
@@ -195,8 +218,8 @@ export default function CourseDetailScreen() {
   );
 
   return (
-    <Screen header={<AppBar title={course.title} subtitle={course.fieldNameAr} fallback={'/learn' as any} actions={!hasSidebar ? <XpMeter /> : undefined} />}>
-      {isDesktop ? (
+    <Screen header={<AppBar title={course.title} subtitle={course.fieldNameAr} fallback={'/learn' as any} actions={!hasSidebar && !webGuest ? <XpMeter /> : undefined} />}>
+      {webGuest ? <Col gap={20}><Text variant="display" accessibilityRole="header">{course.title}</Text><Text tone="secondary">{course.description}</Text>{list}</Col> : isDesktop ? (
         <Row align="flex-start" gap={24}>
           <Col gap={20} flex={1}>
             {list}

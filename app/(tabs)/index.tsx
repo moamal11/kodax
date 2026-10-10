@@ -1,9 +1,14 @@
+import { profilePath } from '@/services/profileLinks';
+import { JourneyNode } from '@/features/rewards/JourneyVisuals';
+import { RecentAchievement } from '@/features/rewards/RecentAchievement';
+import { HomeContinuation } from '@/features/learn/HomeContinuation';
 /**
  * الرئيسية = «اليوم»: تابع من حيث توقفت، هدف اليوم وأسبوعك، تحدي اليوم، ولمحة من المجتمع والصدارة.
  * كل الأرقام من السيرفر (progress_get_state، user_activity_days، daily_challenge_get).
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, View, Pressable } from 'react-native';
+import { Platform, RefreshControl, View, Pressable, useWindowDimensions } from 'react-native';
+import { PublicHome } from '@/features/web/PublicCourseList';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -33,17 +38,10 @@ import { XpMeter } from '@/features/rewards/XpMeter';
 import { formatXp } from '@/features/rewards/level';
 import { useLearningSnapshot, type LearningSnapshot } from '@/features/learn/useLearningSnapshot';
 import { SnippetCard, languageLabel } from '@/features/community/SnippetCard';
-import { getPublicSnippets, type FeedSnippet } from '@/services/codeFeedService';
+import { getPublicSnippets, getSnippetCounts, type FeedSnippet } from '@/services/codeFeedService';
 import { supabaseService } from '@/services/supabaseService';
 import { coinService } from '@/services/coinService';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
-
-function greeting(): string {
-  const h = Number(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Asia/Baghdad' }));
-  if (h >= 5 && h < 12) return 'صباح الخير';
-  if (h >= 12 && h < 18) return 'مساء الخير';
-  return 'مساء النور';
-}
 
 const DIFF: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' }> = {
   easy: { label: 'سهل', tone: 'success' },
@@ -53,6 +51,7 @@ const DIFF: Record<string, { label: string; tone: 'success' | 'warning' | 'dange
 
 export default function HomeScreen() {
   const t = useTheme();
+  const { fontScale } = useWindowDimensions();
   const s = useStyles();
   const router = useRouter();
   const { userId, fullName, user } = useAuth();
@@ -69,7 +68,16 @@ export default function HomeScreen() {
 
   const loadSide = useCallback(async () => {
     const [feed, leaders] = await Promise.all([getPublicSnippets({ limit: 2, sortBy: 'recent' }), supabaseService.getLeaderboard(5)]);
-    setSnippets(feed.data ?? []);
+    const items = feed.data ?? [];
+    const counts = await getSnippetCounts(items.map((s) => s.id));
+    setSnippets(
+      items.map((s) => ({
+        ...s,
+        comments_count: counts.commentCounts[s.id] ?? s.comments_count,
+        views_count: counts.viewCounts[s.id] ?? s.views_count,
+        likes_count: counts.likeCounts[s.id] ?? s.likes_count,
+      }))
+    );
     setTop(leaders ?? []);
   }, []);
   useEffect(() => {
@@ -79,7 +87,8 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh])
+      loadSide();
+    }, [refresh, loadSide])
   );
 
   const onRefresh = async () => {
@@ -88,27 +97,32 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  const name = (fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || '').split(' ')[0];
+  const name = profile?.full_name || fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'حسابي';
 
   const streakLine = data
     ? data.streak.current > 0
-      ? `سلسلتك ${data.streak.current} ${data.streak.current === 1 ? 'يوم' : data.streak.current <= 10 ? 'أيام' : 'يوم'}${data.streak.activeToday ? ' · تعلّمت اليوم' : ' · لا تكسرها اليوم'}`
-      : 'ابدأ سلسلتك اليوم بدرس واحد'
+      ? `سلسلتك ${data.streak.current} ${data.streak.current === 1 ? 'يوم' : data.streak.current <= 10 ? 'أيام' : 'يوم'}${data.streak.activeToday ? ' · تعلّمت اليوم' : ' · لم تسجّل درسًا اليوم'}`
+      : 'لم تبدأ سلسلة التعلّم بعد'
     : ' ';
 
   const header = (
     <View style={[s.header, { paddingHorizontal: isDesktop ? 28 : 16 }]}>
       <Row gap={4}>
-        <Text variant="title" numberOfLines={1} accessibilityRole="header" style={{ flex: 1 }}>
-          {greeting()}{name ? `، ${name}` : ''}
-        </Text>
+        <Pressable onPress={() => router.push('/profile')} accessibilityRole="link" accessibilityLabel="ملفي الشخصي" style={{ flex: 1, minWidth: 0 }}>
+          <Row gap={10}>
+            <Avatar uri={profile?.avatar_url} name={name} size={44} />
+            <Text variant="label" weight="semibold" numberOfLines={1} style={{ flex: 1 }}>
+              {name}
+            </Text>
+          </Row>
+        </Pressable>
         {userId && <MessagesButton userId={userId} />}
         {userId && <NotificationButton userId={userId} onNotificationPress={(n) => n.metadata?.navigateTo && router.push(n.metadata.navigateTo)} />}
       </Row>
-      <Row gap={10} justify="space-between">
+      <Row gap={10} justify="space-between" wrap={fontScale > 1.2}>
         <Row gap={6} style={{ flexShrink: 1 }}>
           <Ionicons name="flame" size={16} color={data?.streak.activeToday ? t.colors.streak : t.colors.textMuted} />
-          <Text variant="bodySm" tone="secondary" numberOfLines={1} style={{ flexShrink: 1 }}>
+          <Text variant="bodySm" tone="secondary" style={{ flexShrink: 1 }}>
             {streakLine}
           </Text>
         </Row>
@@ -130,9 +144,25 @@ export default function HomeScreen() {
         </Surface>
       ) : data ? (
         <>
-          <ContinueCard data={data} />
+          <HomeContinuation data={data} />
           <TodayCard data={data} />
           {data.dailyChallenge && <DailyChallengeCard ch={data.dailyChallenge} />}
+          <Row gap={10} wrap>
+            <Button
+              label="جرّب تحديًا"
+              icon="code-slash-outline"
+              variant="secondary"
+              onPress={() => router.push('/learn?tab=challenges' as any)}
+              style={{ flex: 1, minWidth: 124 }}
+            />
+            <Button
+              label="افتح المحرر"
+              icon="terminal-outline"
+              variant="ghost"
+              onPress={() => router.push('/code/add?lang=python' as any)}
+              style={{ flex: 1, minWidth: 124 }}
+            />
+          </Row>
         </>
       ) : null}
 
@@ -142,7 +172,12 @@ export default function HomeScreen() {
           <View style={{ gap: 12, flexDirection: isDesktop ? 'row-reverse' : 'column' }}>
             {snippets.map((sn) => (
               <View key={sn.id} style={{ flex: isDesktop ? 1 : undefined }}>
-                <SnippetCard snippet={sn} previewLines={4} onPress={() => router.push(`/code/${sn.id}` as any)} onAuthorPress={() => router.push(`/user/${sn.user_id}` as any)} />
+                <SnippetCard
+                  snippet={sn}
+                  previewLines={4}
+                  onPress={() => router.push(`/code/${sn.id}` as any)}
+                  onAuthorPress={() => router.push(profilePath(sn.user_id,sn.profiles?.username) as any)}
+                />
               </View>
             ))}
           </View>
@@ -153,11 +188,13 @@ export default function HomeScreen() {
 
   const side = (
     <Col gap={20} style={isDesktop ? { width: 320 } : undefined}>
+      <RecentAchievement userId={userId} />
       <LeaderboardMini users={top} meId={userId} />
       <CoinsRow />
     </Col>
   );
 
+  if (Platform.OS === 'web' && !userId) return <PublicHome />;
   return (
     <Screen inTabs header={header} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.colors.brand} />}>
       {isDesktop ? (
@@ -177,75 +214,15 @@ export default function HomeScreen() {
 
 /* ------------------------------------------------------------------ */
 
-function ContinueCard({ data }: { data: LearningSnapshot }) {
-  const t = useTheme();
-  const router = useRouter();
-  const { isPhone } = useBreakpoint();
-  const n = data.next;
-  if (!n) {
-    return (
-      <Surface variant="success" padding={20}>
-        <Text variant="heading">خلّصت كل دروس هذا المسار 🎉</Text>
-        <Text variant="bodySm" tone="secondary" style={{ marginTop: 4 }}>
-          اختر مساراً جديداً أو ثبّت ما تعلمته بالتحديات.
-        </Text>
-        <Row gap={8} style={{ marginTop: 14 }}>
-          <Button label="اختر مساراً" onPress={() => router.push('/learn' as any)} />
-          <Button label="التحديات" variant="secondary" onPress={() => router.push('/challenges')} />
-        </Row>
-      </Surface>
-    );
-  }
-  const started = n.done > 0;
-  return (
-    <Surface padding={0} style={{ overflow: 'hidden' }}>
-      <View style={{ padding: 18, gap: 10 }}>
-        <Row justify="space-between" gap={8}>
-          <Text variant="label" tone="brand">
-            {started ? 'تابع من حيث توقفت' : 'ابدأ من هنا'}
-          </Text>
-          <Text variant="caption" tone="muted" tabular>
-            الدرس {n.done + 1} من {n.total}
-          </Text>
-        </Row>
-        <View style={{ gap: 2 }}>
-          <Text variant="caption" tone="secondary" numberOfLines={1}>
-            {n.course.title}
-          </Text>
-          <Text variant="title" numberOfLines={2}>
-            {n.lesson.title}
-          </Text>
-          {!!n.lesson.description && (
-            <Text variant="bodySm" tone="secondary" numberOfLines={2}>
-              {n.lesson.description}
-            </Text>
-          )}
-        </View>
-        <ProgressBar value={n.done / Math.max(1, n.total)} label={`تقدم الدورة ${n.done} من ${n.total}`} />
-        {!!n.lesson.codeExample && !isPhone && <CodeView code={n.lesson.codeExample} language={n.lesson.language ?? 'python'} maxLines={4} size="sm" lineNumbers={false} />}
-        <Row gap={8} wrap style={{ marginTop: 4 }}>
-          {n.locked ? (
-            <>
-              <Button label="افتح الدورة" icon="lock-closed-outline" onPress={() => router.push(`/course/${n.course.id}` as any)} />
-              {n.requiresCourse && (
-                <Text variant="caption" tone="muted" style={{ flex: 1 }}>
-                  تُفتح بعد التقدم في «{n.requiresCourse.title}»
-                </Text>
-              )}
-            </>
-          ) : (
-            <Button label={started ? 'كمّل الدرس' : 'ابدأ الدرس'} icon="play" onPress={() => router.push(`/lesson/${n.lesson.id}` as any)} size="lg" />
-          )}
-          <Button label="الدورة" variant="ghost" onPress={() => router.push(`/course/${n.course.id}` as any)} />
-        </Row>
-      </View>
-    </Surface>
-  );
-}
-
 function TodayCard({ data }: { data: LearningSnapshot }) {
   const t = useTheme();
+  const { fontScale } = useWindowDimensions();
   const g = data.goal;
+  const [weekWidth, setWeekWidth] = useState(0);
+  const dayColumns = fontScale > 1.2 && weekWidth > 0 && weekWidth < 360 ? Math.min(4, data.week.length) : data.week.length;
+  const dayCellWidth = weekWidth && dayColumns ? Math.max(0, Math.floor(((weekWidth - 4 * (dayColumns - 1)) / dayColumns) * 100) / 100) : 32;
+  // Explicit equal dimensions avoid Yoga deriving height from an unclamped percentage width on tablets.
+  const daySize = Math.min(40, dayCellWidth);
   return (
     <Surface padding={18}>
       <Row justify="space-between" align="flex-start" gap={12}>
@@ -257,9 +234,18 @@ function TodayCard({ data }: { data: LearningSnapshot }) {
         </View>
         {g.done ? <Tag label="تم" tone="success" icon="checkmark" /> : <Text variant="heading" tone="secondary" tabular ltr>{`${g.units}/${g.target}`}</Text>}
       </Row>
-      <ProgressBar value={g.units / Math.max(1, g.target)} tone="success" style={{ marginTop: 12 }} label="هدف اليوم" />
+      <Row gap={10} style={{ marginTop: 12 }}>
+        <JourneyNode state={g.done ? 'completed' : 'current'} size={32} />
+        <Text variant="bodySm" tone="secondary" style={{ flex: 1 }}>
+          {g.done
+            ? g.weekDays < g.weekTarget
+              ? `باقي ${g.weekTarget - g.weekDays} أيام تعلّم لهدف الأسبوع`
+              : 'أكملت هدف اليوم والأسبوع'
+            : `باقي ${Math.max(0, g.target - g.units)} درس أو تحدٍّ لهدف اليوم`}
+        </Text>
+      </Row>
       <View style={{ height: 1, backgroundColor: t.colors.border, marginVertical: 16 }} />
-      <Row justify="space-between" style={{ marginBottom: 10 }}>
+      <Row wrap gap={8} justify="space-between" style={{ marginBottom: 10 }}>
         <Text variant="label" tone="secondary">
           آخر 7 أيام
         </Text>
@@ -267,14 +253,18 @@ function TodayCard({ data }: { data: LearningSnapshot }) {
           هذا الأسبوع {g.weekDays} من {g.weekTarget} أيام
         </Text>
       </Row>
-      <Row justify="space-between" gap={4}>
+      <Row wrap align="flex-start" justify="flex-start" gap={4} onLayout={(e) => setWeekWidth(e.nativeEvent.layout.width)}>
         {data.week.map((d) => (
-          <View key={d.date} style={{ flex: 1, alignItems: 'center', gap: 6 }} accessible accessibilityLabel={`${d.isToday ? 'اليوم، ' : ''}${d.label}: ${d.active ? 'تعلمت' : d.frozen ? 'مجمّد' : 'بلا نشاط'}`}>
+          <View
+            key={d.date}
+            style={{ width: weekWidth ? dayCellWidth : undefined, flex: weekWidth ? undefined : 1, alignItems: 'center', gap: 6 }}
+            accessible
+            accessibilityLabel={`${d.isToday ? 'اليوم، ' : ''}${d.label}: ${d.active ? 'تعلمت' : d.frozen ? 'مجمّد' : 'بلا نشاط'}`}
+          >
             <View
               style={{
-                width: '100%',
-                maxWidth: 40,
-                aspectRatio: 1,
+                width: daySize,
+                height: daySize,
                 borderRadius: 10,
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -283,9 +273,20 @@ function TodayCard({ data }: { data: LearningSnapshot }) {
                 borderColor: d.isToday ? t.colors.borderStrong : 'transparent',
               }}
             >
-              {d.active ? <Ionicons name="checkmark" size={18} color={t.colors.successText} /> : d.frozen ? <Ionicons name="snow-outline" size={16} color={t.colors.infoText} /> : null}
+              {d.active ? (
+                <Ionicons name="checkmark" size={18} color={t.colors.successText} />
+              ) : d.frozen ? (
+                <Ionicons name="snow-outline" size={16} color={t.colors.infoText} />
+              ) : null}
             </View>
-            <Text variant="caption" tone={d.isToday ? 'default' : 'muted'} weight={d.isToday ? 'semibold' : 'regular'} align="center" numberOfLines={1} style={{ fontSize: 11 }}>
+            <Text
+              variant="caption"
+              tone={d.isToday ? 'default' : 'muted'}
+              weight={d.isToday ? 'semibold' : 'regular'}
+              align="center"
+              numberOfLines={1}
+              style={{ fontSize: 13 }}
+            >
               {d.isToday ? 'اليوم' : d.label}
             </Text>
           </View>
@@ -334,8 +335,22 @@ function LeaderboardMini({ users, meId }: { users: any[]; meId?: string | null }
         {users.map((u, i) => {
           const me = u.id === meId;
           return (
-            <Pressable key={u.id} onPress={() => router.push(me ? '/profile' : (`/user/${u.id}` as any))} accessibilityRole="link" accessibilityLabel={`المركز ${i + 1}: ${u.full_name || u.username}، ${u.xp} XP`}>
-              <Row gap={10} style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: i === users.length - 1 ? 0 : 1, borderBottomColor: t.colors.border, backgroundColor: me ? t.colors.brandSoft : 'transparent' }}>
+            <Pressable
+              key={u.id}
+              onPress={() => router.push(me ? '/profile' : (profilePath(u.id,u.username) as any))}
+              accessibilityRole="link"
+              accessibilityLabel={`المركز ${i + 1}: ${u.full_name || u.username}، ${u.xp} XP`}
+            >
+              <Row
+                gap={10}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderBottomWidth: i === users.length - 1 ? 0 : 1,
+                  borderBottomColor: t.colors.border,
+                  backgroundColor: me ? t.colors.brandSoft : 'transparent',
+                }}
+              >
                 <Text variant="label" tone={i < 3 ? 'xp' : 'muted'} weight="bold" tabular style={{ width: 20 }} align="center">
                   {i + 1}
                 </Text>

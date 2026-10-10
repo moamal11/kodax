@@ -53,7 +53,8 @@ export type NotificationType =
   | 'follow'
   | 'profile_update'
   | 'like'
-  | 'comment';
+  | 'comment'
+  | 'post';
 
 export interface AppNotification {
   id: string;
@@ -451,24 +452,20 @@ class NotificationService {
   // ===== تحديد الكل كمقروء =====
   async markAllAsRead(): Promise<void> {
     await this.initialize();
-    this.notifications.forEach((n) => (n.read = true));
-    await this.save();
-
-    // تحديث في Supabase
-    if (this.userId) {
-      try {
-        await supabase
+    const owner = this.userId;
+    const visibleIds = new Set(this.notifications.map(n => n.id));
+    if (owner) {
+      const { error } = await supabase
           .from('app_notifications')
           .update({ read: true })
-          .eq('user_id', this.userId)
+          .eq('user_id', owner)
           .eq('read', false);
-      } catch (error) {
-        console.warn(
-          '⚠️ Failed to mark all notifications as read in Supabase:',
-          error
-        );
-      }
+      if (error) throw new Error('notification_read_failed');
     }
+    if (this.userId !== owner) return;
+    // Arrivals during this request remain unread until the next visible-list pass.
+    this.notifications.forEach(n => { if (visibleIds.has(n.id)) n.read = true; });
+    await this.save();
   }
 
   // ===== حذف إشعار =====

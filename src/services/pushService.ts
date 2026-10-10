@@ -14,6 +14,8 @@ import { supabase } from '@/lib/supabase';
 const TOKEN_KEY = '@kodax_push_token';
 /** طُلب إذن النظام على هذا الجهاز (مرة واحدة فقط، مهما كان الجواب) */
 const ASKED_KEY = '@kodax_push_asked';
+// Shared name for the web-only prompt (native prompting is unchanged).
+export const webPromptKey = (userId: string) => `@kodax_web_push_prompt:${userId}`;
 /** المستخدم أوقف الإشعارات على هذا الجهاز من الإعدادات — لا تسجيل تلقائي */
 const optOutKey = (userId: string) => `@kodax_push_off:${userId}`;
 
@@ -22,6 +24,7 @@ export interface NotificationPrefs {
   streak: boolean;
   likes: boolean;
   comments: boolean;
+  posts: boolean;
   follows: boolean;
   messages: boolean;
   system: boolean;
@@ -53,7 +56,7 @@ async function ensureAndroidChannels() {
   const channels: Array<[string, string, Notifications.AndroidImportance]> = [
     ['default', 'عام', Notifications.AndroidImportance.DEFAULT],
     ['messages', 'الرسائل الخاصة', Notifications.AndroidImportance.HIGH],
-    ['social', 'الإعجابات والتعليقات والمتابعات', Notifications.AndroidImportance.DEFAULT],
+    ['social', 'التفاعل والمنشورات والردود', Notifications.AndroidImportance.DEFAULT],
     ['reminders', 'تذكيرات التعلم والسلسلة', Notifications.AndroidImportance.DEFAULT],
     ['announcements', 'رسائل Kodax', Notifications.AndroidImportance.DEFAULT],
   ];

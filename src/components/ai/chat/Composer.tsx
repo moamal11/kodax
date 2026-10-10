@@ -1,9 +1,10 @@
+import { makeStyles } from '@/design/theme';
 /** حقل كتابة الرسالة + أوضاع المساعدة + زر الإرسال */
 import React, { useEffect, useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Platform, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { C, isRtlText } from './theme';
+import { useChatColors, chatColors, isRtlText } from './theme';
 
 export const COMPOSER_MODES = [
   { id: 'general', label: 'سؤال عام', short: 'عام', icon: 'chatbubble-ellipses-outline' },
@@ -26,6 +27,9 @@ const MIN_H = 46;
 const MAX_H = 150;
 
 export function Composer({ value, onChange, onSend, loading, mode, onModeChange, compact }: Props) {
+  const C = useChatColors();
+  const styles = useStyles();
+
   const [height, setHeight] = useState(MIN_H);
   // بعد الإرسال: الحقل يرجع لارتفاعه الأصلي
   useEffect(() => {
@@ -42,12 +46,13 @@ export function Composer({ value, onChange, onSend, loading, mode, onModeChange,
           return (
             <TouchableOpacity
               key={m.id}
+              disabled={loading}
               onPress={() => onModeChange(m.id)}
               style={[styles.modeChip, active && styles.modeChipActive]}
               accessibilityRole="button"
-              accessibilityState={{ selected: active }}
+              accessibilityState={{ selected: active, disabled: loading }}
             >
-              <Ionicons name={m.icon as any} size={14} color={active ? '#fff' : C.muted} />
+              <Ionicons name={m.icon as any} size={14} color={active ? C.text : C.muted} />
               <Text style={[styles.modeText, active && styles.modeTextActive]}>{compact ? m.short : m.label}</Text>
             </TouchableOpacity>
           );
@@ -82,59 +87,66 @@ export function Composer({ value, onChange, onSend, loading, mode, onModeChange,
           editable={!loading}
           accessibilityLabel="رسالة للمساعد"
         />
-        <TouchableOpacity onPress={onSend} disabled={!canSend} accessibilityLabel="إرسال" style={styles.sendTouch}>
-          <LinearGradient
-            colors={canSend ? [C.userA, C.userB] : ['#2a2a40', '#2a2a40']}
-            style={styles.send}
-          >
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={onSend}
+          disabled={!canSend}
+          accessibilityLabel="إرسال"
+          accessibilityState={{ disabled: !canSend }}
+          style={styles.sendTouch}
+        >
+          <LinearGradient colors={canSend ? [C.userA, C.userB] : [C.surfaceStrong, C.surfaceStrong]} style={styles.send}>
             {loading ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="arrow-up" size={22} color={canSend ? '#fff' : C.muted} />}
           </LinearGradient>
         </TouchableOpacity>
       </View>
-      {!compact && <Text style={styles.disclaimer}>المساعد قد يخطئ أحياناً — جرّب الكود قبل ما تعتمد عليه.</Text>}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  modesScroll: { flexGrow: 0 },
-  modes: { flexDirection: 'row-reverse', gap: 6, paddingHorizontal: 2 },
-  modeChip: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 11,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: C.surface,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  modeChipActive: { backgroundColor: C.accentSoft, borderColor: C.borderStrong },
-  modeText: { color: C.muted, fontSize: 12.5, fontFamily: 'Plex-400' },
-  modeTextActive: { color: '#fff', fontFamily: 'Plex-600' },
-  box: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    backgroundColor: '#15152e',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-    paddingLeft: 6,
-    paddingRight: 14,
-    paddingVertical: 6,
-  },
-  input: {
-    flex: 1,
-    color: C.text,
-    fontSize: 15.5,
-    lineHeight: 22,
-    paddingTop: Platform.OS === 'web' ? 12 : 11,
-    paddingBottom: Platform.OS === 'web' ? 10 : 11,
-    fontFamily: 'Plex-400' },
-  sendTouch: { marginBottom: 1 },
-  send: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  disclaimer: { color: C.muted, fontSize: 11.5, textAlign: 'center', fontFamily: 'Plex-400' },
+const useStyles = makeStyles((t) => {
+  const C = chatColors(t.colors);
+  return {
+    wrap: { gap: 8 },
+    modesScroll: { flexGrow: 0 },
+    modes: { flexDirection: 'row-reverse', gap: 6, paddingHorizontal: 2 },
+    modeChip: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 11,
+      minHeight: 44,
+      borderRadius: 16,
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    modeChipActive: { backgroundColor: C.accentSoft, borderColor: C.borderStrong },
+    modeText: { color: C.muted, fontSize: 14, fontFamily: 'Plex-400' },
+    modeTextActive: { color: C.text, fontFamily: 'Plex-600' },
+    box: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 8,
+      backgroundColor: C.surfaceStrong,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: C.borderStrong,
+      paddingLeft: 6,
+      paddingRight: 14,
+      paddingVertical: 6,
+    },
+    input: {
+      flex: 1,
+      color: C.text,
+      fontSize: 15.5,
+      lineHeight: 22,
+      paddingTop: Platform.OS === 'web' ? 12 : 11,
+      paddingBottom: Platform.OS === 'web' ? 10 : 11,
+      fontFamily: 'Plex-400',
+    },
+    sendTouch: { marginBottom: 1 },
+    send: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+    disclaimer: { color: C.muted, fontSize: 12, textAlign: 'center', fontFamily: 'Plex-400' },
+  };
 });

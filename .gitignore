@@ -6,6 +6,8 @@ node_modules/
 # Expo
 .expo/
 dist/
+web-server/generated/
+web-server/public-config.cjs
 web-build/
 expo-env.d.ts
 
@@ -94,3 +96,7 @@ google-services.json
 
 # لوحة الإدارة مستودع منفصل (kodax-admin)
 /kodax-admin/
+
+output/
+reports/
+motion-videos/

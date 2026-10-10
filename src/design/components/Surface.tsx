@@ -25,7 +25,7 @@ export function Surface({ variant = 'surface', padding = 16, radius, onPress, st
     raised: { bg: c.surfaceRaised, border: c.border },
     sunken: { bg: c.surfaceSunken, border: c.border },
     outline: { bg: 'transparent', border: c.border },
-    brand: { bg: c.brandSoft, border: 'transparent' },
+    brand: { bg: c.brandSoft, border: c.borderStrong },
     success: { bg: c.successSoft, border: 'transparent' },
     warning: { bg: c.warningSoft, border: 'transparent' },
     danger: { bg: c.dangerSoft, border: 'transparent' },
@@ -38,7 +38,12 @@ export function Surface({ variant = 'surface', padding = 16, radius, onPress, st
     borderRadius: radius ?? t.radius.md,
     padding,
   };
-  if (!onPress) return <View {...rest} style={[base, style]}>{children}</View>;
+  if (!onPress)
+    return (
+      <View {...rest} style={[base, style]}>
+        {children}
+      </View>
+    );
   return (
     <Pressable
       {...(rest as any)}
@@ -48,7 +53,10 @@ export function Surface({ variant = 'surface', padding = 16, radius, onPress, st
       accessibilityHint={accessibilityHint}
       style={(state: any) => [
         base,
-        (state.pressed || state.hovered) && { backgroundColor: variant === 'surface' || variant === 'raised' ? c.surfacePressed : map.bg, borderColor: c.borderStrong },
+        (state.pressed || state.hovered) && {
+          backgroundColor: variant === 'surface' || variant === 'raised' ? c.surfacePressed : map.bg,
+          borderColor: c.borderStrong,
+        },
         Platform.OS === 'web' && state.focused ? ({ outlineWidth: 2, outlineStyle: 'solid', outlineColor: c.focus } as any) : null,
         style,
       ]}
@@ -75,13 +83,34 @@ type ListRowProps = {
 };
 
 /** صف إعدادات/قائمة: أيقونة، عنوان، وصف، قيمة، سهم */
-export function ListRow({ title, subtitle, icon, iconTone = 'secondary', value, trailing, onPress, danger, chevron = !!onPress, last, accessibilityHint }: ListRowProps) {
+export function ListRow({
+  title,
+  subtitle,
+  icon,
+  iconTone = 'secondary',
+  value,
+  trailing,
+  onPress,
+  danger,
+  chevron = !!onPress,
+  last,
+  accessibilityHint,
+}: ListRowProps) {
   const t = useTheme();
   const c = t.colors;
   const content = (
     <Row gap={12} style={{ paddingVertical: 12, paddingHorizontal: 14, minHeight: 56, borderBottomWidth: last ? 0 : 1, borderBottomColor: c.border }}>
       {icon && (
-        <View style={{ width: 32, height: 32, borderRadius: t.radius.sm, backgroundColor: danger ? c.dangerSoft : c.surfaceSunken, alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: t.radius.sm,
+            backgroundColor: danger ? c.dangerSoft : c.surfaceSunken,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <Ionicons name={icon} size={18} color={danger ? c.dangerText : iconTone === 'secondary' ? c.textSecondary : undefined} />
         </View>
       )}
@@ -124,7 +153,11 @@ export function ListRow({ title, subtitle, icon, iconTone = 'secondary', value, 
 /** مجموعة صفوف داخل سطح واحد */
 export function ListGroup({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const t = useTheme();
-  return <View style={[{ backgroundColor: t.colors.surface, borderRadius: t.radius.md, borderWidth: 1, borderColor: t.colors.border, overflow: 'hidden' }, style]}>{children}</View>;
+  return (
+    <View style={[{ backgroundColor: t.colors.surface, borderRadius: t.radius.md, borderWidth: 1, borderColor: t.colors.border, overflow: 'hidden' }, style]}>
+      {children}
+    </View>
+  );
 }
 
 /** عنوان قسم + إجراء اختياري */

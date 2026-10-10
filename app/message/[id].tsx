@@ -1,3 +1,4 @@
+import { profilePath } from '@/services/profileLinks';
 /**
  * محادثة خاصة.
  * - الفقاعة بعرض أقصى نسبي والنص يلتف (حتى الروابط الطويلة) — F01
@@ -14,6 +15,7 @@ import { getConversationDetail, sendMessage, markMessagesAsRead, subscribeToMess
 import { blockUser, unblockUser, isUserBlocked } from '@/services/codeFeedService';
 import ReportUserSheet from '@/components/social/ReportUserSheet';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
+import { SharedMessageCard } from '@/features/community/SharedMessageCard';
 import { showToast } from '@/components/ui/Toast';
 import { Screen, AppBar, Text, Row, Col, Avatar, IconButton, Button, Field, Sheet, ListGroup, ListRow, Surface, EmptyState, ErrorState, ListSkeleton, useTheme } from '@/design';
 
@@ -149,7 +151,7 @@ export default function ConversationScreen() {
       border
       center={
         other ? (
-          <Pressable onPress={() => router.push(`/user/${other.id}` as any)} accessibilityRole="link" accessibilityLabel={`ملف ${name}`}>
+          <Pressable onPress={() => router.push(profilePath(other.id,other.username) as any)} accessibilityRole="link" accessibilityLabel={`ملف ${name}`}>
             <Row gap={10} style={{ justifyContent: 'flex-start' }}>
               <Avatar uri={other.avatar_url} name={name} size={34} />
               <Row gap={4} style={{ flexShrink: 1 }}>
@@ -266,6 +268,7 @@ export default function ConversationScreen() {
                   >
                     {m.is_deleted ? 'حُذفت هذه الرسالة' : m.content}
                   </Text>
+                  {!m.is_deleted&&m.shared_type&&m.shared_id&&<SharedMessageCard type={m.shared_type} id={m.shared_id}/>}
                   <Text variant="caption" style={{ color: mine && !m.is_deleted ? 'rgba(255,255,255,0.7)' : t.colors.textMuted, fontSize: 11, lineHeight: 14, marginTop: 2 }} align={mine ? 'left' : 'right'}>
                     {timeOf(m.created_at)}
                     {m.is_edited && !m.is_deleted ? ' · معدّلة' : ''}
@@ -316,7 +319,7 @@ export default function ConversationScreen() {
               title="عرض الملف"
               onPress={() => {
                 setMenu(null);
-                other && router.push(`/user/${other.id}` as any);
+                other && router.push(profilePath(other.id,other.username) as any);
               }}
             />
             <ListRow

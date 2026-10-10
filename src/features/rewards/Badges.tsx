@@ -2,59 +2,59 @@
  * الشارات: ملخص صغير في حسابي + ورقة كاملة مجمّعة حسب الفئة.
  * الشارة المكتسبة بلونها، غير المكتسبة رمادية مع شرط الحصول عليها.
  */
-import React from 'react';
-import { Pressable, View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { Pressable, View, useWindowDimensions } from 'react-native';
 import { BADGE_CATEGORIES, ALL_BADGES, type BadgeDefinition } from '@/constants/badgeDefinitions';
-import { Sheet, Text, Row, Col, ProgressBar, SectionHeader, Surface, useTheme } from '@/design';
+import { Sheet, Text, Row, Col, Button, useTheme } from '@/design';
+import { AchievementSeal } from './JourneyVisuals';
 
 const RARITY_LABEL: Record<string, string> = { common: 'عادية', rare: 'نادرة', epic: 'ملحمية', legendary: 'أسطورية' };
 
 function BadgeTile({ b, earned, size = 'md' }: { b: BadgeDefinition; earned: boolean; size?: 'sm' | 'md' }) {
-  const t = useTheme();
-  const box = size === 'sm' ? 44 : 52;
   return (
-    <View style={{ width: size === 'sm' ? 64 : 92, alignItems: 'center', gap: 6 }} accessible accessibilityLabel={`${b.nameAr}${earned ? '، مكتسبة' : `، لم تُكتسب بعد: ${b.descriptionAr}`}`}>
-      <View
-        style={{
-          width: box,
-          height: box,
-          borderRadius: 14,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: earned ? t.colors.xpSoft : t.colors.surfaceSunken,
-          borderWidth: 1,
-          borderColor: earned ? t.colors.xp : t.colors.border,
-          opacity: earned ? 1 : 0.6,
-        }}
-      >
-        <MaterialIcons name={b.icon} size={size === 'sm' ? 22 : 26} color={earned ? t.colors.xp : t.colors.textMuted} />
-      </View>
-      <Text variant="caption" align="center" numberOfLines={2} tone={earned ? 'default' : 'muted'} style={{ fontSize: 11, lineHeight: 15 }}>
+    <View
+      style={{ width: size === 'sm' ? '100%' : 104, alignItems: 'center', gap: 6 }}
+      accessible
+      accessibilityLabel={`${b.nameAr}${earned ? '، مكتسبة' : `، لم تُكتسب بعد: ${b.descriptionAr}`}`}
+    >
+      <AchievementSeal icon={b.icon} earned={earned} size={size === 'sm' ? 64 : 76} />
+      <Text variant="caption" align="center" tone={earned ? 'default' : 'secondary'}>
         {b.nameAr}
+      </Text>
+      <Text variant="caption" align="center" tone={earned ? 'xp' : 'secondary'}>
+        {earned ? 'مكتسبة' : 'قادمة'}
       </Text>
     </View>
   );
 }
 
-export function BadgesSummary({ earnedIds, onOpen }: { earnedIds: string[]; onOpen: () => void }) {
-  const t = useTheme();
+export function BadgesSummary({ earnedIds, onOpen, title = 'الشارات' }: { earnedIds: string[]; onOpen: () => void; title?: string }) {
+  const { fontScale } = useWindowDimensions();
+  const [width, setWidth] = useState(0);
+  const columns = width >= 620 ? 6 : 3;
   const earned = ALL_BADGES.filter((b) => earnedIds.includes(b.id));
   const next = ALL_BADGES.filter((b) => !earnedIds.includes(b.id)).slice(0, Math.max(0, 6 - earned.slice(0, 6).length));
   const shown = [...earned.slice(-6).reverse(), ...next];
   return (
     <View>
-      <SectionHeader title="الشارات" subtitle={`${earned.length} من ${ALL_BADGES.length}`} action="كل الشارات" onAction={onOpen} />
-      <Surface padding={12}>
+      <Row justify="space-between" align="flex-end" gap={12} style={{ marginBottom: 10 }}>
+        <Col flex={1} gap={2}>
+          <Text variant="heading" accessibilityRole="header">{title}</Text>
+          <Text variant="bodySm" tone="muted">{earned.length} من {ALL_BADGES.length} · مكتسبة</Text>
+        </Col>
+        <Button label="كل الشارات" variant="ghost" onPress={onOpen} style={{ minWidth: 112 * Math.min(fontScale, 1.6), flexShrink: 0 }} />
+      </Row>
+      <View style={{ paddingVertical: 16 }}>
         <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`الشارات: ${earned.length} من ${ALL_BADGES.length}. عرض الكل`}>
-          <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', justifyContent: 'space-around', rowGap: 12 }}>
+          <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', rowGap: 16 }}>
             {shown.map((b) => (
-              <BadgeTile key={b.id} b={b} earned={earnedIds.includes(b.id)} size="sm" />
+              <View key={b.id} style={{ width: `${100 / columns}%`, paddingHorizontal: 4, minHeight: 92 }}>
+                <BadgeTile b={b} earned={earnedIds.includes(b.id)} size="sm" />
+              </View>
             ))}
           </View>
-          <ProgressBar value={earned.length / Math.max(1, ALL_BADGES.length)} tone="xp" height={4} style={{ marginTop: 12 }} />
         </Pressable>
-      </Surface>
+      </View>
     </View>
   );
 }
@@ -80,15 +80,32 @@ export function BadgesSheet({ visible, onClose, earnedIds }: { visible: boolean;
                 {cat.badges.map((b) => {
                   const on = earnedIds.includes(b.id);
                   return (
-                    <View key={b.id} style={{ width: 150, flexGrow: 1, flexDirection: 'row-reverse', gap: 10, alignItems: 'center', padding: 10, borderRadius: t.radius.md, backgroundColor: t.colors.surface, borderWidth: 1, borderColor: on ? t.colors.xp : t.colors.border }}>
-                      <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? t.colors.xpSoft : t.colors.surfaceSunken }}>
-                        <MaterialIcons name={b.icon} size={22} color={on ? t.colors.xp : t.colors.textMuted} />
-                      </View>
+                    <View
+                      key={b.id}
+                      accessible
+                      accessibilityLabel={`${b.nameAr}${on ? '، مكتسبة' : `، لم تُكتسب بعد: ${b.descriptionAr}`}`}
+                      style={{
+                        width: 150,
+                        flexGrow: 1,
+                        flexDirection: 'row-reverse',
+                        gap: 10,
+                        alignItems: 'center',
+                        padding: 10,
+                        borderRadius: t.radius.md,
+                        backgroundColor: t.colors.surface,
+                        borderWidth: 1,
+                        borderColor: on ? t.colors.xp : t.colors.border,
+                      }}
+                    >
+                      <AchievementSeal icon={b.icon} earned={on} size={48} />
                       <View style={{ flex: 1 }}>
-                        <Text variant="label" weight="semibold" tone={on ? 'default' : 'secondary'} numberOfLines={1}>
+                        <Text variant="label" weight="semibold" tone={on ? 'default' : 'secondary'}>
                           {b.nameAr}
                         </Text>
-                        <Text variant="caption" tone="muted" numberOfLines={2}>
+                        <Text variant="caption" tone={on ? 'xp' : 'secondary'}>
+                          {on ? 'مكتسبة' : 'قادمة'}
+                        </Text>
+                        <Text variant="caption" tone="secondary">
                           {b.descriptionAr} · {RARITY_LABEL[b.rarity] ?? ''}
                         </Text>
                       </View>

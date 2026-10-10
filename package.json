@@ -8,7 +8,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "ai:knowledge": "npx tsx scripts/build-ai-knowledge.ts",
-    "ai:knowledge:check": "npx tsx scripts/build-ai-knowledge.ts --check"
+    "ai:knowledge:check": "npx tsx scripts/build-ai-knowledge.ts --check",
+    "typecheck:app": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
@@ -40,6 +41,7 @@
     "@supabase/supabase-js": "^2.93.3",
     "babel-preset-expo": "~54.0.10",
     "expo": "~54.0.33",
+    "expo-asset": "~12.0.12",
     "expo-auth-session": "^7.0.10",
     "expo-blur": "^15.0.8",
     "expo-build-properties": "^1.0.10",
@@ -77,6 +79,7 @@
   "devDependencies": {
     "@types/prismjs": "^1.26.5",
     "@types/react": "~19.1.0",
+    "tsx": "4.20.6",
     "typescript": "~5.9.2"
   },
   "private": true

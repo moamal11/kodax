@@ -1,0 +1,27 @@
+import {literalProgramOutput,webResultDocument} from '../../src/features/community/resultPreviewData';
+import assert from 'node:assert/strict';
+assert.equal(literalProgramOutput('console.log("Kodax QA");','javascript'),'Kodax QA');
+assert.equal(literalProgramOutput('const value = 3 * 4; console.log(value);','javascript'),'12');
+assert.equal(literalProgramOutput('name="Kodax"\nprint(name, 3+2)','python'),'Kodax 5');
+assert.equal(literalProgramOutput('if False:\n  print("wrong")','python'),null);
+assert.equal(literalProgramOutput('fetch("https://example.com"); console.log("wrong");','javascript'),null);
+assert.equal(literalProgramOutput('for(;;){}','javascript'),null);
+assert.equal(literalProgramOutput('print(input())','python'),null);
+assert.equal(literalProgramOutput('print(4/2)','python'),null); // no false integer formatting for Python float division
+assert.equal(literalProgramOutput('console.log(True)','javascript'),null);
+assert.equal(literalProgramOutput('print(-5%3)','python'),null);
+assert.equal(literalProgramOutput('print(1.0)','python'),null);
+assert.equal(literalProgramOutput('const x=1;x=2;console.log(x)','javascript'),null);
+assert.equal(literalProgramOutput('console=1;console.log("wrong")','javascript'),null);
+assert.equal(literalProgramOutput('class=1\nprint(class)','python'),null);
+assert.equal(literalProgramOutput('value=1;console.log(value)','javascript'),null);
+assert.equal(literalProgramOutput('  print(1)','python'),null);
+assert.equal(literalProgramOutput("print('a\nb')",'python'),null);
+assert.equal(literalProgramOutput('print(01)','python'),null);
+assert.equal(literalProgramOutput('const console.log("invalid")','javascript'),null);
+assert.equal(literalProgramOutput('elif=1\nprint(elif)','python'),null);
+assert.equal(literalProgramOutput('const enum=1;console.log(enum)','javascript'),null);
+assert.equal(literalProgramOutput('console.log("a");'.repeat(21)+'invalid syntax','javascript'),null);
+const doc=webResultDocument('<meta http-equiv="refresh" content="0;url=https://example.com"><h1>واجهة</h1><script>parent.location="https://example.com"</script>');
+assert.ok(doc.includes("script-src 'none'")&&doc.includes('<h1>واجهة</h1>')&&!doc.includes('<script>')&&!doc.includes('http-equiv="refresh"'));
+console.log('PASS passive result preview: literals, expressions, no invented conditional/dynamic output, script/redirect isolation');

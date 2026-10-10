@@ -1,3 +1,11 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { useApp } from '@/contexts/AppContext';
+import { useBadges } from '@/contexts/BadgeContext';
+import { ProgressionOverview } from '@/features/rewards/ProgressionOverview';
+import { NextBadgeGoal } from '@/features/rewards/NextBadgeGoal';
+import { BadgesSummary, BadgesSheet } from '@/features/rewards/Badges';
+import { coinService, type ProgressState } from '@/services/coinService';
+import { hybridSyncService } from '@/services/hybridSyncService';
 /**
  * الكوينات والمكافآت: الرصيد وما ينفع له، الأهداف، المكافأة اليومية، مكافآت التعلم،
  * الإعلانات الاختيارية (اسمها واضح ولا يلتبس بالتحديات البرمجية — F27)، والسجل بأسماء مفهومة (F15).
@@ -29,14 +37,47 @@ export default function RewardsScreen() {
   const t = useTheme();
   const router = useRouter();
   const { isDesktop } = useBreakpoint();
+  const { userId } = useAuth();
+  const { profile, refreshProfile } = useApp();
+  const { earnedBadgeIds, refreshBadges } = useBadges();
+  const [badges, setBadges] = useState(false);
+  const [progress, setProgress] = useState<ProgressState | null>(null);
+  const [completedChallenges, setCompletedChallenges] = useState<number | null>(null);
+
   const { state, balance, isLoading, loadError, refresh, watchAd, adsSupported } = useCoins();
   const [refreshing, setRefreshing] = useState(false);
   const [watching, setWatching] = useState(false);
   const [adNotice, setAdNotice] = useState<string | null>(null);
   useFocusEffect(
     useCallback(() => {
+      let alive = true;
       refresh();
-    }, [refresh])
+      refreshProfile();
+      refreshBadges();
+      coinService
+        .getProgressState()
+        .then((p) => {
+          if (alive) setProgress(p);
+        })
+        .catch(() => {
+          if (alive) setProgress(null);
+        });
+      if (userId) {
+        (async () => {
+          await hybridSyncService.setUser(userId);
+          return hybridSyncService.fetchCompletedChallengesOnly();
+        })()
+          .then((ids) => {
+            if (alive) setCompletedChallenges(ids.length);
+          })
+          .catch(() => {
+            if (alive) setCompletedChallenges(null);
+          });
+      }
+      return () => {
+        alive = false;
+      };
+    }, [refresh, refreshProfile, refreshBadges, userId])
   );
   const cooldown = useCountdown(state?.ads.nextAvailableAt ?? null);
 
@@ -53,7 +94,7 @@ export default function RewardsScreen() {
 
   if (!state) {
     return (
-      <Screen width="reading" header={<AppBar title="الكوينات والمكافآت" fallback="/profile" />}>
+      <Screen width="reading" header={<AppBar title="المكافآت والمستويات" fallback="/profile" />}>
         {isLoading ? <ListSkeleton rows={3} /> : <ErrorState body={coinMessage(loadError ?? 'network')} onRetry={refresh} />}
       </Screen>
     );
@@ -118,7 +159,13 @@ export default function RewardsScreen() {
           كوينات التحديات اليوم: {ch.earnedToday} من {ch.dailyCap}
           {ch.earnedToday >= ch.dailyCap ? ' — وصلت للحد اليومي' : ''}
         </Text>
-        <Button label="التحديات" variant="secondary" size="sm" onPress={() => router.push('/learn?tab=challenges' as any)} style={{ alignSelf: 'flex-start', marginTop: 10 }} />
+        <Button
+          label="حلّ تحديًا واجمع كوينات"
+          variant="secondary"
+          size="sm"
+          onPress={() => router.push('/learn?tab=challenges' as any)}
+          style={{ alignSelf: 'flex-start', marginTop: 10 }}
+        />
       </Surface>
     </View>
   );
@@ -136,7 +183,15 @@ export default function RewardsScreen() {
           شاهدت {ads.watchedToday} من {ads.limit} اليوم{ads.bonus > 0 ? ` · مكافأة إضافية ${ads.bonus} كوين عند إكمالها كلها` : ''}
         </Text>
         <Button
-          label={!adsSupported ? 'متاح في تطبيق Android' : adsLeft === 0 ? 'أكملت إعلانات اليوم' : cooldown > 0 ? `الإعلان التالي بعد ${cooldown} ث` : `شاهد إعلاناً (+${ads.reward})`}
+          label={
+            !adsSupported
+              ? 'متاح في تطبيق Android'
+              : adsLeft === 0
+                ? 'أكملت إعلانات اليوم'
+                : cooldown > 0
+                  ? `الإعلان التالي بعد ${cooldown} ث`
+                  : `شاهد إعلاناً (+${ads.reward})`
+          }
           icon={adsLeft === 0 ? 'checkmark-done' : 'play-circle-outline'}
           variant="secondary"
           onPress={handleWatchAd}
@@ -182,7 +237,7 @@ export default function RewardsScreen() {
 
   return (
     <Screen
-      header={<AppBar title="الكوينات والمكافآت" fallback="/profile" />}
+      header={<AppBar title="المكافآت والمستويات" fallback="/profile" />}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -198,26 +253,37 @@ export default function RewardsScreen() {
       {isDesktop ? (
         <Row align="flex-start" gap={24}>
           <Col gap={20} flex={1}>
-            {hero}
-            <DailyRewardCard />
+            <BadgesSummary title="معرض الشارات" earnedIds={earnedBadgeIds} onOpen={() => setBadges(true)} />
+            {progress && profile?.xp != null && completedChallenges != null && (
+              <NextBadgeGoal earnedIds={earnedBadgeIds} progress={progress} xp={Number(profile.xp)} completedChallenges={completedChallenges} />
+            )}
+            <DailyRewardCard detailed />
             <LearningGoalsCard />
             {history}
           </Col>
-          <Col gap={20} style={{ width: 380 }}>
+          <Col gap={20} style={{ width: 300 }}>
+            {profile?.xp != null && <ProgressionOverview xp={Number(profile.xp)} />}
+            {hero}
             {learning}
             {adsCard}
           </Col>
         </Row>
       ) : (
         <Col gap={20}>
-          {hero}
-          <DailyRewardCard />
+          <BadgesSummary title="معرض الشارات" earnedIds={earnedBadgeIds} onOpen={() => setBadges(true)} />
+          {progress && profile?.xp != null && completedChallenges != null && (
+            <NextBadgeGoal earnedIds={earnedBadgeIds} progress={progress} xp={Number(profile.xp)} completedChallenges={completedChallenges} />
+          )}
+          {profile?.xp != null && <ProgressionOverview xp={Number(profile.xp)} compact />}
+          <DailyRewardCard detailed />
           <LearningGoalsCard />
+          {hero}
           {learning}
           {adsCard}
           {history}
         </Col>
       )}
+      <BadgesSheet visible={badges} onClose={() => setBadges(false)} earnedIds={earnedBadgeIds} />
     </Screen>
   );
 }

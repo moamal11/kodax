@@ -1,3 +1,4 @@
+import { useReducedMotion } from '@/design/hooks';
 /**
  * UpdateModal - مربع حوار التحديث
  * 1. يحاول تحديث OTA عبر expo-updates (تحديثات JavaScript).
@@ -32,7 +33,7 @@ import {
   openStoreListing,
 } from '@/services/updateService';
 
-import { darkColors } from '@/design/tokens';
+import { useTheme, makeStyles } from '@/design/theme';
 interface UpdateModalProps {
   visible: boolean;
   update: AppUpdate | null;
@@ -50,6 +51,10 @@ export default function UpdateModal({
   isForced,
   onDismiss,
 }: UpdateModalProps) {
+  const reduced = useReducedMotion();
+  const darkColors = useTheme().colors;
+  const styles = useStyles();
+
   const [state, setState] = useState<UpdateState>('idle');
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
@@ -95,13 +100,13 @@ export default function UpdateModal({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType={reduced ? 'none' : 'fade'}
       statusBarTranslucent
       onRequestClose={isForced ? undefined : onDismiss}
     >
       <View style={styles.overlay}>
         <Animated.View
-          entering={FadeInDown.springify().damping(20)}
+          entering={reduced ? undefined : FadeInDown.springify().damping(20)}
           style={styles.container}
         >
           {/* الأيقونة العلوية */}
@@ -145,7 +150,7 @@ export default function UpdateModal({
           {/* ملاحظات الإصدار */}
           {update.release_notes && state === 'idle' && (
             <Animated.View
-              entering={FadeIn.delay(200)}
+              entering={reduced ? undefined : FadeIn.delay(200)}
               style={styles.notesContainer}
             >
               <Text style={styles.notesTitle}>
@@ -164,7 +169,7 @@ export default function UpdateModal({
           {/* شريط التقدم (OTA) */}
           {isUpdating && (
             <Animated.View
-              entering={FadeInUp.springify()}
+              entering={reduced ? undefined : FadeInUp.springify()}
               style={styles.progressContainer}
             >
               <View style={styles.progressBar}>
@@ -182,7 +187,7 @@ export default function UpdateModal({
           )}
 
           {state === 'store' && (
-            <Animated.View entering={FadeIn} style={styles.installingContainer}>
+            <Animated.View entering={reduced ? undefined : FadeIn} style={styles.installingContainer}>
               <Ionicons
                 name="logo-google-playstore"
                 size={16}
@@ -258,7 +263,7 @@ export default function UpdateModal({
           {/* تحذير التحديث الإجباري */}
           {isForced && (
             <Animated.View
-              entering={FadeIn.delay(400)}
+              entering={reduced ? undefined : FadeIn.delay(400)}
               style={styles.forceWarning}
             >
               <Ionicons name="lock-closed" size={14} color={darkColors.warningText} />
@@ -273,7 +278,7 @@ export default function UpdateModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((t) => { const darkColors = t.colors; return {
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -468,4 +473,4 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     flex: 1,
     fontFamily: 'Plex-600' },
-});
+}; });

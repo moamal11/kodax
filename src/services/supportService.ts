@@ -122,7 +122,7 @@ class SupportService {
   /**
    * جلب تذاكر المستخدم الحالي
    */
-  async getUserTickets(): Promise<SupportTicket[]> {
+  async getUserTickets(throwOnError = false): Promise<SupportTicket[]> {
     try {
       const {
         data: { user },
@@ -135,12 +135,11 @@ class SupportService {
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
-      if (error) {
-        return [];
-      }
+      if (error) throw error;
 
       return data || [];
-    } catch {
+    } catch (error) {
+      if (throwOnError) throw error;
       return [];
     }
   }
@@ -148,7 +147,7 @@ class SupportService {
   /**
    * جلب رسائل التذكرة
    */
-  async getTicketMessages(ticketId: string): Promise<SupportMessage[]> {
+  async getTicketMessages(ticketId: string, throwOnError = false): Promise<SupportMessage[]> {
     try {
       const { data, error } = await supabase
         .from('support_messages')
@@ -156,12 +155,11 @@ class SupportService {
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        return [];
-      }
+      if (error) throw error;
 
       return data || [];
-    } catch {
+    } catch (error) {
+      if (throwOnError) throw error;
       return [];
     }
   }

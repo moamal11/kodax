@@ -1,0 +1,20 @@
+/** Preserve the reviewed live push behavior, adding only publication preferences. */
+const fs=require('node:fs');
+const file='supabase/migrations/20261010020000_community_social_sharing_notifications.sql';
+const audit=JSON.parse(fs.readFileSync('reports/community-social-20261010/preflight-clean.json','utf8'));
+let base=fs.readFileSync(file,'utf8');
+if(base.includes('-- Reviewed push functions'))throw new Error('Already prepared');
+let enqueue=audit.functions._push_enqueue;
+if(!enqueue.includes("WHEN 'like' THEN p.likes")||!enqueue.includes("p_kind IN ('like', 'comment', 'follow')"))throw new Error('Unexpected live push implementation');
+enqueue=enqueue.replace("WHEN 'like' THEN p.likes","WHEN 'new_post' THEN p.posts WHEN 'like' THEN p.likes").replaceAll("('like', 'comment', 'follow')","('like', 'comment', 'follow', 'new_post')");
+let from=audit.functions._push_from_app_notification;
+from=from.replace("NEW.type IN ('like', 'comment', 'follow')","NEW.type IN ('like', 'comment', 'follow', 'post')").replace('NEW.user_id, NEW.type,','NEW.user_id, CASE WHEN NEW.type=\'post\' THEN \'new_post\' ELSE NEW.type END,').replace("jsonb_build_object('url', COALESCE(v_url, '/'), 'notification_id', NEW.id)","NEW.metadata || jsonb_build_object('url', COALESCE(v_url, '/'), 'notification_id', NEW.id)");
+let prefs=fs.readFileSync('supabase/migrations/20261004040000_push_notifications.sql','utf8').match(/CREATE OR REPLACE FUNCTION public.notification_prefs_set\(p_prefs JSONB\)[\s\S]*?\$\$;/)[0];
+prefs=prefs.replace('daily_goal = COALESCE','posts = COALESCE((p_prefs->>\'posts\')::boolean, posts),\n    daily_goal = COALESCE');
+let feed=audit.functions.community_feed;
+const needle="to_jsonb(p)||jsonb_build_object('profiles'";
+if(!feed.includes(needle))throw new Error('Unexpected feed payload');
+feed=feed.replace(needle,"to_jsonb(p)||jsonb_build_object('liked_by_me',EXISTS(SELECT 1 FROM community_likes cl WHERE cl.post_id=p.id AND cl.user_id=auth.uid()),'profiles'");
+base=base.replace(/COMMIT;\s*$/,'')+'\n-- Reviewed push functions: retain limits, quiet hours and campaign behavior.\n'+[enqueue,from,prefs,feed].map(s=>s.trim()+';').join('\n\n')+'\nCOMMIT;\n';
+fs.writeFileSync(file,base);
+console.log('Prepared social migration; unchanged reward economy and existing push scheduling.');

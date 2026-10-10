@@ -1,3 +1,4 @@
+import { profilePath } from '@/services/profileLinks';
 /**
  * المستخدمون المحظورون — من user_blocks (RLS: حظر المستخدم الحالي فقط) مع إلغاء الحظر بتأكيد.
  */
@@ -82,7 +83,7 @@ export default function BlockedUsersScreen() {
           <Surface padding={0}>
             {items.map((u, i) => (
               <Row key={u.id} gap={12} style={{ paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: t.colors.border }}>
-                <Pressable onPress={() => router.push(`/user/${u.id}` as any)} accessibilityRole="link" accessibilityLabel={`ملف ${name(u)}`} style={{ flex: 1 }}>
+                <Pressable onPress={() => router.push(profilePath(u.id,u.username) as any)} accessibilityRole="link" accessibilityLabel={`ملف ${name(u)}`} style={{ flex: 1 }}>
                   <Row gap={12}>
                     <Avatar uri={u.avatar_url} name={name(u)} size={40} />
                     <View style={{ flex: 1 }}>

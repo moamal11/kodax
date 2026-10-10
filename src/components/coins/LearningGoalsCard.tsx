@@ -1,3 +1,4 @@
+import { Col, Row, Text, Surface, Button, ProgressBar, Tag, ErrorState, ListSkeleton, useTheme } from '@/design';
 /**
  * أهداف التعلم والسلسلة — من السيرفر فقط (progress_get_state).
  *
@@ -8,25 +9,33 @@
  * - استخدامات اختيارية للكوينات: تجميد السلسلة، طلبات ذكاء إضافية.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
 import { Ionicons } from '@expo/vector-icons';
 import { coinService, coinMessage, type ProgressState } from '@/services/coinService';
 import { useCoins } from '@/contexts/CoinsContext';
 import { showToast } from '@/components/ui/Toast';
 import { CoinIcon } from './CoinIcon';
+import { JourneyNode } from '@/features/rewards/JourneyVisuals';
 
-import { darkColors } from '@/design/tokens';
 export default function LearningGoalsCard() {
   const { refresh: refreshCoins } = useCoins();
   const [state, setState] = useState<ProgressState | null>(null);
   const [aiPack, setAiPack] = useState<{ price: number; amount: number; can_buy: boolean } | null>(null);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [s, q] = await Promise.all([coinService.getProgressState(), coinService.getAIQuota()]);
-    setState(s);
-    const packs = (q as any)?.packs;
-    setAiPack(packs ? { price: packs.price, amount: packs.amount, can_buy: !!packs.can_buy } : null);
+    setLoading(true);
+    try {
+      const [s, q] = await Promise.all([coinService.getProgressState(), coinService.getAIQuota()]);
+      setState(s);
+      const packs = (q as any)?.packs;
+      setAiPack(packs ? { price: packs.price, amount: packs.amount, can_buy: !!packs.can_buy } : null);
+    } catch {
+      setState(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -47,168 +56,123 @@ export default function LearningGoalsCard() {
     }
   };
 
-  if (!state) return null;
+  const t = useTheme();
+  if (loading && !state) return <ListSkeleton rows={2} />;
+  if (!state)
+    return (
+      <Surface padding={16}>
+        <ErrorState compact title="أهداف التعلّم" body="لم تُحمّل الأهداف بعد." onRetry={load} />
+      </Surface>
+    );
   const { streak, goals } = state;
-  const dailyPct = Math.min(100, Math.round((goals.today_units / Math.max(1, goals.daily_target)) * 100));
-  const weekPct = Math.min(100, Math.round((goals.week_active_days / Math.max(1, goals.weekly_target_days)) * 100));
-
   return (
-    <View style={styles.card}>
-      {/* السلسلة */}
-      <View style={styles.row}>
-        <Ionicons name="flame" size={22} color="#F97316" />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>
-            سلسلة التعلم: {streak.current} {streak.current === 1 ? 'يوم' : 'أيام'}
-          </Text>
-          <Text style={styles.sub}>
-            {streak.active_today
-              ? 'تعلّمت اليوم — أحسنت!'
-              : 'درس واحد أو تحدٍ واحد اليوم يكفي للحفاظ عليها.'}{' '}
-            أفضل سلسلة: {streak.best}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.freezeRow}>
-        <Ionicons name="snow" size={16} color={darkColors.infoText} />
-        <Text style={styles.freezeText}>
-          تجميد السلسلة: {streak.freezes}/{streak.max_freezes} — يحمي سلسلتك إذا فاتك يوم
-          (تحصل على {streak.free_freezes_per_week} مجاناً كل أسبوع).
-        </Text>
-      </View>
-      {streak.freezes < streak.max_freezes && (
-        <TouchableOpacity
-          style={styles.smallBtn}
-          disabled={busy !== null}
-          onPress={() => run('freeze', () => coinService.buyStreakFreeze(), () => 'تمت إضافة تجميد للسلسلة ❄️')}
-        >
-          {busy === 'freeze' ? (
-            <ActivityIndicator color={darkColors.brandText} />
-          ) : (
-            <>
-              <Text style={styles.smallBtnText}>تجميد إضافي (اختياري)</Text>
-              <CoinIcon size={14} />
-              <Text style={styles.smallBtnText}>{streak.freeze_price}</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      )}
-
-      <View style={styles.divider} />
-
-      {/* هدف اليوم */}
-      <Text style={styles.title}>هدف اليوم</Text>
-      <Text style={styles.sub}>
-        اختر هدفاً يناسبك (دروس أو تحديات): {goals.today_units}/{goals.daily_target}
-        {goals.daily_rewarded ? ' — تحقق ✓' : goals.daily_reward > 0 ? ` — مكافأة ${goals.daily_reward} كوين` : ''}
-      </Text>
-      <View style={styles.bar}>
-        <View style={[styles.fill, { width: `${dailyPct}%` }]} />
-      </View>
-      <View style={styles.options}>
-        {goals.daily_options.map((n) => (
-          <TouchableOpacity
-            key={n}
-            style={[styles.option, goals.daily_target === n && styles.optionActive]}
-            disabled={busy !== null || goals.daily_target === n}
-            onPress={() => run('goal' + n, () => coinService.setDailyGoal(n), () => `هدفك اليومي: ${n}`)}
-          >
-            <Text style={[styles.optionText, goals.daily_target === n && styles.optionTextActive]}>
-              {n === 1 ? 'خفيف (1)' : n === 2 ? 'عادي (2)' : 'جاد (3)'}
+    <Surface padding={18}>
+      <Col gap={18}>
+        <Row gap={12}>
+          <Ionicons name="flame" size={28} color={t.colors.streak} />
+          <Col flex={1} gap={2}>
+            <Text variant="heading">
+              سلسلة التعلم: {streak.current} {streak.current === 1 ? 'يوم' : 'أيام'}
             </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* هدف الأسبوع */}
-      <Text style={[styles.title, { marginTop: 12 }]}>هدف الأسبوع</Text>
-      <Text style={styles.sub}>
-        تعلّم {goals.weekly_target_days} أيام من 7 (أيام الراحة مسموحة): {goals.week_active_days}/
-        {goals.weekly_target_days}
-        {goals.weekly_rewarded ? ' — تحقق ✓' : goals.weekly_reward > 0 ? ` — مكافأة ${goals.weekly_reward} كوين` : ''}
-      </Text>
-      <View style={styles.bar}>
-        <View style={[styles.fill, { width: `${weekPct}%`, backgroundColor: darkColors.brand }]} />
-      </View>
-
-      {aiPack && aiPack.price > 0 && (
-        <>
-          <View style={styles.divider} />
-          <Text style={styles.title}>طلبات ذكاء إضافية</Text>
-          <Text style={styles.sub}>
-            10 طلبات يومياً مجاناً. إذا احتجت أكثر: شاهد إعلانين (+3) من صفحة المساعد، أو استخدم
-            الكوينات (+{aiPack.amount}).
+            <Text variant="bodySm" tone="secondary">
+              {streak.active_today ? 'تعلّمت اليوم — أحسنت!' : 'درس أو تحدٍّ اليوم يحافظ عليها.'} أفضل سلسلة: {streak.best}
+            </Text>
+          </Col>
+        </Row>
+        <Col gap={10} style={{ borderTopWidth: 1, borderTopColor: t.colors.border, paddingTop: 16 }}>
+          <Row justify="space-between" gap={8} wrap>
+            <Text variant="heading">هدف اليوم</Text>
+            <Tag label={goals.daily_rewarded ? 'استلمت المكافأة' : `${goals.daily_reward} كوين عند الإنجاز`} tone={goals.daily_rewarded ? 'success' : 'coin'} />
+          </Row>
+          <Text variant="bodySm" tone="secondary">
+            أنجزت {goals.today_units} {goals.today_units === 1 ? 'درسًا أو تحديًا' : 'دروس أو تحديات'} · هدفك {goals.daily_target} باليوم
           </Text>
-          <TouchableOpacity
-            style={[styles.smallBtn, !aiPack.can_buy && { opacity: 0.5 }]}
-            disabled={busy !== null || !aiPack.can_buy}
-            onPress={() => run('ai', () => coinService.buyAiPack(), () => `+${aiPack.amount} طلبات ذكاء لليوم`)}
-          >
-            {busy === 'ai' ? (
-              <ActivityIndicator color={darkColors.brandText} />
-            ) : (
-              <>
-                <Text style={styles.smallBtnText}>
-                  {aiPack.can_buy ? `+${aiPack.amount} طلبات اليوم` : 'اشتريت حزمة اليوم'}
-                </Text>
-                {aiPack.can_buy && (
-                  <>
-                    <CoinIcon size={14} />
-                    <Text style={styles.smallBtnText}>{aiPack.price}</Text>
-                  </>
-                )}
-              </>
-            )}
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
+          <Row gap={10} accessibilityLabel={`هدف اليوم، ${goals.today_units} من ${goals.daily_target}`}>
+            {Array.from({ length: goals.daily_target }, (_, i) => (
+              <JourneyNode key={i} number={i + 1} state={i < goals.today_units ? 'completed' : i === goals.today_units ? 'current' : 'upcoming'} size={36} />
+            ))}
+          </Row>
+          <Row gap={8} wrap>
+            {goals.daily_options.map((n) => (
+              <Button
+                key={n}
+                label={n === 1 ? 'خفيف · 1' : n === 2 ? 'عادي · 2' : 'جاد · 3'}
+                variant={goals.daily_target === n ? 'primary' : 'secondary'}
+                size="sm"
+                disabled={busy !== null || goals.daily_target === n}
+                loading={busy === 'goal' + n}
+                onPress={() =>
+                  run(
+                    'goal' + n,
+                    () => coinService.setDailyGoal(n),
+                    () => `هدفك اليومي: ${n}`
+                  )
+                }
+                style={{ flex: 1, minWidth: 70 }}
+              />
+            ))}
+          </Row>
+          <Row justify="space-between" gap={8} wrap style={{ marginTop: 8 }}>
+            <Text variant="heading">هدف الأسبوع</Text>
+            <Tag label={goals.weekly_rewarded ? 'مكتمل' : `${goals.weekly_reward} كوين عند الإنجاز`} tone={goals.weekly_rewarded ? 'success' : 'coin'} />
+          </Row>
+          <Text variant="bodySm" tone="secondary">
+            تعلّمت {goals.week_active_days} أيام · المطلوب {goals.weekly_target_days} من أيام الأسبوع السبعة
+          </Text>
+          <Row gap={8} wrap accessibilityLabel={`هدف الأسبوع، ${goals.week_active_days} من ${goals.weekly_target_days} أيام`}>
+            {Array.from({ length: goals.weekly_target_days }, (_, i) => (
+              <JourneyNode key={i} number={i + 1} state={i < goals.week_active_days ? 'completed' : 'upcoming'} size={32} />
+            ))}
+          </Row>
+          <Text variant="caption" tone="muted">
+            أيام الراحة مسموحة. مكافأة الهدف تُضاف تلقائيًا مرة واحدة.
+          </Text>
+        </Col>
+        <Col gap={8} style={{ borderTopWidth: 1, borderTopColor: t.colors.border, paddingTop: 16 }}>
+          <Text variant="bodySm" tone="info">
+            تجميد السلسلة: عندك {streak.freezes} · الحد {streak.max_freezes}. يحميها إذا فاتك يوم، وتحصل على {streak.free_freezes_per_week} مجانًا كل أسبوع.
+          </Text>
+          {streak.freezes < streak.max_freezes && (
+            <Button
+              label={`تجميد إضافي · ${streak.freeze_price} كوين`}
+              icon="snow-outline"
+              variant="secondary"
+              disabled={busy !== null}
+              loading={busy === 'freeze'}
+              onPress={() =>
+                run(
+                  'freeze',
+                  () => coinService.buyStreakFreeze(),
+                  () => 'تمت إضافة تجميد للسلسلة'
+                )
+              }
+            />
+          )}
+        </Col>
+        {aiPack && aiPack.price > 0 && (
+          <Col gap={8} style={{ borderTopWidth: 1, borderTopColor: t.colors.border, paddingTop: 16 }}>
+            <Text variant="label" weight="semibold">
+              طلبات إضافية للمساعد
+            </Text>
+            <Text variant="bodySm" tone="secondary">
+              بعد حصتك المجانية، تقدر تستخدم الكوينات لحزمة {aiPack.amount} طلبات لليوم.
+            </Text>
+            <Button
+              label={aiPack.can_buy ? `${aiPack.amount} طلبات · ${aiPack.price} كوين` : 'اشتريت حزمة اليوم'}
+              variant="secondary"
+              disabled={busy !== null || !aiPack.can_buy}
+              loading={busy === 'ai'}
+              onPress={() =>
+                run(
+                  'ai',
+                  () => coinService.buyAiPack(),
+                  () => `${aiPack.amount} طلبات إضافية لليوم`
+                )
+              }
+            />
+          </Col>
+        )}
+      </Col>
+    </Surface>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    gap: 6,
-  },
-  row: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
-  title: { color: '#F3F4F6', fontSize: 15,  textAlign: 'right', fontFamily: 'Plex-700' },
-  sub: { color: darkColors.textMuted, fontSize: 13, lineHeight: 20, textAlign: 'right', fontFamily: 'Plex-400' },
-  freezeRow: { flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 6, marginTop: 6 },
-  freezeText: { color: '#BFDBFE', fontSize: 12, lineHeight: 19, textAlign: 'right', flex: 1, fontFamily: 'Plex-400' },
-  smallBtn: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    alignSelf: 'flex-end',
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(196,181,253,0.4)',
-    marginTop: 6,
-  },
-  smallBtnText: { color: darkColors.brandText, fontSize: 13, fontFamily: 'Plex-600' },
-  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 10 },
-  bar: { height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 4 },
-  fill: { height: 8, borderRadius: 4, backgroundColor: darkColors.success },
-  options: { flexDirection: 'row-reverse', gap: 8, marginTop: 8 },
-  option: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-  },
-  optionActive: { backgroundColor: 'rgba(16,185,129,0.15)', borderColor: darkColors.success },
-  optionText: { color: darkColors.textSecondary, fontSize: 12, fontFamily: 'Plex-400' },
-  optionTextActive: { color: '#6EE7B7', fontFamily: 'Plex-700' },
-});

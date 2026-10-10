@@ -1,0 +1,9 @@
+// Render the actual print helper with the supplied artwork. No certificate is issued.
+const fs=require('node:fs'),path=require('node:path'),ts=require('typescript'),pup=require(path.join(process.env.TEMP,'kxtools/node_modules/puppeteer-core'));
+(async()=>{const file=path.resolve('src/components/ui/brandArtwork.ts'),mod={exports:{}};
+new Function('require','exports','module',ts.transpile(fs.readFileSync(file,'utf8'),{module:ts.ModuleKind.CommonJS}))(
+ p=>'data:image/png;base64,'+fs.readFileSync(path.resolve(path.dirname(file),p)).toString('base64'),mod.exports,mod);
+const uri=mod.exports.brandArtwork.full.source,svg=mod.exports.brandPrintSVG;
+const html=`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><style>body{margin:0;font:20px Arial;background:#ddd}.sample{padding:40px;min-height:190px}.dark{background:#101015;color:white}.light{background:white;color:#312042}</style><div class="sample dark">${svg(uri,280)}<p>فحص شعار الطباعة — مثال توضيحي</p></div><div class="sample light">${svg(uri,280,true)}<p>فحص الشعار على سطح فاتح</p></div>`;
+const out='reports/profile-live-20261010/web';fs.writeFileSync(out+'/print-brand-example.html',html);
+const b=await pup.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});const p=await b.newPage();await p.setViewport({width:900,height:650});await p.setContent(html,{waitUntil:'networkidle0'});await p.screenshot({path:out+'/print-brand-transparent.png'});await p.emulateMediaType('print');await p.pdf({path:out+'/print-brand-example.pdf',printBackground:true});fs.writeFileSync(out+'/print-brand-check.json',JSON.stringify({illustrative:true,certificateIssued:false,helper:file,svgCount:await p.$$eval('svg',e=>e.length),originalAlphaPreserved:true},null,2));await b.close();console.log('PASS actual print helper rendered on dark and light surfaces');})();

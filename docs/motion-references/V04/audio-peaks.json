@@ -1,0 +1,66 @@
+[
+  {
+    "time_s": 0.24,
+    "rms_dbfs": -8.31
+  },
+  {
+    "time_s": 0.52,
+    "rms_dbfs": -11.39
+  },
+  {
+    "time_s": 0.78,
+    "rms_dbfs": -14.06
+  },
+  {
+    "time_s": 1.94,
+    "rms_dbfs": -10.01
+  },
+  {
+    "time_s": 3.35,
+    "rms_dbfs": -10.26
+  },
+  {
+    "time_s": 3.77,
+    "rms_dbfs": -14.2
+  },
+  {
+    "time_s": 4.25,
+    "rms_dbfs": -10.18
+  },
+  {
+    "time_s": 5.94,
+    "rms_dbfs": -11.11
+  },
+  {
+    "time_s": 6.45,
+    "rms_dbfs": -11.01
+  },
+  {
+    "time_s": 6.74,
+    "rms_dbfs": -7.5
+  },
+  {
+    "time_s": 7.08,
+    "rms_dbfs": -12.83
+  },
+  {
+    "time_s": 8.05,
+    "rms_dbfs": -13.56
+  },
+  {
+    "time_s": 8.57,
+    "rms_dbfs": -7.31
+  },
+  {
+    "time_s": 8.85,
+    "rms_dbfs": -12.86
+  },
+  {
+    "time_s": 10.41,
+    "rms_dbfs": -10.91
+  },
+  {
+    "time_s": 12.29,
+    "rms_dbfs": -14.29
+  }
+]

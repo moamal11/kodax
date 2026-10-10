@@ -1,3 +1,4 @@
+import { makeStyles } from '@/design/theme';
 /**
  * عرض Markdown لرسائل المساعد: عناوين، قوائم، اقتباس، جداول بسيطة، نص عريض/مائل، كود سطري،
  * وكتل كود بزر نسخ (CodeBlock). اتجاه كل فقرة حسب لغتها (RTL للعربي، LTR للإنجليزي)،
@@ -6,7 +7,7 @@
 import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Linking, ScrollView } from 'react-native';
 import { CodeBlock } from '@/components/ui/CodeBlock';
-import { C, FONT_MONO, isRtlText } from './theme';
+import { useChatColors, chatColors, FONT_MONO, isRtlText } from './theme';
 
 type Block =
   | { type: 'code'; lang: string; code: string }
@@ -50,7 +51,11 @@ export function parseBlocks(src: string): Block[] {
     if (/^\s*\|.*\|\s*$/.test(line)) {
       const rows: string[][] = [];
       while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
-        const cells = lines[i].trim().slice(1, -1).split('|').map((c) => c.trim());
+        const cells = lines[i]
+          .trim()
+          .slice(1, -1)
+          .split('|')
+          .map((c) => c.trim());
         if (!cells.every((c) => /^:?-{2,}:?$/.test(c))) rows.push(cells);
         i++;
       }
@@ -99,6 +104,9 @@ export function parseBlocks(src: string): Block[] {
 
 /** تنسيق سطري: **عريض**، *مائل*، `كود`، [رابط](url) */
 function Inline({ text, color }: { text: string; color: string }) {
+  const C = useChatColors();
+  const styles = useStyles();
+
   const parts: React.ReactNode[] = [];
   const re = /(\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|\*([^*\s][^*\n]*?)\*)/g;
   let last = 0;
@@ -106,8 +114,13 @@ function Inline({ text, color }: { text: string; color: string }) {
   let k = 0;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) parts.push(text.slice(last, m.index));
-    if (m[2]) parts.push(<Text key={k++} style={styles.bold}>{m[2]}</Text>);
-    else if (m[3]) parts.push(<Text key={k++} style={styles.inlineCode}>{` ${m[3]} `}</Text>);
+    if (m[2])
+      parts.push(
+        <Text key={k++} style={styles.bold}>
+          {m[2]}
+        </Text>
+      );
+    else if (m[3]) parts.push(<Text key={k++} style={styles.inlineCode}>{` \u2066${m[3]}\u2069 `}</Text>);
     else if (m[4]) {
       const url = m[5];
       parts.push(
@@ -115,7 +128,12 @@ function Inline({ text, color }: { text: string; color: string }) {
           {m[4]}
         </Text>
       );
-    } else if (m[6]) parts.push(<Text key={k++} style={styles.italic}>{m[6]}</Text>);
+    } else if (m[6])
+      parts.push(
+        <Text key={k++} style={styles.italic}>
+          {m[6]}
+        </Text>
+      );
     last = m.index + m[0].length;
   }
   if (last < text.length) parts.push(text.slice(last));
@@ -123,9 +141,7 @@ function Inline({ text, color }: { text: string; color: string }) {
 }
 
 function dirStyle(text: string) {
-  return isRtlText(text)
-    ? ({ textAlign: 'right', writingDirection: 'rtl' } as const)
-    : ({ textAlign: 'left', writingDirection: 'ltr' } as const);
+  return isRtlText(text) ? ({ textAlign: 'right', writingDirection: 'rtl' } as const) : ({ textAlign: 'left', writingDirection: 'ltr' } as const);
 }
 
 interface Props {
@@ -136,6 +152,9 @@ interface Props {
 }
 
 function ChatMarkdownImpl({ content, variant = 'assistant', compact }: Props) {
+  const C = useChatColors();
+  const styles = useStyles();
+
   const blocks = useMemo(() => parseBlocks(content), [content]);
   const color = variant === 'user' ? '#ffffff' : C.text;
   const fontSize = compact ? 14.5 : 15.5;
@@ -155,11 +174,7 @@ function ChatMarkdownImpl({ content, variant = 'assistant', compact }: Props) {
             return (
               <Text
                 key={idx}
-                style={[
-                  styles.heading,
-                  { color, fontSize: b.level <= 2 ? fontSize + 3 : fontSize + 1, fontFamily: 'Plex-400' },
-                  dirStyle(b.text),
-                ]}
+                style={[styles.heading, { color, fontSize: b.level <= 2 ? fontSize + 3 : fontSize + 1, fontFamily: 'Plex-400' }, dirStyle(b.text)]}
               >
                 <Inline text={b.text} color={color} />
               </Text>
@@ -180,9 +195,7 @@ function ChatMarkdownImpl({ content, variant = 'assistant', compact }: Props) {
               <View key={idx} style={styles.list}>
                 {b.items.map((it, j) => (
                   <View key={j} style={[styles.li, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-                    <Text style={[styles.bullet, { color: C.accent, fontSize, lineHeight }]}>
-                      {b.ordered ? `${j + 1}.` : '•'}
-                    </Text>
+                    <Text style={[styles.bullet, { color: C.accent, fontSize, lineHeight }]}>{b.ordered ? `${j + 1}.` : '•'}</Text>
                     <Text style={[{ flex: 1, color, fontSize, lineHeight }, dirStyle(it)]}>
                       <Inline text={it} color={color} />
                     </Text>
@@ -199,7 +212,13 @@ function ChatMarkdownImpl({ content, variant = 'assistant', compact }: Props) {
                     <View key={j} style={[styles.tr, j === 0 && styles.thRow]}>
                       {r.map((cell, k) => (
                         <View key={k} style={styles.td}>
-                          <Text style={[{ color, fontSize: fontSize - 1.5, lineHeight: lineHeight - 4, fontFamily: 'Plex-400' }, j === 0 && styles.bold, dirStyle(cell)]}>
+                          <Text
+                            style={[
+                              { color, fontSize: fontSize - 1.5, lineHeight: lineHeight - 4, fontFamily: 'Plex-400' },
+                              j === 0 && styles.bold,
+                              dirStyle(cell),
+                            ]}
+                          >
                             <Inline text={cell} color={color} />
                           </Text>
                         </View>
@@ -223,31 +242,34 @@ function ChatMarkdownImpl({ content, variant = 'assistant', compact }: Props) {
 
 export const ChatMarkdown = memo(ChatMarkdownImpl);
 
-const styles = StyleSheet.create({
-  root: { gap: 10 },
-  // رسالة المستخدم داخل فقاعة بعرض المحتوى: عرض 100% فيها يسبب ارتفاعاً زائداً على Android
-  rootFull: { width: '100%' },
-  code: { width: '100%', marginVertical: 2 },
-  heading: {  marginTop: 4, fontFamily: 'Plex-700' },
-  bold: { fontFamily: 'Plex-700' },
-  italic: { fontStyle: 'italic' },
-  link: { color: C.accent2, textDecorationLine: 'underline' },
-  inlineCode: {
-    fontFamily: FONT_MONO,
-    fontSize: 13.5,
-    backgroundColor: C.inlineCodeBg,
-    color: C.inlineCode,
-    borderRadius: 5,
-  },
-  hr: { height: 1, backgroundColor: C.border, marginVertical: 4 },
-  quote: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: C.surface, borderRadius: 8 },
-  quoteRtl: { borderRightWidth: 3, borderRightColor: C.accent },
-  quoteLtr: { borderLeftWidth: 3, borderLeftColor: C.accent },
-  list: { gap: 6 },
-  li: { gap: 8, alignItems: 'flex-start' },
-  bullet: {  minWidth: 16, textAlign: 'center', fontFamily: 'Plex-700' },
-  tableWrap: { borderRadius: 10, borderWidth: 1, borderColor: C.border },
-  tr: { flexDirection: 'row-reverse', borderBottomWidth: 1, borderBottomColor: C.border },
-  thRow: { backgroundColor: C.surfaceStrong },
-  td: { minWidth: 110, maxWidth: 260, paddingHorizontal: 10, paddingVertical: 8 },
+const useStyles = makeStyles((t) => {
+  const C = chatColors(t.colors);
+  return {
+    root: { gap: 10 },
+    // رسالة المستخدم داخل فقاعة بعرض المحتوى: عرض 100% فيها يسبب ارتفاعاً زائداً على Android
+    rootFull: { width: '100%' },
+    code: { width: '100%', marginVertical: 2 },
+    heading: { marginTop: 4, fontFamily: 'Plex-700' },
+    bold: { fontFamily: 'Plex-700' },
+    italic: { fontStyle: 'italic' },
+    link: { color: C.accent2, textDecorationLine: 'underline' },
+    inlineCode: {
+      fontFamily: FONT_MONO,
+      fontSize: 13.5,
+      backgroundColor: C.inlineCodeBg,
+      color: C.inlineCode,
+      borderRadius: 5,
+    },
+    hr: { height: 1, backgroundColor: C.border, marginVertical: 4 },
+    quote: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: C.surface, borderRadius: 8 },
+    quoteRtl: { paddingRight: 16 },
+    quoteLtr: { paddingLeft: 16 },
+    list: { gap: 6 },
+    li: { gap: 8, alignItems: 'flex-start' },
+    bullet: { minWidth: 16, textAlign: 'center', fontFamily: 'Plex-700' },
+    tableWrap: { borderRadius: 10, borderWidth: 1, borderColor: C.border },
+    tr: { flexDirection: 'row-reverse', borderBottomWidth: 1, borderBottomColor: C.border },
+    thRow: { backgroundColor: C.surfaceStrong },
+    td: { minWidth: 110, maxWidth: 260, paddingHorizontal: 10, paddingVertical: 8 },
+  };
 });

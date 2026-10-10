@@ -3,7 +3,7 @@
  * (التفضيلات محفوظة على السيرفر وتُحترم عند الإرسال). كل مفتاح مربوط باسمه ووصفه (F11).
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { AppState, Linking, View } from 'react-native';
+import { AppState, Linking, Platform, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getNotificationPrefs, getPermissionInfo, isDeviceRegistered, isPushOptedOut, isPushSupported, NotificationPrefs, registerForPush, setDevicePushEnabled, setNotificationPrefs } from '@/services/pushService';
 import { showToast } from '@/components/ui/Toast';
@@ -14,8 +14,9 @@ const KINDS: Array<{ key: keyof NotificationPrefs; label: string; hint: string; 
   { key: 'daily_goal', label: 'تذكير الهدف اليومي', hint: 'مرة في اليوم إذا لم تكمل هدفك', icon: 'flag-outline' },
   { key: 'streak', label: 'تحذير السلسلة', hint: 'مساءً إذا كانت سلسلتك مهددة', icon: 'flame-outline' },
   { key: 'messages', label: 'الرسائل الخاصة', hint: 'عند وصول رسالة جديدة', icon: 'chatbubble-ellipses-outline' },
-  { key: 'comments', label: 'التعليقات', hint: 'عندما يعلّق أحد على كودك', icon: 'chatbox-outline' },
-  { key: 'likes', label: 'الإعجابات', hint: 'عندما يعجب أحد بكودك', icon: 'heart-outline' },
+  { key: 'comments', label: 'التعليقات والردود', hint: 'التعليق على كودك أو منشورك، والرد على تعليقك', icon: 'chatbox-outline' },
+  { key: 'posts', label: 'منشورات الحسابات التي أتابعها', hint: 'عند نشر كود أو منشور جديد', icon: 'newspaper-outline' },
+  { key: 'likes', label: 'الإعجابات', hint: 'عندما يعجب أحد بكودك أو منشورك', icon: 'heart-outline' },
   { key: 'follows', label: 'المتابعون الجدد', hint: 'عندما يتابعك أحد', icon: 'person-add-outline' },
   { key: 'system', label: 'الدعم والتنبيهات المهمة', hint: 'ردود الدعم وتنبيهات الحساب', icon: 'shield-checkmark-outline' },
   { key: 'admin', label: 'رسائل Kodax', hint: 'أخبار ودورات جديدة (قليلة)', icon: 'megaphone-outline' },
@@ -62,7 +63,7 @@ export default function NotificationSettingsScreen() {
 
   const toggleDevice = async (on: boolean) => {
     if (!userId) return;
-    if (on && blocked) return Linking.openSettings();
+    if (on && blocked) { if (Platform.OS !== 'web') return Linking.openSettings(); return; }
     setEnabling(true);
     const res = await setDevicePushEnabled(userId, on);
     setEnabling(false);
@@ -108,17 +109,17 @@ export default function NotificationSettingsScreen() {
             blocked ? (
               <Surface variant="warning" padding={14}>
                 <Text variant="label" tone="warning">
-                  الإشعارات مرفوضة من إعدادات الجهاز
+                  {Platform.OS === 'web' ? 'المتصفح منع الإشعارات' : 'الإشعارات مرفوضة من إعدادات الجهاز'}
                 </Text>
                 <Text variant="bodySm" tone="secondary" style={{ marginTop: 2 }}>
-                  افتح إعدادات التطبيق واسمح بالإشعارات، ثم ارجع هنا.
+                  {Platform.OS === 'web' ? 'اسمح بالإشعارات من إعدادات هذا الموقع في المتصفح، ثم ارجع هنا.' : 'افتح إعدادات التطبيق واسمح بالإشعارات، ثم ارجع هنا.'}
                 </Text>
-                <Button label="فتح إعدادات الجهاز" variant="secondary" size="sm" onPress={() => Linking.openSettings()} style={{ alignSelf: 'flex-start', marginTop: 10 }} />
+                {Platform.OS !== 'web' && <Button label="فتح إعدادات الجهاز" variant="secondary" size="sm" onPress={() => Linking.openSettings()} style={{ alignSelf: 'flex-start', marginTop: 10 }} />}
               </Surface>
             ) : (
               <ListGroup>
                 <SwitchRow
-                  title="الإشعارات على هذا الجهاز"
+                  title={Platform.OS === 'web' ? 'إشعارات هذا المتصفح' : 'الإشعارات على هذا الجهاز'}
                   hint={deviceOn ? 'تصلك فقط الأنواع المفعّلة أدناه' : 'فعّلها حتى تصلك الرسائل والتذكيرات المهمة'}
                   icon={deviceOn ? 'notifications' : 'notifications-off-outline'}
                   value={deviceOn}
@@ -131,7 +132,7 @@ export default function NotificationSettingsScreen() {
           ) : (
             <Surface variant="brand" padding={14}>
               <Text variant="bodySm" tone="secondary">
-                الإشعارات الفورية متاحة في تطبيق Android. تفضيلاتك هنا تُطبَّق على كل أجهزتك.
+                {Platform.OS === 'web' ? 'إشعارات المتصفح تحتاج HTTPS ومتصفحًا يدعمها. على iPhone وiPad، أضف الموقع للشاشة الرئيسية أولًا. تفضيلاتك تُطبّق على أجهزتك.' : 'الإشعارات الفورية متاحة في تطبيق Android. تفضيلاتك هنا تُطبَّق على كل أجهزتك.'}
               </Text>
             </Surface>
           )}

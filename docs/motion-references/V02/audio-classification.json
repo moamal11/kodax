@@ -1,0 +1,906 @@
+{
+  "id": "V02",
+  "method": "YAMNet ONNX automated inference; not direct listening; class scores are not calibrated probabilities",
+  "top_mean_classes": [
+    {
+      "class": "Sound effect",
+      "score": 0.1952
+    },
+    {
+      "class": "Whoosh, swoosh, swish",
+      "score": 0.1595
+    },
+    {
+      "class": "Arrow",
+      "score": 0.1565
+    },
+    {
+      "class": "Silence",
+      "score": 0.1179
+    },
+    {
+      "class": "Synthesizer",
+      "score": 0.1131
+    },
+    {
+      "class": "Music",
+      "score": 0.1073
+    },
+    {
+      "class": "Keyboard (musical)",
+      "score": 0.0989
+    },
+    {
+      "class": "Stomach rumble",
+      "score": 0.0691
+    },
+    {
+      "class": "Musical instrument",
+      "score": 0.0608
+    },
+    {
+      "class": "Gurgling",
+      "score": 0.0392
+    }
+  ],
+  "windows": [
+    {
+      "start_s": 0.0,
+      "end_s": 0.96,
+      "top": [
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.7668
+        },
+        {
+          "class": "Arrow",
+          "score": 0.7025
+        },
+        {
+          "class": "Sigh",
+          "score": 0.4349
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.3349
+        },
+        {
+          "class": "Gasp",
+          "score": 0.0292
+        }
+      ]
+    },
+    {
+      "start_s": 0.48,
+      "end_s": 1.44,
+      "top": [
+        {
+          "class": "Sound effect",
+          "score": 0.2496
+        },
+        {
+          "class": "Arrow",
+          "score": 0.2289
+        },
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.2242
+        },
+        {
+          "class": "Heart murmur",
+          "score": 0.1552
+        },
+        {
+          "class": "Heart sounds, heartbeat",
+          "score": 0.0429
+        }
+      ]
+    },
+    {
+      "start_s": 0.96,
+      "end_s": 1.92,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.7203
+        },
+        {
+          "class": "Synthesizer",
+          "score": 0.446
+        },
+        {
+          "class": "Keyboard (musical)",
+          "score": 0.3827
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.1582
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0614
+        }
+      ]
+    },
+    {
+      "start_s": 1.44,
+      "end_s": 2.4,
+      "top": [
+        {
+          "class": "Synthesizer",
+          "score": 0.7427
+        },
+        {
+          "class": "Keyboard (musical)",
+          "score": 0.6886
+        },
+        {
+          "class": "Music",
+          "score": 0.466
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.3036
+        },
+        {
+          "class": "Sampler",
+          "score": 0.1524
+        }
+      ]
+    },
+    {
+      "start_s": 1.92,
+      "end_s": 2.88,
+      "top": [
+        {
+          "class": "Silence",
+          "score": 0.1202
+        },
+        {
+          "class": "Speech",
+          "score": 0.061
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0426
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0387
+        },
+        {
+          "class": "Vehicle",
+          "score": 0.0248
+        }
+      ]
+    },
+    {
+      "start_s": 2.4,
+      "end_s": 3.36,
+      "top": [
+        {
+          "class": "Sound effect",
+          "score": 0.2979
+        },
+        {
+          "class": "Silence",
+          "score": 0.2226
+        },
+        {
+          "class": "Rustle",
+          "score": 0.1647
+        },
+        {
+          "class": "Fire",
+          "score": 0.1238
+        },
+        {
+          "class": "Wind",
+          "score": 0.1189
+        }
+      ]
+    },
+    {
+      "start_s": 2.88,
+      "end_s": 3.84,
+      "top": [
+        {
+          "class": "Sound effect",
+          "score": 0.4272
+        },
+        {
+          "class": "Plop",
+          "score": 0.1951
+        },
+        {
+          "class": "Heart murmur",
+          "score": 0.1314
+        },
+        {
+          "class": "Heart sounds, heartbeat",
+          "score": 0.0524
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0333
+        }
+      ]
+    },
+    {
+      "start_s": 3.36,
+      "end_s": 4.32,
+      "top": [
+        {
+          "class": "Sound effect",
+          "score": 0.3929
+        },
+        {
+          "class": "Plop",
+          "score": 0.1372
+        },
+        {
+          "class": "Scratching (performance technique)",
+          "score": 0.076
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0537
+        },
+        {
+          "class": "Synthesizer",
+          "score": 0.0257
+        }
+      ]
+    },
+    {
+      "start_s": 3.84,
+      "end_s": 4.8,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.4494
+        },
+        {
+          "class": "Synthesizer",
+          "score": 0.3686
+        },
+        {
+          "class": "Keyboard (musical)",
+          "score": 0.2943
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.1146
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.0934
+        }
+      ]
+    },
+    {
+      "start_s": 4.32,
+      "end_s": 5.28,
+      "top": [
+        {
+          "class": "Sound effect",
+          "score": 0.3872
+        },
+        {
+          "class": "Cacophony",
+          "score": 0.174
+        },
+        {
+          "class": "Synthesizer",
+          "score": 0.1661
+        },
+        {
+          "class": "Noise",
+          "score": 0.1321
+        },
+        {
+          "class": "Keyboard (musical)",
+          "score": 0.0906
+        }
+      ]
+    },
+    {
+      "start_s": 4.8,
+      "end_s": 5.76,
+      "top": [
+        {
+          "class": "Stomach rumble",
+          "score": 0.3118
+        },
+        {
+          "class": "Heart murmur",
+          "score": 0.2973
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.2557
+        },
+        {
+          "class": "Heart sounds, heartbeat",
+          "score": 0.1725
+        },
+        {
+          "class": "Silence",
+          "score": 0.0751
+        }
+      ]
+    },
+    {
+      "start_s": 5.28,
+      "end_s": 6.24,
+      "top": [
+        {
+          "class": "Stomach rumble",
+          "score": 0.8101
+        },
+        {
+          "class": "Whale vocalization",
+          "score": 0.6253
+        },
+        {
+          "class": "Animal",
+          "score": 0.4076
+        },
+        {
+          "class": "Wild animals",
+          "score": 0.3602
+        },
+        {
+          "class": "Roaring cats (lions, tigers)",
+          "score": 0.2918
+        }
+      ]
+    },
+    {
+      "start_s": 5.76,
+      "end_s": 6.72,
+      "top": [
+        {
+          "class": "Stomach rumble",
+          "score": 0.6193
+        },
+        {
+          "class": "Whale vocalization",
+          "score": 0.508
+        },
+        {
+          "class": "Gurgling",
+          "score": 0.4753
+        },
+        {
+          "class": "Roaring cats (lions, tigers)",
+          "score": 0.2772
+        },
+        {
+          "class": "Water",
+          "score": 0.1692
+        }
+      ]
+    },
+    {
+      "start_s": 6.24,
+      "end_s": 7.2,
+      "top": [
+        {
+          "class": "Stomach rumble",
+          "score": 0.2598
+        },
+        {
+          "class": "Walk, footsteps",
+          "score": 0.1658
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.1612
+        },
+        {
+          "class": "Heart murmur",
+          "score": 0.1259
+        },
+        {
+          "class": "Heart sounds, heartbeat",
+          "score": 0.1023
+        }
+      ]
+    },
+    {
+      "start_s": 6.72,
+      "end_s": 7.68,
+      "top": [
+        {
+          "class": "Synthesizer",
+          "score": 0.976
+        },
+        {
+          "class": "Keyboard (musical)",
+          "score": 0.9586
+        },
+        {
+          "class": "Music",
+          "score": 0.8877
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.8815
+        },
+        {
+          "class": "Sampler",
+          "score": 0.3084
+        }
+      ]
+    },
+    {
+      "start_s": 7.2,
+      "end_s": 8.16,
+      "top": [
+        {
+          "class": "Synthesizer",
+          "score": 0.8053
+        },
+        {
+          "class": "Keyboard (musical)",
+          "score": 0.723
+        },
+        {
+          "class": "Music",
+          "score": 0.5595
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.4237
+        },
+        {
+          "class": "Sampler",
+          "score": 0.1635
+        }
+      ]
+    },
+    {
+      "start_s": 7.68,
+      "end_s": 8.64,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.2232
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.101
+        },
+        {
+          "class": "Silence",
+          "score": 0.0508
+        },
+        {
+          "class": "Synthesizer",
+          "score": 0.0421
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0413
+        }
+      ]
+    },
+    {
+      "start_s": 8.16,
+      "end_s": 9.12,
+      "top": [
+        {
+          "class": "Sound effect",
+          "score": 0.423
+        },
+        {
+          "class": "Vehicle",
+          "score": 0.0895
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.076
+        },
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.0702
+        },
+        {
+          "class": "Motor vehicle (road)",
+          "score": 0.067
+        }
+      ]
+    },
+    {
+      "start_s": 8.64,
+      "end_s": 9.6,
+      "top": [
+        {
+          "class": "Arrow",
+          "score": 0.4699
+        },
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.2907
+        },
+        {
+          "class": "Thump, thud",
+          "score": 0.2213
+        },
+        {
+          "class": "Slam",
+          "score": 0.1094
+        },
+        {
+          "class": "Door",
+          "score": 0.0863
+        }
+      ]
+    },
+    {
+      "start_s": 9.12,
+      "end_s": 10.08,
+      "top": [
+        {
+          "class": "Crack",
+          "score": 0.2337
+        },
+        {
+          "class": "Fire",
+          "score": 0.1932
+        },
+        {
+          "class": "Crackle",
+          "score": 0.1926
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.1909
+        },
+        {
+          "class": "Squish",
+          "score": 0.1288
+        }
+      ]
+    },
+    {
+      "start_s": 9.6,
+      "end_s": 10.56,
+      "top": [
+        {
+          "class": "Sound effect",
+          "score": 0.2289
+        },
+        {
+          "class": "Water",
+          "score": 0.2214
+        },
+        {
+          "class": "Gurgling",
+          "score": 0.0973
+        },
+        {
+          "class": "Rain",
+          "score": 0.0819
+        },
+        {
+          "class": "Rustle",
+          "score": 0.08
+        }
+      ]
+    },
+    {
+      "start_s": 10.08,
+      "end_s": 11.04,
+      "top": [
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.4833
+        },
+        {
+          "class": "Arrow",
+          "score": 0.3811
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.3519
+        },
+        {
+          "class": "Silence",
+          "score": 0.0533
+        },
+        {
+          "class": "Explosion",
+          "score": 0.0467
+        }
+      ]
+    },
+    {
+      "start_s": 10.56,
+      "end_s": 11.52,
+      "top": [
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.8719
+        },
+        {
+          "class": "Arrow",
+          "score": 0.8208
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.4053
+        },
+        {
+          "class": "Sigh",
+          "score": 0.1401
+        },
+        {
+          "class": "Thump, thud",
+          "score": 0.0364
+        }
+      ]
+    },
+    {
+      "start_s": 11.04,
+      "end_s": 12.0,
+      "top": [
+        {
+          "class": "Arrow",
+          "score": 0.6814
+        },
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.6599
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.2384
+        },
+        {
+          "class": "Thump, thud",
+          "score": 0.172
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.057
+        }
+      ]
+    },
+    {
+      "start_s": 11.52,
+      "end_s": 12.48,
+      "top": [
+        {
+          "class": "Sound effect",
+          "score": 0.2376
+        },
+        {
+          "class": "Arrow",
+          "score": 0.1662
+        },
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.1133
+        },
+        {
+          "class": "Door",
+          "score": 0.109
+        },
+        {
+          "class": "Thump, thud",
+          "score": 0.0711
+        }
+      ]
+    },
+    {
+      "start_s": 12.0,
+      "end_s": 12.96,
+      "top": [
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.5685
+        },
+        {
+          "class": "Arrow",
+          "score": 0.4811
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.4526
+        },
+        {
+          "class": "Rumble",
+          "score": 0.0606
+        },
+        {
+          "class": "Thump, thud",
+          "score": 0.0516
+        }
+      ]
+    },
+    {
+      "start_s": 12.48,
+      "end_s": 13.44,
+      "top": [
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.7957
+        },
+        {
+          "class": "Arrow",
+          "score": 0.6966
+        },
+        {
+          "class": "Sigh",
+          "score": 0.4105
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.2872
+        },
+        {
+          "class": "Thump, thud",
+          "score": 0.1376
+        }
+      ]
+    },
+    {
+      "start_s": 12.96,
+      "end_s": 13.92,
+      "top": [
+        {
+          "class": "Explosion",
+          "score": 0.4374
+        },
+        {
+          "class": "Eruption",
+          "score": 0.2645
+        },
+        {
+          "class": "Burst, pop",
+          "score": 0.2562
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.2397
+        },
+        {
+          "class": "Boom",
+          "score": 0.2169
+        }
+      ]
+    },
+    {
+      "start_s": 13.44,
+      "end_s": 14.4,
+      "top": [
+        {
+          "class": "Gurgling",
+          "score": 0.5665
+        },
+        {
+          "class": "Water",
+          "score": 0.3766
+        },
+        {
+          "class": "Stomach rumble",
+          "score": 0.2239
+        },
+        {
+          "class": "Liquid",
+          "score": 0.2147
+        },
+        {
+          "class": "Slosh",
+          "score": 0.2058
+        }
+      ]
+    },
+    {
+      "start_s": 13.92,
+      "end_s": 14.88,
+      "top": [
+        {
+          "class": "Plop",
+          "score": 0.5256
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.231
+        },
+        {
+          "class": "Boing",
+          "score": 0.0936
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0607
+        },
+        {
+          "class": "Speech",
+          "score": 0.0548
+        }
+      ]
+    },
+    {
+      "start_s": 14.4,
+      "end_s": 15.36,
+      "top": [
+        {
+          "class": "Silence",
+          "score": 1.0
+        },
+        {
+          "class": "Speech",
+          "score": 0.0
+        },
+        {
+          "class": "Snicker",
+          "score": 0.0
+        },
+        {
+          "class": "Distortion",
+          "score": 0.0
+        },
+        {
+          "class": "Field recording",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "start_s": 14.88,
+      "end_s": 15.84,
+      "top": [
+        {
+          "class": "Silence",
+          "score": 1.0
+        },
+        {
+          "class": "Speech",
+          "score": 0.0
+        },
+        {
+          "class": "Snicker",
+          "score": 0.0
+        },
+        {
+          "class": "Distortion",
+          "score": 0.0
+        },
+        {
+          "class": "Field recording",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "start_s": 15.36,
+      "end_s": 16.32,
+      "top": [
+        {
+          "class": "Silence",
+          "score": 1.0
+        },
+        {
+          "class": "Speech",
+          "score": 0.0
+        },
+        {
+          "class": "Snicker",
+          "score": 0.0
+        },
+        {
+          "class": "Distortion",
+          "score": 0.0
+        },
+        {
+          "class": "Field recording",
+          "score": 0.0
+        }
+      ]
+    }
+  ]
+}

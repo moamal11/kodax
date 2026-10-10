@@ -24,5 +24,6 @@
   "emmet.includeLanguages": {
     "typescript": "typescriptreact",
     "javascript": "javascriptreact"
-  }
+  },
+  "java.compile.nullAnalysis.mode": "disabled"
 }

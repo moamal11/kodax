@@ -18,7 +18,10 @@ http
     const candidates = [file, file + '.html', path.join(file, 'index.html')];
     let found = candidates.find((f) => fs.existsSync(f) && fs.statSync(f).isFile());
     if (!found) found = path.join(root, 'index.html');
+    if (!fs.existsSync(found)) return res.writeHead(503, { 'Retry-After': '2' }).end('Preview build is being prepared');
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(found)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
-    fs.createReadStream(found).pipe(res);
+    const stream = fs.createReadStream(found);
+    stream.on('error', () => { if (!res.headersSent) res.writeHead(404); res.end(); });
+    stream.pipe(res);
   })
   .listen(port, () => console.log(`static ${root} on http://localhost:${port}`));

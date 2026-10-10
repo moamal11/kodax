@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { Platform, Pressable, ScrollView, Switch, TextInput, View, type KeyboardTypeOptions, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  Switch,
+  TextInput,
+  useWindowDimensions,
+  View,
+  type KeyboardTypeOptions,
+  type StyleProp,
+  type TextInputProps,
+  type ViewStyle,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { Text } from './Text';
@@ -26,11 +38,14 @@ type FieldProps = Omit<TextInputProps, 'style'> & {
 };
 
 export function Field({ label, hint, error, icon, secure, ltr, inputRef, style, multiline, hideLabel, minHeight, ...input }: FieldProps) {
-  const mh = multiline ? minHeight ?? 96 : 48;
+  const mh = multiline ? (minHeight ?? 96) : 48;
   const t = useTheme();
   const c = t.colors;
   const [focused, setFocused] = useState(false);
   const [reveal, setReveal] = useState(false);
+  const { fontScale } = useWindowDimensions();
+  const fontLimit = input.maxFontSizeMultiplier ?? 1.6;
+  const inputScale = input.allowFontScaling === false ? 1 : fontLimit >= 1 ? Math.min(fontScale, fontLimit) : fontScale;
   const borderColor = error ? c.danger : focused ? c.focus : c.borderStrong;
   return (
     <View style={[{ gap: 6 }, style]}>
@@ -55,6 +70,7 @@ export function Field({ label, hint, error, icon, secure, ltr, inputRef, style, 
         <TextInput
           ref={inputRef}
           {...input}
+          allowFontScaling={Platform.OS === 'android' ? false : input.allowFontScaling}
           multiline={multiline}
           secureTextEntry={secure && !reveal}
           accessibilityLabel={label}
@@ -74,7 +90,7 @@ export function Field({ label, hint, error, icon, secure, ltr, inputRef, style, 
               minWidth: 0,
               color: c.text,
               fontFamily: t.font.regular,
-              fontSize: 16,
+              fontSize: 16 * (Platform.OS === 'android' ? inputScale : 1),
               paddingVertical: multiline ? 12 : 10,
               textAlign: ltr ? 'left' : 'right',
               writingDirection: ltr ? 'ltr' : 'rtl',
@@ -91,7 +107,7 @@ export function Field({ label, hint, error, icon, secure, ltr, inputRef, style, 
             accessibilityRole="button"
             accessibilityLabel={reveal ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
             hitSlop={8}
-            style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
           >
             <Ionicons name={reveal ? 'eye-off-outline' : 'eye-outline'} size={20} color={c.textMuted} />
           </Pressable>
@@ -109,7 +125,23 @@ export function Field({ label, hint, error, icon, secure, ltr, inputRef, style, 
 /* ------------------------------------------------------------------ */
 /* SwitchRow: الاسم والوصف مربوطان بالمفتاح، والصف كله قابل للضغط          */
 /* ------------------------------------------------------------------ */
-export function SwitchRow({ title, hint, value, onValueChange, icon, disabled, last }: { title: string; hint?: string; value: boolean; onValueChange: (v: boolean) => void; icon?: IconName; disabled?: boolean; last?: boolean }) {
+export function SwitchRow({
+  title,
+  hint,
+  value,
+  onValueChange,
+  icon,
+  disabled,
+  last,
+}: {
+  title: string;
+  hint?: string;
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+  icon?: IconName;
+  disabled?: boolean;
+  last?: boolean;
+}) {
   const t = useTheme();
   const c = t.colors;
   return (
@@ -123,7 +155,17 @@ export function SwitchRow({ title, hint, value, onValueChange, icon, disabled, l
         Platform.OS === 'web' && s.focused ? ({ outlineWidth: 2, outlineStyle: 'solid', outlineColor: c.focus, outlineOffset: -2 } as any) : null,
       ]}
     >
-      <Row gap={12} style={{ paddingVertical: 12, paddingHorizontal: 14, minHeight: 60, borderBottomWidth: last ? 0 : 1, borderBottomColor: c.border, opacity: disabled ? 0.5 : 1 }}>
+      <Row
+        gap={12}
+        style={{
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          minHeight: 60,
+          borderBottomWidth: last ? 0 : 1,
+          borderBottomColor: c.border,
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
         {icon && <Ionicons name={icon} size={20} color={c.textSecondary} />}
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="body" weight="medium">
@@ -136,7 +178,13 @@ export function SwitchRow({ title, hint, value, onValueChange, icon, disabled, l
           )}
         </View>
         <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-          <Switch value={value} disabled={disabled} trackColor={{ false: c.borderStrong, true: c.brand }} thumbColor="#ffffff" {...(Platform.OS === 'web' ? ({ activeThumbColor: '#ffffff', tabIndex: -1 } as any) : {})} />
+          <Switch
+            value={value}
+            disabled={disabled}
+            trackColor={{ false: c.borderStrong, true: c.brand }}
+            thumbColor="#ffffff"
+            {...(Platform.OS === 'web' ? ({ activeThumbColor: '#ffffff', tabIndex: -1 } as any) : {})}
+          />
         </View>
       </Row>
     </Pressable>
@@ -146,7 +194,21 @@ export function SwitchRow({ title, hint, value, onValueChange, icon, disabled, l
 /* ------------------------------------------------------------------ */
 /* Chip و Segmented                                                    */
 /* ------------------------------------------------------------------ */
-export function Chip({ label, selected, onPress, icon, count }: { label: string; selected?: boolean; onPress?: () => void; icon?: IconName; count?: number }) {
+export function Chip({
+  label,
+  selected,
+  onPress,
+  icon,
+  leading,
+  count,
+}: {
+  label: string;
+  selected?: boolean;
+  onPress?: () => void;
+  icon?: IconName;
+  leading?: React.ReactNode;
+  count?: number;
+}) {
   const t = useTheme();
   const c = t.colors;
   return (
@@ -165,11 +227,12 @@ export function Chip({ label, selected, onPress, icon, count }: { label: string;
           borderRadius: t.radius.pill,
           backgroundColor: selected ? c.brandSoft : s.hovered || s.pressed ? c.surfacePressed : c.surface,
           borderWidth: 1,
-          borderColor: selected ? c.brand : c.border,
+          borderColor: selected ? (t.mode === 'light' ? '#C8B5E8' : c.brand) : c.border,
         },
         Platform.OS === 'web' && s.focused ? ({ outlineWidth: 2, outlineStyle: 'solid', outlineColor: c.focus } as any) : null,
       ]}
     >
+      {leading}
       {icon && <Ionicons name={icon} size={15} color={selected ? c.brandText : c.textSecondary} />}
       <Text variant="label" style={{ color: selected ? c.brandText : c.textSecondary }} numberOfLines={1}>
         {label}
@@ -210,21 +273,48 @@ export function ChipBar({ children, style }: { children: React.ReactNode; style?
   );
 }
 
-export function Segmented<T extends string>({ options, value, onChange, style }: { options: { value: T; label: string; count?: number }[]; value: T; onChange: (v: T) => void; style?: StyleProp<ViewStyle> }) {
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  style,
+}: {
+  options: { value: T; label: string; count?: number }[];
+  value: T;
+  onChange: (v: T) => void;
+  style?: StyleProp<ViewStyle>;
+}) {
   const t = useTheme();
   const c = t.colors;
   return (
-    <Row accessibilityRole="tablist" style={[{ backgroundColor: c.surfaceSunken, borderRadius: t.radius.md, padding: 4, gap: 4, borderWidth: 1, borderColor: c.border }, style]}>
+    <Row
+      accessibilityRole="tablist"
+      style={[{ backgroundColor: c.surfaceSunken, borderRadius: t.radius.md, padding: 4, gap: 4, borderWidth: 1, borderColor: c.border }, style]}
+    >
       {options.map((o) => {
         const on = o.value === value;
         return (
           <Pressable
             key={o.value}
             onPress={() => onChange(o.value)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: on }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              {...(Platform.OS === 'web' ? { 'aria-selected': on } : {})}
             style={(s: any) => [
-              { flex: 1, minHeight: 38, borderRadius: t.radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? c.surfaceRaised : s.hovered ? c.surfacePressed : 'transparent', borderWidth: on ? 1 : 0, borderColor: c.borderStrong, flexDirection: 'row-reverse', gap: 6 },
+              {
+                flex: 1,
+                minHeight: 44,
+                flexWrap: 'wrap',
+                paddingVertical: 6,
+                borderRadius: t.radius.sm,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: on ? c.surfaceRaised : s.hovered ? c.surfacePressed : 'transparent',
+                borderWidth: on ? 1 : 0,
+                borderColor: c.borderStrong,
+                flexDirection: 'row-reverse',
+                gap: 6,
+              },
               Platform.OS === 'web' && s.focused ? ({ outlineWidth: 2, outlineStyle: 'solid', outlineColor: c.focus } as any) : null,
             ]}
           >

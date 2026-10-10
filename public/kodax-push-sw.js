@@ -1,0 +1,6 @@
+// Push-only worker. No fetch handler or caching of authenticated pages.
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
+function safePath(value){try{if(typeof value!=='string'||!value.startsWith('/')||value.startsWith('//')||/[\\\r\n]/.test(value))return '/';const u=new URL(value,self.location.origin);return u.origin===self.location.origin?u.pathname+u.search:'/';}catch{return '/';}}
+self.addEventListener('push',event=>{let p={};try{p=event.data?.json()||{};}catch{}event.waitUntil(self.registration.showNotification(p.title||'Kodax',{body:p.body||'لديك تحديث جديد',icon:'/icon-192.png',badge:'/icon-192.png',tag:`kodax:${p.id||'update'}`,data:{url:safePath(p.data?.url)},renotify:false}));});
+self.addEventListener('notificationclick',event=>{event.notification.close();const path=safePath(event.notification.data?.url);event.waitUntil((async()=>{const url=self.location.origin+path;const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});for(const client of windows){if(new URL(client.url).origin!==self.location.origin)continue;await client.navigate(url);return client.focus();}return self.clients.openWindow(url);})());});

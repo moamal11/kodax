@@ -1,3 +1,5 @@
+import { LanguageIcon } from '@/components/editor/LanguageIcon';
+import { LanguagePicker } from '@/components/editor/LanguagePicker';
 /**
  * محرر الأكواد الاحترافي - Professional Code Editor
  * ✅ محرر حقيقي مع Syntax Highlighting
@@ -8,15 +10,24 @@
  * ✅ عنوان/وصف في dialog عند النشر
  */
 
-import { Sheet, Field, Button, IconButton, Chip, ChipBar, Segmented, SwitchRow, Surface, Tag, Row, Col, Text as DText, useTheme, darkColors } from '@/design';
+import {
+  Sheet,
+  Field,
+  Button,
+  IconButton,
+  Segmented,
+  SwitchRow,
+  Surface,
+  Tag,
+  Row,
+  Col,
+  Text as DText,
+  useTheme,
+  useReducedMotion,
+  darkColors,
+} from '@/design';
 import { showToast } from '@/components/ui/Toast';
-import React, {
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-  useEffect,
-} from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -35,21 +46,10 @@ import {
   NativeSyntheticEvent,
   TextInputSelectionChangeEventData,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  MaterialIcons,
-  MaterialCommunityIcons,
-  Ionicons,
-} from '@expo/vector-icons';
-import Animated, {
-  FadeInDown,
-  FadeIn,
-  SlideInDown,
-} from 'react-native-reanimated';
+import { MaterialIcons, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown, FadeIn, SlideInDown } from 'react-native-reanimated';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
@@ -70,9 +70,7 @@ const PUBLISH_RULES = [
 ];
 import { executeCode } from '@/services/codeExecution';
 import { WebView } from 'react-native-webview';
-import MobileWebEditor, {
-  type MobileWebEditorRef,
-} from '@/components/editor/MobileWebEditor';
+import MobileWebEditor, { type MobileWebEditorRef } from '@/components/editor/MobileWebEditor';
 
 // Web-only: CodeMirror professional editor
 let CodeMirrorEditor: any = null;
@@ -196,10 +194,7 @@ const TC: Record<TokenType, string> = {
 };
 
 // ===== Full autocomplete database for all languages =====
-const AUTOCOMPLETE: Record<
-  string,
-  { label: string; insert: string; kind: string }[]
-> = {
+const AUTOCOMPLETE: Record<string, { label: string; insert: string; kind: string }[]> = {
   javascript: [
     { label: 'console.log', insert: 'console.log($1);', kind: 'fn' },
     { label: 'console.error', insert: 'console.error($1);', kind: 'fn' },
@@ -229,8 +224,7 @@ const AUTOCOMPLETE: Record<
     { label: 'while', insert: 'while ($1) {\n  $2\n}', kind: 'kw' },
     {
       label: 'switch',
-      insert:
-        'switch ($1) {\n  case $2:\n    $3\n    break;\n  default:\n    break;\n}',
+      insert: 'switch ($1) {\n  case $2:\n    $3\n    break;\n  default:\n    break;\n}',
       kind: 'kw',
     },
     {
@@ -271,14 +265,12 @@ const AUTOCOMPLETE: Record<
     },
     {
       label: 'fetch',
-      insert:
-        "fetch('$1')\n  .then(res => res.json())\n  .then(data => {\n    $2\n  });",
+      insert: "fetch('$1')\n  .then(res => res.json())\n  .then(data => {\n    $2\n  });",
       kind: 'fn',
     },
     {
       label: 'async fetch',
-      insert:
-        "const response = await fetch('$1');\nconst data = await response.json();",
+      insert: "const response = await fetch('$1');\nconst data = await response.json();",
       kind: 'fn',
     },
     {
@@ -426,8 +418,7 @@ const AUTOCOMPLETE: Record<
     { label: 'forEach', insert: '.forEach(($1) => {\n  $2\n})', kind: 'fn' },
     {
       label: 'fetch',
-      insert:
-        "const response = await fetch('$1');\nconst data = await response.json();",
+      insert: "const response = await fetch('$1');\nconst data = await response.json();",
       kind: 'fn',
     },
   ],
@@ -557,14 +548,12 @@ const AUTOCOMPLETE: Record<
     { label: 'while', insert: 'while ($1) {\n    $2\n}', kind: 'kw' },
     {
       label: 'switch',
-      insert:
-        'switch ($1) {\n    case $2:\n        $3\n        break;\n    default:\n        break;\n}',
+      insert: 'switch ($1) {\n    case $2:\n        $3\n        break;\n    default:\n        break;\n}',
       kind: 'kw',
     },
     {
       label: 'try...catch',
-      insert:
-        'try {\n    $1\n} catch (Exception e) {\n    e.printStackTrace();\n}',
+      insert: 'try {\n    $1\n} catch (Exception e) {\n    e.printStackTrace();\n}',
       kind: 'kw',
     },
     { label: 'import', insert: 'import $1;', kind: 'kw' },
@@ -629,14 +618,12 @@ const AUTOCOMPLETE: Record<
     { label: 'while', insert: 'while ($1) {\n    $2\n}', kind: 'kw' },
     {
       label: 'switch',
-      insert:
-        'switch ($1) {\n    case $2:\n        $3\n        break;\n    default:\n        break;\n}',
+      insert: 'switch ($1) {\n    case $2:\n        $3\n        break;\n    default:\n        break;\n}',
       kind: 'kw',
     },
     {
       label: 'try...catch',
-      insert:
-        'try {\n    $1\n} catch (const std::exception& e) {\n    std::cerr << e.what();\n}',
+      insert: 'try {\n    $1\n} catch (const std::exception& e) {\n    std::cerr << e.what();\n}',
       kind: 'kw',
     },
     { label: 'vector', insert: 'std::vector<$1> $2;', kind: 'tp' },
@@ -681,8 +668,7 @@ const AUTOCOMPLETE: Record<
     { label: 'ol', insert: '<ol>\n  <li>$1</li>\n</ol>', kind: 'tg' },
     {
       label: 'table',
-      insert:
-        '<table>\n  <thead>\n    <tr>\n      <th>$1</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>$2</td>\n    </tr>\n  </tbody>\n</table>',
+      insert: '<table>\n  <thead>\n    <tr>\n      <th>$1</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>$2</td>\n    </tr>\n  </tbody>\n</table>',
       kind: 'tg',
     },
     { label: 'section', insert: '<section>\n  $1\n</section>', kind: 'tg' },
@@ -877,14 +863,12 @@ const AUTOCOMPLETE: Record<
     { label: 'useContext', insert: 'const $1 = useContext($2);', kind: 'fn' },
     {
       label: 'component',
-      insert:
-        'function $1({ $2 }) {\n  return (\n    <div>\n      $3\n    </div>\n  );\n}\n\nexport default $1;',
+      insert: 'function $1({ $2 }) {\n  return (\n    <div>\n      $3\n    </div>\n  );\n}\n\nexport default $1;',
       kind: 'sn',
     },
     {
       label: 'arrow component',
-      insert:
-        'const $1 = ({ $2 }) => {\n  return (\n    <div>\n      $3\n    </div>\n  );\n};\n\nexport default $1;',
+      insert: 'const $1 = ({ $2 }) => {\n  return (\n    <div>\n      $3\n    </div>\n  );\n};\n\nexport default $1;',
       kind: 'sn',
     },
     {
@@ -1108,8 +1092,7 @@ const AUTOCOMPLETE: Record<
     { label: 'function', insert: 'function $1($2) {\n    $3\n}', kind: 'kw' },
     {
       label: 'class',
-      insert:
-        'class $1 {\n    public function __construct($2) {\n        $3\n    }\n}',
+      insert: 'class $1 {\n    public function __construct($2) {\n        $3\n    }\n}',
       kind: 'kw',
     },
     { label: 'if', insert: 'if ($1) {\n    $2\n}', kind: 'kw' },
@@ -1122,14 +1105,12 @@ const AUTOCOMPLETE: Record<
     { label: 'while', insert: 'while ($1) {\n    $2\n}', kind: 'kw' },
     {
       label: 'switch',
-      insert:
-        'switch ($1) {\n    case $2:\n        $3\n        break;\n    default:\n        break;\n}',
+      insert: 'switch ($1) {\n    case $2:\n        $3\n        break;\n    default:\n        break;\n}',
       kind: 'kw',
     },
     {
       label: 'try...catch',
-      insert:
-        'try {\n    $1\n} catch (Exception $e) {\n    echo $e->getMessage();\n}',
+      insert: 'try {\n    $1\n} catch (Exception $e) {\n    echo $e->getMessage();\n}',
       kind: 'kw',
     },
     { label: 'return', insert: 'return $1;', kind: 'kw' },
@@ -1176,8 +1157,7 @@ const AUTOCOMPLETE: Record<
     },
     {
       label: 'StatelessWidget',
-      insert:
-        'class $1 extends StatelessWidget {\n  @override\n  Widget build(BuildContext context) {\n    return $2;\n  }\n}',
+      insert: 'class $1 extends StatelessWidget {\n  @override\n  Widget build(BuildContext context) {\n    return $2;\n  }\n}',
       kind: 'sn',
     },
     {
@@ -1209,8 +1189,7 @@ const AUTOCOMPLETE: Record<
     { label: 'setState', insert: 'setState(() {\n  $1\n});', kind: 'fn' },
     {
       label: 'Navigator.push',
-      insert:
-        'Navigator.push(context, MaterialPageRoute(builder: (context) => $1()));',
+      insert: 'Navigator.push(context, MaterialPageRoute(builder: (context) => $1()));',
       kind: 'fn',
     },
   ],
@@ -1245,14 +1224,12 @@ const AUTOCOMPLETE: Record<
     { label: 'while', insert: 'while ($1)\n{\n    $2\n}', kind: 'kw' },
     {
       label: 'switch',
-      insert:
-        'switch ($1)\n{\n    case $2:\n        $3\n        break;\n    default:\n        break;\n}',
+      insert: 'switch ($1)\n{\n    case $2:\n        $3\n        break;\n    default:\n        break;\n}',
       kind: 'kw',
     },
     {
       label: 'try...catch',
-      insert:
-        'try\n{\n    $1\n}\ncatch (Exception ex)\n{\n    Console.WriteLine(ex.Message);\n}',
+      insert: 'try\n{\n    $1\n}\ncatch (Exception ex)\n{\n    Console.WriteLine(ex.Message);\n}',
       kind: 'kw',
     },
     { label: 'using', insert: 'using $1;', kind: 'kw' },
@@ -1359,11 +1336,7 @@ function getIndent(line: string): string {
 function haptic(style: 'light' | 'medium' = 'light') {
   if (Platform.OS !== 'web') {
     try {
-      Haptics.impactAsync(
-        style === 'light'
-          ? Haptics.ImpactFeedbackStyle.Light
-          : Haptics.ImpactFeedbackStyle.Medium
-      );
+      Haptics.impactAsync(style === 'light' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
   }
 }
@@ -1376,6 +1349,7 @@ function processInsert(template: string): string {
 // ==================== Main Component ====================
 
 export default function AddCodeScreen() {
+  const reduced = useReducedMotion();
   const { user } = useAuth();
   const { isLargeScreen } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
@@ -1388,14 +1362,8 @@ export default function AddCodeScreen() {
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => setKeyboardHeight(e.endCoordinates.height)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardHeight(0)
-    );
+    const showSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardHeight(0));
     return () => {
       showSub.remove();
       hideSub.remove();
@@ -1403,36 +1371,25 @@ export default function AddCodeScreen() {
   }, []);
 
   // Get initial language from params
-  const initialLang =
-    typeof params.lang === 'string' &&
-    LANGUAGES.find((l) => l.id === params.lang)
-      ? params.lang
-      : 'javascript';
-  const langFromParam = !!params.lang;
+  const initialLang = typeof params.lang === 'string' && LANGUAGES.find((l) => l.id === params.lang) ? params.lang : 'javascript';
   const isWebProject = initialLang === 'web';
 
   // Edit mode params
-  const editSnippetId =
-    typeof params.editId === 'string' ? params.editId : null;
-  const editOwnerId =
-    typeof params.ownerId === 'string' ? params.ownerId : null;
+  const editSnippetId = typeof params.editId === 'string' ? params.editId : null;
+  const editOwnerId = typeof params.ownerId === 'string' ? params.ownerId : null;
   const editCode = typeof params.code === 'string' ? params.code : null;
   const editLang = typeof params.editLang === 'string' ? params.editLang : null;
-  const editTitle =
-    typeof params.editTitle === 'string' ? params.editTitle : '';
+  const editTitle = typeof params.editTitle === 'string' ? params.editTitle : '';
   const editDesc = typeof params.editDesc === 'string' ? params.editDesc : '';
   const isEditMode = !!editSnippetId;
   const isOwnerEdit = isEditMode && editOwnerId === user?.id;
 
   // Mode - auto-set to 'project' if web is selected
-  const [mode, setMode] = useState<EditorMode>(
-    isWebProject ? 'project' : 'snippet'
-  );
+  const [mode, setMode] = useState<EditorMode>(isWebProject ? 'project' : 'snippet');
 
   // Snippet state
-  const [language, setLanguage] = useState(
-    editLang || (isWebProject ? 'javascript' : initialLang)
-  );
+  const [languagePicker, setLanguagePicker] = useState(false);
+  const [language, setLanguage] = useState(editLang || (isWebProject ? 'javascript' : initialLang));
   const [code, setCode] = useState(editCode || '');
 
   // Project state
@@ -1442,9 +1399,7 @@ export default function AddCodeScreen() {
   });
 
   // Autocomplete
-  const [acItems, setAcItems] = useState<
-    { label: string; insert: string; kind: string }[]
-  >([]);
+  const [acItems, setAcItems] = useState<{ label: string; insert: string; kind: string }[]>([]);
   const [acVisible, setAcVisible] = useState(false);
   const [cursorPos, setCursorPos] = useState(0);
 
@@ -1489,10 +1444,7 @@ export default function AddCodeScreen() {
   const lineCount = useMemo(() => activeCode.split('\n').length, [activeCode]);
 
   // ===== Syntax tokens =====
-  const tokens = useMemo(
-    () => tokenizeCode(activeCode, activeLang),
-    [activeCode, activeLang]
-  );
+  const tokens = useMemo(() => tokenizeCode(activeCode, activeLang), [activeCode, activeLang]);
   const lines = useMemo(() => activeCode.split('\n'), [activeCode]);
 
   // ===== Autocomplete engine =====
@@ -1512,13 +1464,7 @@ export default function AddCodeScreen() {
     }
 
     const db = AUTOCOMPLETE[activeLang] || DEFAULT_AC;
-    const matches = db
-      .filter(
-        (item) =>
-          item.label.toLowerCase().includes(word) &&
-          item.label.toLowerCase() !== word
-      )
-      .slice(0, 10);
+    const matches = db.filter((item) => item.label.toLowerCase().includes(word) && item.label.toLowerCase() !== word).slice(0, 10);
 
     setAcItems(matches);
     setAcVisible(matches.length > 0);
@@ -1537,9 +1483,7 @@ export default function AddCodeScreen() {
         const cur = mode === 'project' ? projectFiles[activeTab] : code;
         const before = cur.slice(0, cursorPos);
         const after = cur.slice(cursorPos);
-        const parts = before.split(
-          /[\s\n\r\t{}()\[\];,.<>!@#$%^&*+=|?\/~`"':]+/
-        );
+        const parts = before.split(/[\s\n\r\t{}()\[\];,.<>!@#$%^&*+=|?\/~`"':]+/);
         const word = parts[parts.length - 1] || '';
         const insertionPt = before.length - word.length;
         const newCode = cur.slice(0, insertionPt) + processed + after;
@@ -1560,8 +1504,7 @@ export default function AddCodeScreen() {
   // Handle code change — auto-indent is now handled inside WebView
   const handleCodeChange = useCallback(
     (newCode: string) => {
-      if (mode === 'project')
-        setProjectFiles({ ...projectFiles, [activeTab]: newCode });
+      if (mode === 'project') setProjectFiles({ ...projectFiles, [activeTab]: newCode });
       else setCode(newCode);
     },
     [mode, projectFiles, activeTab]
@@ -1592,8 +1535,7 @@ export default function AddCodeScreen() {
         const before = cur.slice(0, cursorPos);
         const after = cur.slice(cursorPos);
         const newCode = before + insertText + after;
-        if (mode === 'project')
-          setProjectFiles({ ...projectFiles, [activeTab]: newCode });
+        if (mode === 'project') setProjectFiles({ ...projectFiles, [activeTab]: newCode });
         else setCode(newCode);
         setCursorPos(cursorPos + (pairs[char] ? 1 : char.length));
         codeInputRef.current?.focus();
@@ -1633,20 +1575,10 @@ export default function AddCodeScreen() {
         // Client-side execution for JS/TS/React
         const logs: string[] = [];
         const fakeConsole = {
-          log: (...args: any[]) =>
-            logs.push(
-              args
-                .map((a) =>
-                  typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)
-                )
-                .join(' ')
-            ),
-          error: (...args: any[]) =>
-            logs.push('[خطأ] ' + args.map((a) => String(a)).join(' ')),
-          warn: (...args: any[]) =>
-            logs.push('[تحذير] ' + args.map((a) => String(a)).join(' ')),
-          info: (...args: any[]) =>
-            logs.push('[معلومة] ' + args.map((a) => String(a)).join(' ')),
+          log: (...args: any[]) => logs.push(args.map((a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a))).join(' ')),
+          error: (...args: any[]) => logs.push('[خطأ] ' + args.map((a) => String(a)).join(' ')),
+          warn: (...args: any[]) => logs.push('[تحذير] ' + args.map((a) => String(a)).join(' ')),
+          info: (...args: any[]) => logs.push('[معلومة] ' + args.map((a) => String(a)).join(' ')),
         };
         const safeCode = code
           .replace(/console\.log/g, '__c.log')
@@ -1662,11 +1594,7 @@ export default function AddCodeScreen() {
         } catch (e: any) {
           logs.push('[خطأ] خطأ: ' + (e.message || String(e)));
         }
-        setRunOutput(
-          logs.length > 0
-            ? logs.join('\n')
-            : '[نجاح] تم التنفيذ بنجاح (لا يوجد إخراج)'
-        );
+        setRunOutput(logs.length > 0 ? logs.join('\n') : '[نجاح] تم التنفيذ بنجاح (لا يوجد إخراج)');
       } else if (lang === 'html') {
         // For HTML, show web preview
         setShowRunPanel(false);
@@ -1678,20 +1606,12 @@ export default function AddCodeScreen() {
           const result = await executeCode({ language: lang, code });
           if (result.success) {
             const output = result.output?.trim();
-            setRunOutput(
-              output
-                ? `[نجاح] النتيجة:\n${output}`
-                : '[نجاح] تم التنفيذ بنجاح (لا يوجد إخراج)'
-            );
+            setRunOutput(output ? `[نجاح] النتيجة:\n${output}` : '[نجاح] تم التنفيذ بنجاح (لا يوجد إخراج)');
           } else {
-            setRunOutput(
-              `[خطأ] خطأ في التنفيذ:\n${result.error || 'خطأ غير معروف'}`
-            );
+            setRunOutput(`[خطأ] خطأ في التنفيذ:\n${result.error || 'خطأ غير معروف'}`);
           }
         } catch (execError: any) {
-          setRunOutput(
-            `[خطأ] فشل الاتصال بخادم التنفيذ:\n${execError.message || 'تحقق من اتصال الإنترنت'}`
-          );
+          setRunOutput(`[خطأ] فشل الاتصال بخادم التنفيذ:\n${execError.message || 'تحقق من اتصال الإنترنت'}`);
         }
       }
     } catch (e: any) {
@@ -1718,9 +1638,7 @@ export default function AddCodeScreen() {
   const handleBack = useCallback(() => {
     const hasCode =
       mode === 'project'
-        ? projectFiles.html !== PROJECT_STARTER.html ||
-          projectFiles.css !== PROJECT_STARTER.css ||
-          projectFiles.js !== PROJECT_STARTER.js
+        ? projectFiles.html !== PROJECT_STARTER.html || projectFiles.css !== PROJECT_STARTER.css || projectFiles.js !== PROJECT_STARTER.js
         : code.trim().length > 0;
     if (hasCode) setShowPublish(true);
     else router.back();
@@ -1733,9 +1651,7 @@ export default function AddCodeScreen() {
     setPublishing(true);
     haptic('medium');
     const finalCode =
-      mode === 'project'
-        ? `<!-- HTML -->\n${projectFiles.html}\n\n<style>\n${projectFiles.css}\n</style>\n\n<script>\n${projectFiles.js}\n<\/script>`
-        : code;
+      mode === 'project' ? `<!-- HTML -->\n${projectFiles.html}\n\n<style>\n${projectFiles.css}\n</style>\n\n<script>\n${projectFiles.js}\n<\/script>` : code;
 
     let result: { id?: string | null; error?: string | null };
     if (isEditMode && isOwnerEdit && editSnippetId) {
@@ -1767,18 +1683,7 @@ export default function AddCodeScreen() {
     } else {
       setPubError('تعذّر النشر. كودك ما زال هنا — تحقق من الاتصال وحاول مرة أخرى.');
     }
-  }, [
-    user?.id,
-    pubTitle,
-    pubDesc,
-    code,
-    language,
-    mode,
-    projectFiles,
-    isEditMode,
-    isOwnerEdit,
-    editSnippetId,
-  ]);
+  }, [user?.id, pubTitle, pubDesc, code, language, mode, projectFiles, isEditMode, isOwnerEdit, editSnippetId]);
 
   // Save draft
   const handleDraft = useCallback(async () => {
@@ -1786,9 +1691,7 @@ export default function AddCodeScreen() {
     setPubError(null);
     setSaving(true);
     const finalCode =
-      mode === 'project'
-        ? `<!-- HTML -->\n${projectFiles.html}\n\n<style>\n${projectFiles.css}\n</style>\n\n<script>\n${projectFiles.js}\n<\/script>`
-        : code;
+      mode === 'project' ? `<!-- HTML -->\n${projectFiles.html}\n\n<style>\n${projectFiles.css}\n</style>\n\n<script>\n${projectFiles.js}\n<\/script>` : code;
     const { error } = await createSnippet({
       userId: user.id,
       title: pubTitle.trim(),
@@ -1831,12 +1734,9 @@ export default function AddCodeScreen() {
 
   // ==================== RENDER ====================
   return (
-    <SafeAreaView style={s.safe}>
-      <KeyboardAvoidingView
-        style={s.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={[s.container, isLargeScreen && wS.container]}>
+    <SafeAreaView style={[s.safe, { backgroundColor: t.colors.bg }]}>
+      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={[s.container, isLargeScreen && wS.container, { backgroundColor: t.colors.bg }]}>
           {/* ===== HEADER ===== */}
           <View style={{ borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
             <Row gap={6} style={{ paddingHorizontal: 8, minHeight: 56 }}>
@@ -1849,37 +1749,56 @@ export default function AddCodeScreen() {
                   {mode === 'project' ? 'HTML · CSS · JavaScript' : selectedLang.full} · {lineCount} سطر
                 </DText>
               </View>
-              <IconButton icon={copied ? 'checkmark' : 'copy-outline'} label={copied ? 'تم النسخ' : 'نسخ الكود'} onPress={handleCopy} color={copied ? t.colors.successText : undefined} />
-              <Button label={mode === 'project' || activeLang === 'html' ? 'معاينة' : 'شغّل'} icon={mode === 'project' || activeLang === 'html' ? 'eye-outline' : 'play'} variant="success" size="sm" onPress={handleRun} />
+              <IconButton
+                icon={copied ? 'checkmark' : 'copy-outline'}
+                label={copied ? 'تم النسخ' : 'نسخ الكود'}
+                onPress={handleCopy}
+                color={copied ? t.colors.successText : undefined}
+              />
+              <Button
+                label={mode === 'project' || activeLang === 'html' ? 'معاينة' : 'شغّل'}
+                icon={mode === 'project' || activeLang === 'html' ? 'eye-outline' : 'play'}
+                variant="success"
+                size="sm"
+                onPress={handleRun}
+              />
               <Button label={isOwnerEdit ? 'تحديث' : 'نشر'} size="sm" onPress={() => setShowPublish(true)} />
             </Row>
           </View>
 
           {/* ===== LANGUAGE STRIP ===== */}
           {/* F23: «ويب» يحوّل لمشروع HTML/CSS/JS حقيقي، وبقية اللغات تعيد وضع الملف الواحد */}
-          {!langFromParam && !isEditMode && (
-            <View style={{ paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
-              <ChipBar>
-                {LANGUAGES.map((item) => (
-                  <Chip
-                    key={item.id}
-                    label={item.name}
-                    selected={item.id === 'web' ? mode === 'project' : mode === 'snippet' && language === item.id}
-                    onPress={() => {
-                      haptic();
-                      if (item.id === 'web') {
-                        setMode('project');
-                        setActiveTab('html');
-                      } else {
-                        setMode('snippet');
-                        setLanguage(item.id);
-                      }
-                    }}
-                  />
-                ))}
-              </ChipBar>
-            </View>
+          {!isEditMode && (
+            <Row gap={8} style={{ paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
+              <DText variant="bodySm" tone="secondary">
+                لغة الكود
+              </DText>
+              <Button
+                label={mode === 'project' ? 'مشروع ويب' : selectedLang.full}
+                variant="secondary"
+                leading={<LanguageIcon language={mode === 'project' ? 'web' : language} size={22} />}
+                icon="chevron-down"
+                iconPosition="end"
+                onPress={() => setLanguagePicker(true)}
+              />
+            </Row>
           )}
+          <LanguagePicker
+            visible={languagePicker}
+            onClose={() => setLanguagePicker(false)}
+            selected={mode === 'project' ? 'web' : language}
+            allowed={LANGUAGES.map((l) => l.id)}
+            onSelect={(id) => {
+              haptic();
+              if (id === 'web') {
+                setMode('project');
+                setActiveTab('html');
+              } else {
+                setMode('snippet');
+                setLanguage(id);
+              }
+            }}
+          />
 
           {/* ===== PROJECT TABS ===== */}
           {mode === 'project' && (
@@ -1905,8 +1824,14 @@ export default function AddCodeScreen() {
             <DText variant="caption" tone="muted" tabular>
               {lineCount} سطر · {activeCode.length} حرف
             </DText>
-            <DText mono variant="caption" ltr style={{ color: t.colors.codeMuted }}>
-              {mode === 'project' ? (activeTab === 'html' ? 'index.html' : activeTab === 'css' ? 'style.css' : 'script.js') : `main.${selectedLang.id === 'react' ? 'jsx' : selectedLang.id === 'csharp' ? 'cs' : selectedLang.id}`}
+            <DText mono variant="caption" ltr style={{ color: t.colors.textMuted }}>
+              {mode === 'project'
+                ? activeTab === 'html'
+                  ? 'index.html'
+                  : activeTab === 'css'
+                    ? 'style.css'
+                    : 'script.js'
+                : `main.${selectedLang.id === 'react' ? 'jsx' : selectedLang.id === 'csharp' ? 'cs' : selectedLang.id}`}
             </DText>
           </Row>
 
@@ -1914,11 +1839,7 @@ export default function AddCodeScreen() {
           <View style={[s.editorWrap, isLargeScreen && wS.editorWrap]}>
             {/* Web: CodeMirror professional editor */}
             {Platform.OS === 'web' && CodeMirrorEditor ? (
-              <CodeMirrorEditor
-                code={activeCode}
-                language={activeLang}
-                onChange={handleCodeChange}
-              />
+              <CodeMirrorEditor code={activeCode} language={activeLang} onChange={handleCodeChange} />
             ) : (
               /* Mobile: WebView-based editor (no text duplication!) */
               <MobileWebEditor
@@ -1932,10 +1853,7 @@ export default function AddCodeScreen() {
 
             {/* ===== AUTOCOMPLETE DROPDOWN (mobile only) ===== */}
             {Platform.OS !== 'web' && acVisible && (
-              <Animated.View
-                entering={FadeIn.duration(150)}
-                style={s.acDropdown}
-              >
+              <Animated.View entering={reduced ? undefined : FadeIn.duration(150)} style={s.acDropdown}>
                 <View style={s.acHeader}>
                   <Ionicons name="bulb-outline" size={12} color="#f59e0b" />
                   <Text style={s.acHeaderTxt}>اقتراحات</Text>
@@ -1943,19 +1861,11 @@ export default function AddCodeScreen() {
                     <Ionicons name="close" size={14} color="#6b7280" />
                   </TouchableOpacity>
                 </View>
-                <ScrollView
-                  style={s.acList}
-                  keyboardShouldPersistTaps="always"
-                  nestedScrollEnabled
-                >
+                <ScrollView style={s.acList} keyboardShouldPersistTaps="always" nestedScrollEnabled>
                   {acItems.map((item, i) => {
                     const ki = getKindIcon(item.kind);
                     return (
-                      <TouchableOpacity
-                        key={i}
-                        style={s.acItem}
-                        onPress={() => insertAcItem(item)}
-                      >
+                      <TouchableOpacity key={i} style={s.acItem} onPress={() => insertAcItem(item)}>
                         <Ionicons name={ki.icon} size={14} color={ki.color} />
                         <Text style={s.acLabel}>{item.label}</Text>
                         <Text style={s.acKind}>
@@ -1993,43 +1903,9 @@ export default function AddCodeScreen() {
                   : { paddingBottom: Math.max(4, insets.bottom) },
               ]}
             >
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.qInsertRow}
-                keyboardShouldPersistTaps="always"
-              >
-                {[
-                  '  ',
-                  '{',
-                  '}',
-                  '(',
-                  ')',
-                  '[',
-                  ']',
-                  '<',
-                  '>',
-                  '/',
-                  ';',
-                  ':',
-                  '"',
-                  "'",
-                  '`',
-                  '=',
-                  '.',
-                  ',',
-                  '!',
-                  '&',
-                  '|',
-                  '#',
-                  '_',
-                  '-',
-                ].map((c, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={s.qKey}
-                    onPress={() => insertChar(c)}
-                  >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.qInsertRow} keyboardShouldPersistTaps="always">
+                {['  ', '{', '}', '(', ')', '[', ']', '<', '>', '/', ';', ':', '"', "'", '`', '=', '.', ',', '!', '&', '|', '#', '_', '-'].map((c, i) => (
+                  <TouchableOpacity key={i} style={s.qKey} onPress={() => insertChar(c)}>
                     <Text style={s.qKeyTxt}>{c === '  ' ? '⇥' : c}</Text>
                   </TouchableOpacity>
                 ))}
@@ -2068,7 +1944,7 @@ export default function AddCodeScreen() {
         </Sheet>
 
         {/* ===== WEB PREVIEW (for projects & HTML) ===== */}
-        <Modal visible={showWebPreview} transparent={false} animationType="slide" onRequestClose={() => setShowWebPreview(false)}>
+        <Modal visible={showWebPreview} transparent={false} animationType={reduced ? 'none' : 'slide'} onRequestClose={() => setShowWebPreview(false)}>
           <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg }}>
             <Row gap={6} style={{ paddingHorizontal: 8, minHeight: 56, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
               <IconButton icon="close" label="إغلاق المعاينة" onPress={() => setShowWebPreview(false)} />
@@ -2087,9 +1963,22 @@ export default function AddCodeScreen() {
             <View style={{ flex: 1, margin: isLargeScreen ? 24 : 8, borderRadius: t.radius.md, overflow: 'hidden', backgroundColor: '#fff' }}>
               {Platform.OS === 'web' ? (
                 // @ts-ignore — عنصر DOM على الويب فقط
-                <iframe srcDoc={webPreviewHtml} style={{ width: '100%', height: '100%', border: 'none' }} sandbox="allow-scripts allow-same-origin" title="معاينة المشروع" />
+                <iframe
+                  srcDoc={webPreviewHtml}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  sandbox="allow-scripts allow-same-origin"
+                  title="معاينة المشروع"
+                />
               ) : (
-                <WebView source={{ html: webPreviewHtml }} style={{ flex: 1 }} javaScriptEnabled domStorageEnabled startInLoadingState scalesPageToFit originWhitelist={['*']} />
+                <WebView
+                  source={{ html: webPreviewHtml }}
+                  style={{ flex: 1 }}
+                  javaScriptEnabled
+                  domStorageEnabled
+                  startInLoadingState
+                  scalesPageToFit
+                  originWhitelist={['*']}
+                />
               )}
             </View>
           </SafeAreaView>
@@ -2098,7 +1987,15 @@ export default function AddCodeScreen() {
         {/* ===== PUBLISH ===== */}
         <Sheet visible={showPublish} onClose={() => setShowPublish(false)} title={isOwnerEdit ? 'تحديث الكود' : 'انشر أو احفظ'} maxWidth={520}>
           <Col gap={14}>
-            <Field label="العنوان" placeholder="مثال: حاسبة المعدل الفصلي" value={pubTitle} onChangeText={setPubTitle} maxLength={100} autoFocus hint="يظهر في المجتمع وفي ملفك" />
+            <Field
+              label="العنوان"
+              placeholder="مثال: حاسبة المعدل الفصلي"
+              value={pubTitle}
+              onChangeText={setPubTitle}
+              maxLength={100}
+              autoFocus
+              hint="يظهر في المجتمع وفي ملفك"
+            />
             <Field label="الوصف (اختياري)" placeholder="ماذا يفعل الكود؟ ماذا تعلمت منه؟" value={pubDesc} onChangeText={setPubDesc} maxLength={500} multiline />
             <Row gap={8} style={{ justifyContent: 'flex-start' }}>
               <Tag label={mode === 'project' ? 'مشروع ويب' : selectedLang.full} tone="brand" />
@@ -2112,7 +2009,14 @@ export default function AddCodeScreen() {
                 </DText>
               </Surface>
             )}
-            <Button label={isOwnerEdit ? 'حفظ التحديث' : 'انشر في المجتمع'} icon={isOwnerEdit ? 'save-outline' : 'cloud-upload-outline'} onPress={handlePublish} disabled={!pubTitle.trim() || !rulesAccepted} loading={publishing} size="lg" />
+            <Button
+              label={isOwnerEdit ? 'حفظ التحديث' : 'انشر في المجتمع'}
+              icon={isOwnerEdit ? 'save-outline' : 'cloud-upload-outline'}
+              onPress={handlePublish}
+              disabled={!pubTitle.trim() || !rulesAccepted}
+              loading={publishing}
+              size="lg"
+            />
             {!isEditMode && <Button label="احفظه كمسودة خاصة" variant="secondary" onPress={handleDraft} disabled={!pubTitle.trim()} loading={saving} />}
             <Row gap={8}>
               <Button label="متابعة التحرير" variant="ghost" onPress={() => setShowPublish(false)} style={{ flex: 1 }} />
@@ -2391,9 +2295,7 @@ const s = StyleSheet.create({
     fontFamily: MONO,
     color: 'transparent',
     backgroundColor: 'transparent',
-    ...(Platform.OS === 'web'
-      ? ({ caretColor: darkColors.brand, outlineStyle: 'none' } as any)
-      : {}),
+    ...(Platform.OS === 'web' ? ({ caretColor: darkColors.brand, outlineStyle: 'none' } as any) : {}),
     ...(Platform.OS === 'android' ? { includeFontPadding: false } : {}),
     textAlignVertical: 'top',
     textAlign: 'left' as const,

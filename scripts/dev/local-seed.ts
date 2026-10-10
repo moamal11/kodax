@@ -103,6 +103,12 @@ export async function seed(env: TestEnv, _sign: (p: Record<string, unknown>) => 
   }
   await asUser(U(1), `SELECT coins_claim_daily_reward() r`).catch(() => undefined);
 
+  // Explicit certificate fixtures for UI review only (not earned by these seed accounts).
+  await q(`INSERT INTO certificates (id, user_id, course_id, level, status, security_hash, user_full_name, course_title, course_title_ar, achievement_snapshot)
+    VALUES ('00000000-0000-4000-8000-000000000101', $1, 'python', 'silver', 'valid', 'local-fixture-not-a-production-certificate', 'سارة الكبيسي', 'Python', 'مسار بايثون',
+      '{"lessons_percent":50,"challenges_percent":25,"total_lessons":80,"completed_lessons":40,"total_challenges":40,"completed_challenges":10}'::jsonb),
+      ('00000000-0000-4000-8000-000000000102', $1, 'web-dev', 'silver', 'revoked', 'local-revoked-fixture', 'سارة الكبيسي', 'Web development', 'تطوير الويب', '{}'::jsonb)`, [U(1)]);
+
   // ---------- المجتمع ----------
   const snip = async (uid: string, title: string, desc: string, language: string, code: string, daysAgo: number) =>
     (await one(`INSERT INTO code_snippets (user_id, title, description, code, language, is_public, created_at) VALUES ($1, $2, $3, $4, $5, true, now() - make_interval(days => $6)) RETURNING id`, [uid, title, desc, code, language, daysAgo])).id as string;
@@ -128,7 +134,7 @@ export async function seed(env: TestEnv, _sign: (p: Record<string, unknown>) => 
   for (const [u, s] of [[U(1), s1], [U(5), s1], [U(6), s1], [U(7), s1], [U(1), s2], [U(4), s2], [U(1), s3], [U(4), s4], [U(5), s5]] as const) await like(u, s);
   for (let i = 0; i < 37; i++) await q(`INSERT INTO code_views (user_id, snippet_id) VALUES (NULL, $1)`, [s1]).catch(() => undefined);
 
-  const follow = (a: string, b: string) => asUser(a, `INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) RETURNING id`, [a, b]).catch((e) => console.warn('[seed] follow', e.message));
+  const follow = (a: string, b: string) => asUser(a, `SELECT set_follow($1, true)`, [b]).catch((e) => console.warn('[seed] follow', e.message));
   for (const [a, b] of [[U(1), U(4)], [U(1), U(5)], [U(4), U(1)], [U(5), U(1)], [U(6), U(1)], [U(2), U(4)], [U(7), U(4)]] as const) await follow(a, b);
 
   // رسائل خاصة: محادثة فيها رسالة طويلة ورابط + غير مقروء

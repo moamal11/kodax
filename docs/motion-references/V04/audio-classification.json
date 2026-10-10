@@ -1,0 +1,828 @@
+{
+  "id": "V04",
+  "method": "YAMNet ONNX automated inference; not direct listening; class scores are not calibrated probabilities",
+  "top_mean_classes": [
+    {
+      "class": "Music",
+      "score": 0.2681
+    },
+    {
+      "class": "Liquid",
+      "score": 0.0706
+    },
+    {
+      "class": "Splash, splatter",
+      "score": 0.053
+    },
+    {
+      "class": "Slosh",
+      "score": 0.0489
+    },
+    {
+      "class": "Water",
+      "score": 0.0412
+    },
+    {
+      "class": "Glass",
+      "score": 0.0365
+    },
+    {
+      "class": "Ding",
+      "score": 0.0337
+    },
+    {
+      "class": "Outside, rural or natural",
+      "score": 0.0284
+    },
+    {
+      "class": "Sound effect",
+      "score": 0.0276
+    },
+    {
+      "class": "Plop",
+      "score": 0.0237
+    }
+  ],
+  "windows": [
+    {
+      "start_s": 0.0,
+      "end_s": 0.96,
+      "top": [
+        {
+          "class": "Sound effect",
+          "score": 0.1589
+        },
+        {
+          "class": "Drum machine",
+          "score": 0.1147
+        },
+        {
+          "class": "Music",
+          "score": 0.1107
+        },
+        {
+          "class": "Synthesizer",
+          "score": 0.0885
+        },
+        {
+          "class": "Keyboard (musical)",
+          "score": 0.0631
+        }
+      ]
+    },
+    {
+      "start_s": 0.48,
+      "end_s": 1.44,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.3094
+        },
+        {
+          "class": "Ping",
+          "score": 0.1051
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0786
+        },
+        {
+          "class": "Ringtone",
+          "score": 0.0612
+        },
+        {
+          "class": "Ding",
+          "score": 0.0563
+        }
+      ]
+    },
+    {
+      "start_s": 0.96,
+      "end_s": 1.92,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.3032
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0235
+        },
+        {
+          "class": "Speech",
+          "score": 0.0198
+        },
+        {
+          "class": "Music for children",
+          "score": 0.015
+        },
+        {
+          "class": "Speech synthesizer",
+          "score": 0.0094
+        }
+      ]
+    },
+    {
+      "start_s": 1.44,
+      "end_s": 2.4,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.3008
+        },
+        {
+          "class": "Plop",
+          "score": 0.0805
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0625
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0544
+        },
+        {
+          "class": "Drip",
+          "score": 0.012
+        }
+      ]
+    },
+    {
+      "start_s": 1.92,
+      "end_s": 2.88,
+      "top": [
+        {
+          "class": "Plop",
+          "score": 0.5876
+        },
+        {
+          "class": "Music for children",
+          "score": 0.1577
+        },
+        {
+          "class": "Speech",
+          "score": 0.1026
+        },
+        {
+          "class": "Music",
+          "score": 0.063
+        },
+        {
+          "class": "Boing",
+          "score": 0.0314
+        }
+      ]
+    },
+    {
+      "start_s": 2.4,
+      "end_s": 3.36,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.1276
+        },
+        {
+          "class": "Music for children",
+          "score": 0.1133
+        },
+        {
+          "class": "Speech",
+          "score": 0.0868
+        },
+        {
+          "class": "Child speech, kid speaking",
+          "score": 0.0329
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.026
+        }
+      ]
+    },
+    {
+      "start_s": 2.88,
+      "end_s": 3.84,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.7391
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0187
+        },
+        {
+          "class": "Speech",
+          "score": 0.0105
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0086
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.0068
+        }
+      ]
+    },
+    {
+      "start_s": 3.36,
+      "end_s": 4.32,
+      "top": [
+        {
+          "class": "Clang",
+          "score": 0.6667
+        },
+        {
+          "class": "Ding",
+          "score": 0.6599
+        },
+        {
+          "class": "Ping",
+          "score": 0.3381
+        },
+        {
+          "class": "Glass",
+          "score": 0.2844
+        },
+        {
+          "class": "Chink, clink",
+          "score": 0.246
+        }
+      ]
+    },
+    {
+      "start_s": 3.84,
+      "end_s": 4.8,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.1593
+        },
+        {
+          "class": "Speech",
+          "score": 0.0544
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0399
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0314
+        },
+        {
+          "class": "Sonar",
+          "score": 0.0182
+        }
+      ]
+    },
+    {
+      "start_s": 4.32,
+      "end_s": 5.28,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.3861
+        },
+        {
+          "class": "Whack, thwack",
+          "score": 0.0349
+        },
+        {
+          "class": "Speech",
+          "score": 0.0278
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0185
+        },
+        {
+          "class": "Whoosh, swoosh, swish",
+          "score": 0.0174
+        }
+      ]
+    },
+    {
+      "start_s": 4.8,
+      "end_s": 5.76,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.145
+        },
+        {
+          "class": "Television",
+          "score": 0.0345
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.027
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0268
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0219
+        }
+      ]
+    },
+    {
+      "start_s": 5.28,
+      "end_s": 6.24,
+      "top": [
+        {
+          "class": "Sound effect",
+          "score": 0.0666
+        },
+        {
+          "class": "Buzz",
+          "score": 0.0463
+        },
+        {
+          "class": "Beep, bleep",
+          "score": 0.043
+        },
+        {
+          "class": "Radio",
+          "score": 0.0385
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0376
+        }
+      ]
+    },
+    {
+      "start_s": 5.76,
+      "end_s": 6.72,
+      "top": [
+        {
+          "class": "Environmental noise",
+          "score": 0.2005
+        },
+        {
+          "class": "Insect",
+          "score": 0.1975
+        },
+        {
+          "class": "Animal",
+          "score": 0.1962
+        },
+        {
+          "class": "Outside, rural or natural",
+          "score": 0.1933
+        },
+        {
+          "class": "Cricket",
+          "score": 0.1679
+        }
+      ]
+    },
+    {
+      "start_s": 6.24,
+      "end_s": 7.2,
+      "top": [
+        {
+          "class": "Chirp, tweet",
+          "score": 0.1998
+        },
+        {
+          "class": "Bird vocalization, bird call, bird song",
+          "score": 0.191
+        },
+        {
+          "class": "Bird",
+          "score": 0.1313
+        },
+        {
+          "class": "Animal",
+          "score": 0.124
+        },
+        {
+          "class": "Music",
+          "score": 0.1127
+        }
+      ]
+    },
+    {
+      "start_s": 6.72,
+      "end_s": 7.68,
+      "top": [
+        {
+          "class": "Liquid",
+          "score": 0.3145
+        },
+        {
+          "class": "Music",
+          "score": 0.2677
+        },
+        {
+          "class": "Pour",
+          "score": 0.2188
+        },
+        {
+          "class": "Trickle, dribble",
+          "score": 0.1871
+        },
+        {
+          "class": "Drip",
+          "score": 0.0833
+        }
+      ]
+    },
+    {
+      "start_s": 7.2,
+      "end_s": 8.16,
+      "top": [
+        {
+          "class": "Splash, splatter",
+          "score": 0.5244
+        },
+        {
+          "class": "Slosh",
+          "score": 0.4748
+        },
+        {
+          "class": "Liquid",
+          "score": 0.3942
+        },
+        {
+          "class": "Rowboat, canoe, kayak",
+          "score": 0.3826
+        },
+        {
+          "class": "Boat, Water vehicle",
+          "score": 0.317
+        }
+      ]
+    },
+    {
+      "start_s": 7.68,
+      "end_s": 8.64,
+      "top": [
+        {
+          "class": "Liquid",
+          "score": 0.1479
+        },
+        {
+          "class": "Water",
+          "score": 0.1211
+        },
+        {
+          "class": "Splash, splatter",
+          "score": 0.0997
+        },
+        {
+          "class": "Slosh",
+          "score": 0.0798
+        },
+        {
+          "class": "Outside, rural or natural",
+          "score": 0.0636
+        }
+      ]
+    },
+    {
+      "start_s": 8.16,
+      "end_s": 9.12,
+      "top": [
+        {
+          "class": "Slosh",
+          "score": 0.6628
+        },
+        {
+          "class": "Splash, splatter",
+          "score": 0.6301
+        },
+        {
+          "class": "Liquid",
+          "score": 0.5813
+        },
+        {
+          "class": "Pour",
+          "score": 0.3552
+        },
+        {
+          "class": "Trickle, dribble",
+          "score": 0.3123
+        }
+      ]
+    },
+    {
+      "start_s": 8.64,
+      "end_s": 9.6,
+      "top": [
+        {
+          "class": "Liquid",
+          "score": 0.3656
+        },
+        {
+          "class": "Water",
+          "score": 0.3654
+        },
+        {
+          "class": "Splash, splatter",
+          "score": 0.2589
+        },
+        {
+          "class": "Slosh",
+          "score": 0.1701
+        },
+        {
+          "class": "Gurgling",
+          "score": 0.0981
+        }
+      ]
+    },
+    {
+      "start_s": 9.12,
+      "end_s": 10.08,
+      "top": [
+        {
+          "class": "Chink, clink",
+          "score": 0.3566
+        },
+        {
+          "class": "Glass",
+          "score": 0.3561
+        },
+        {
+          "class": "Liquid",
+          "score": 0.1471
+        },
+        {
+          "class": "Water",
+          "score": 0.1383
+        },
+        {
+          "class": "Fill (with liquid)",
+          "score": 0.115
+        }
+      ]
+    },
+    {
+      "start_s": 9.6,
+      "end_s": 10.56,
+      "top": [
+        {
+          "class": "Glass",
+          "score": 0.2054
+        },
+        {
+          "class": "Rodents, rats, mice",
+          "score": 0.1365
+        },
+        {
+          "class": "Breaking",
+          "score": 0.1101
+        },
+        {
+          "class": "Shatter",
+          "score": 0.1073
+        },
+        {
+          "class": "Mouse",
+          "score": 0.1024
+        }
+      ]
+    },
+    {
+      "start_s": 10.08,
+      "end_s": 11.04,
+      "top": [
+        {
+          "class": "Breaking",
+          "score": 0.219
+        },
+        {
+          "class": "Glass",
+          "score": 0.2157
+        },
+        {
+          "class": "Shatter",
+          "score": 0.1674
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.077
+        },
+        {
+          "class": "Speech",
+          "score": 0.0674
+        }
+      ]
+    },
+    {
+      "start_s": 10.56,
+      "end_s": 11.52,
+      "top": [
+        {
+          "class": "Outside, rural or natural",
+          "score": 0.1512
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0827
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0613
+        },
+        {
+          "class": "Snake",
+          "score": 0.0574
+        },
+        {
+          "class": "Hiss",
+          "score": 0.0454
+        }
+      ]
+    },
+    {
+      "start_s": 11.04,
+      "end_s": 12.0,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.3206
+        },
+        {
+          "class": "Speech",
+          "score": 0.0511
+        },
+        {
+          "class": "Spray",
+          "score": 0.0357
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0229
+        },
+        {
+          "class": "Liquid",
+          "score": 0.0209
+        }
+      ]
+    },
+    {
+      "start_s": 11.52,
+      "end_s": 12.48,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.8829
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0085
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0069
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0042
+        },
+        {
+          "class": "Dubstep",
+          "score": 0.0034
+        }
+      ]
+    },
+    {
+      "start_s": 12.0,
+      "end_s": 12.96,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.7221
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0488
+        },
+        {
+          "class": "Synthesizer",
+          "score": 0.0139
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0124
+        },
+        {
+          "class": "Drum machine",
+          "score": 0.0074
+        }
+      ]
+    },
+    {
+      "start_s": 12.48,
+      "end_s": 13.44,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9426
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0056
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0056
+        },
+        {
+          "class": "Synthesizer",
+          "score": 0.0042
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0036
+        }
+      ]
+    },
+    {
+      "start_s": 12.96,
+      "end_s": 13.92,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9406
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0027
+        },
+        {
+          "class": "Keyboard (musical)",
+          "score": 0.0019
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.0018
+        },
+        {
+          "class": "Speech",
+          "score": 0.0017
+        }
+      ]
+    },
+    {
+      "start_s": 13.44,
+      "end_s": 14.4,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9545
+        },
+        {
+          "class": "Jingle (music)",
+          "score": 0.0103
+        },
+        {
+          "class": "Music for children",
+          "score": 0.0049
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0038
+        },
+        {
+          "class": "Jingle, tinkle",
+          "score": 0.0036
+        }
+      ]
+    },
+    {
+      "start_s": 13.92,
+      "end_s": 14.88,
+      "top": [
+        {
+          "class": "Ding",
+          "score": 0.2738
+        },
+        {
+          "class": "Doorbell",
+          "score": 0.1196
+        },
+        {
+          "class": "Ding-dong",
+          "score": 0.1025
+        },
+        {
+          "class": "Music",
+          "score": 0.0924
+        },
+        {
+          "class": "Silence",
+          "score": 0.0754
+        }
+      ]
+    }
+  ]
+}

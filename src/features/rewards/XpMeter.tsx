@@ -4,7 +4,7 @@
  */
 import React, { useEffect, useRef } from 'react';
 import { View, Pressable } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming, cancelAnimation } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTheme, useReducedMotion, Text, Row, ProgressBar } from '@/design';
 import { useApp } from '@/contexts/AppContext';
@@ -36,7 +36,9 @@ export function XpMeter({ variant = 'compact', link = true }: Props) {
 
   useEffect(() => registerTarget(ref), [registerTarget]);
   useEffect(() => {
+    if (reduced) { cancelAnimation(pulse); pulse.value = 1; return; }
     if (arrival && !reduced) pulse.value = withSequence(withTiming(1.08, { duration: 90 }), withTiming(1, { duration: 160 }));
+      return () => cancelAnimation(pulse);
   }, [arrival, reduced]);
   const st = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
@@ -45,9 +47,9 @@ export function XpMeter({ variant = 'compact', link = true }: Props) {
 
   const body =
     variant === 'compact' ? (
-      <Animated.View ref={ref as any} collapsable={false} style={[{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, height: 36, paddingHorizontal: 10, borderRadius: 18, backgroundColor: t.colors.surface, borderWidth: 1, borderColor: t.colors.border }, glow, st]}>
+      <Animated.View ref={ref as any} collapsable={false} style={[{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, minHeight: 36, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 18, backgroundColor: t.colors.surface, borderWidth: 1, borderColor: t.colors.border }, glow, st]}>
         <View style={{ minWidth: 22, height: 22, paddingHorizontal: 4, borderRadius: 6, backgroundColor: t.colors.xpSoft, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="caption" weight="bold" tone="xp" align="center" ltr tabular style={{ fontSize: 12, lineHeight: 16 }}>
+          <Text variant="caption" weight="bold" tone="xp" align="center" ltr tabular allowFontScaling={false} style={{ fontSize: 12, lineHeight: 16 }}>
             {p.level}
           </Text>
         </View>
@@ -63,7 +65,7 @@ export function XpMeter({ variant = 'compact', link = true }: Props) {
         <Row justify="space-between">
           <Row gap={8}>
             <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: t.colors.xpSoft, alignItems: 'center', justifyContent: 'center' }}>
-              <Text variant="label" weight="bold" tone="xp" align="center" ltr tabular>
+              <Text variant="label" weight="bold" tone="xp" align="center" ltr tabular allowFontScaling={false}>
                 {p.level}
               </Text>
             </View>

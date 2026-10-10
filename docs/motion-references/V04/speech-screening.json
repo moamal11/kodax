@@ -1,0 +1,13 @@
+{
+  "method": "Whisper small.en plus VAD; automated speech screening; no transcript retained",
+  "vad_speech_duration_s": 3.68,
+  "candidate_segments": [
+    {
+      "start_s": 2.19,
+      "end_s": 8.59,
+      "avg_logprob": -1.03,
+      "no_speech_prob": 0.564,
+      "character_count": 21
+    }
+  ]
+}

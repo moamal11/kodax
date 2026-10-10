@@ -1,19 +1,25 @@
 {
   "framework": null,
-  "buildCommand": "node scripts/prepare-build-env.js && npx expo export --platform web && node scripts/copy-web-fonts.js",
+  "buildCommand": "node scripts/prepare-build-env.js && npx expo export --platform web && node scripts/copy-web-fonts.js && npx tsx scripts/build-web-public.ts",
   "outputDirectory": "dist",
+  "cleanUrls": true,
+  "functions": { "api/public-page.js": { "includeFiles": "web-server/**", "maxDuration": 30 } },
+  "rewrites": [
+    { "source": "/code/add", "destination": "/code-create" },
+    { "source": "/discussion/new", "destination": "/discussion-create" },
+    { "source": "/sitemap.xml", "destination": "/api/public-page?kind=sitemap&key=index" },
+    { "source": "/sitemap-:kind(user|code|discussion)-:page(\\d+).xml", "destination": "/api/public-page?kind=sitemap&key=:kind-:page" },
+    { "source": "/user/:id", "destination": "/api/public-page?kind=user&key=:id" },
+    { "source": "/code/:id", "destination": "/api/public-page?kind=code&key=:id" },
+    { "source": "/discussion/:id", "destination": "/api/public-page?kind=discussion&key=:id" },
+    { "source": "/field/:id", "destination": "/api/public-page?kind=field&key=:id" },
+    { "source": "/course/:id", "destination": "/api/public-page?kind=course&key=:id" },
+    { "source": "/lesson/:id", "destination": "/api/public-page?kind=lesson&key=:id" },
+    { "source": "/challenge/:id", "destination": "/api/public-page?kind=challenge&key=:id" }
+  ],
 
   "redirects": [
-    {
-      "source": "/sitemap.xml",
-      "destination": "https://raw.githubusercontent.com/m2iq/kodax-seo/refs/heads/main/sitemap.xml",
-      "permanent": true
-    },
-    {
-      "source": "/robots.txt",
-      "destination": "https://raw.githubusercontent.com/m2iq/kodax-seo/refs/heads/main/robots.txt",
-      "permanent": true
-    },
+    { "source": "/sitemap-0.xml", "destination": "/sitemap.xml", "permanent": true },
     {
       "source": "/account-deletion",
       "destination": "/delete-account/",
@@ -21,6 +27,8 @@
     }
   ],
   "headers": [
+    { "source": "/kodax-push-sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }, { "key": "Service-Worker-Allowed", "value": "/" }] },
+    { "source": "/api/public-page", "headers": [{ "key": "X-Content-Type-Options", "value": "nosniff" }] },
     {
       "source": "/sitemap.xml",
       "headers": [

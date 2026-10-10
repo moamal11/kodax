@@ -7,14 +7,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const distDir = path.join(__dirname, '..', 'dist');
+const distDir = path.resolve(process.env.KODAX_WEB_OUT || path.join(__dirname, '..', 'dist'));
 
 // possible locations where Metro may place the vector-icons fonts
 const possibleSrcDirs = [
   path.join(
-    __dirname,
-    '..',
-    'dist',
+    distDir,
     'assets',
     'node_modules',
     '@expo',
@@ -25,9 +23,7 @@ const possibleSrcDirs = [
     'Fonts'
   ),
   path.join(
-    __dirname,
-    '..',
-    'dist',
+    distDir,
     'assets',
     'node_modules',
     '@expo',
@@ -36,7 +32,7 @@ const possibleSrcDirs = [
     'react-native-vector-icons',
     'Fonts'
   ),
-  path.join(__dirname, '..', 'dist', 'assets', 'Fonts'),
+  path.join(distDir, 'assets', 'Fonts'),
 ];
 
 let srcDir = null;
@@ -47,7 +43,7 @@ for (const p of possibleSrcDirs) {
   }
 }
 
-const destDir = path.join(__dirname, '..', 'dist', '_expo', 'static', 'fonts');
+const destDir = path.join(distDir, '_expo', 'static', 'fonts');
 
 try {
   // Create destination directory

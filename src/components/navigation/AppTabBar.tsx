@@ -1,3 +1,7 @@
+import { BrandMark } from '@/components/ui/BrandMark';
+import { AssistantIcon } from '@/components/ai/AssistantIcon';
+import { useAuth } from '@/contexts/AuthContext';
+import { requestSignIn } from '@/services/webAccess';
 /**
  * ملاحة Kodax: خمس وجهات مسماة.
  * - الهاتف/اللوحي: شريط سفلي بأيقونة + تسمية (يختفي مع لوحة المفاتيح على Android/iOS)
@@ -17,7 +21,7 @@ export const TAB_ITEMS: Record<string, { label: string; icon: IconName; active: 
   index: { label: 'الرئيسية', icon: 'home-outline', active: 'home' },
   learn: { label: 'تعلّم', icon: 'school-outline', active: 'school' },
   code: { label: 'المجتمع', icon: 'code-slash-outline', active: 'code-slash' },
-  ai: { label: 'المساعد', icon: 'sparkles-outline', active: 'sparkles' },
+  ai: { label: 'المساعد', icon: 'bulb-outline', active: 'bulb' },
   profile: { label: 'حسابي', icon: 'person-circle-outline', active: 'person-circle' },
 };
 const ORDER = ['index', 'learn', 'code', 'ai', 'profile'];
@@ -28,6 +32,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { hasSidebar } = useBreakpoint();
   const { profile } = useApp();
+  const { userId } = useAuth();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   useEffect(() => {
@@ -43,6 +48,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
   const routes = ORDER.map((name) => state.routes.find((r) => r.name === name)).filter(Boolean) as typeof state.routes;
   const activeName = state.routes[state.index]?.name;
   const go = (name: string, key: string) => {
+    if (Platform.OS === 'web' && !userId && (name === 'ai' || name === 'profile')) { requestSignIn(`/${name}`); return; }
     const e = navigation.emit({ type: 'tabPress', target: key, canPreventDefault: true });
     if (activeName !== name && !e.defaultPrevented) navigation.navigate(name as never);
   };
@@ -51,11 +57,19 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
     return (
       <View
         role="navigation"
-        style={{ width: t.layout.sidebarWidth, backgroundColor: c.bg, borderLeftWidth: 1, borderLeftColor: c.border, paddingVertical: 20, paddingHorizontal: 14, justifyContent: 'space-between' }}
+        style={{
+          width: t.layout.sidebarWidth,
+          backgroundColor: c.bg,
+          borderLeftWidth: 1,
+          borderLeftColor: c.border,
+          paddingVertical: 20,
+          paddingHorizontal: 14,
+          justifyContent: 'space-between',
+        }}
       >
         <Col gap={4}>
           <Row style={{ paddingHorizontal: 8, marginBottom: 20 }}>
-            <Image source={require('../../../assets/kodax-wordmark.png')} style={{ width: 118, height: 27 }} resizeMode="contain" accessibilityLabel="Kodax" />
+            <BrandMark width={118} />
           </Row>
           {routes.map((r) => {
             const item = TAB_ITEMS[r.name];
@@ -80,7 +94,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
                   s.focused ? ({ outlineWidth: 2, outlineStyle: 'solid', outlineColor: c.focus } as any) : null,
                 ]}
               >
-                <Ionicons name={on ? item.active : item.icon} size={20} color={on ? c.brandText : c.textSecondary} />
+                {r.name==='ai'?<AssistantIcon size={22} color={on?c.brandText:c.textSecondary}/>:<Ionicons name={on ? item.active : item.icon} size={20} color={on ? c.brandText : c.textSecondary} />}
                 <Text variant="body" weight={on ? 'semibold' : 'medium'} style={{ color: on ? c.text : c.textSecondary }}>
                   {item.label}
                 </Text>
@@ -89,7 +103,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
           })}
         </Col>
         <Col gap={12}>
-          <XpMeter variant="full" />
+          {(Platform.OS !== 'web' || userId) && <XpMeter variant="full" />}
           <Pressable onPress={() => go('profile', routes.find((r) => r.name === 'profile')?.key ?? '')} accessibilityRole="link" accessibilityLabel="حسابي">
             <Row gap={10} style={{ paddingHorizontal: 4 }}>
               <Avatar uri={(profile as any)?.avatar_url} name={(profile as any)?.full_name || (profile as any)?.username} size={32} />
@@ -106,7 +120,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
   if (keyboardOpen) return null;
   return (
     <View accessibilityRole="tablist" style={{ backgroundColor: c.bg, borderTopWidth: 1, borderTopColor: c.border, paddingBottom: Math.max(insets.bottom, 6) }}>
-      <View style={{ flexDirection: 'row-reverse', height: 58, width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+      <View style={{ flexDirection: 'row-reverse', minHeight: 58, paddingVertical: 6, width: '100%', maxWidth: 640, alignSelf: 'center' }}>
         {routes.map((r) => {
           const item = TAB_ITEMS[r.name];
           const on = r.name === activeName;
@@ -117,11 +131,19 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
               accessibilityRole="tab"
               accessibilityLabel={item.label}
               accessibilityState={{ selected: on }}
-              style={(s: any) => [{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, opacity: s.pressed ? 0.7 : 1 }, Platform.OS === 'web' && s.focused ? ({ outlineWidth: 2, outlineStyle: 'solid', outlineColor: c.focus } as any) : null]}
+              style={(s: any) => [
+                { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, opacity: s.pressed ? 0.7 : 1 },
+                Platform.OS === 'web' && s.focused ? ({ outlineWidth: 2, outlineStyle: 'solid', outlineColor: c.focus } as any) : null,
+              ]}
             >
-              <View style={{ position: 'absolute', top: 0, width: 28, height: 2, borderRadius: 1, backgroundColor: on ? c.brand : 'transparent' }} />
-              <Ionicons name={on ? item.active : item.icon} size={22} color={on ? c.brandText : c.textMuted} />
-              <Text variant="caption" weight={on ? 'semibold' : 'medium'} align="center" numberOfLines={1} style={{ color: on ? c.text : c.textMuted, fontSize: 11, lineHeight: 14 }}>
+              {r.name==='ai'?<AssistantIcon size={24} color={on?c.brandText:c.textMuted}/>:<Ionicons name={on ? item.active : item.icon} size={22} color={on ? c.brandText : c.textMuted} />}
+              <Text
+                variant="caption"
+                weight={on ? 'semibold' : 'medium'}
+                align="center"
+                numberOfLines={1}
+                style={{ color: on ? c.text : c.textMuted, fontSize: 11, lineHeight: 14 }}
+              >
                 {item.label}
               </Text>
             </Pressable>

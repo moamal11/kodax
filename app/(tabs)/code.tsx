@@ -1,306 +1,58 @@
-/**
- * المجتمع: أكواد الأعضاء (معاينة كود حقيقي)، بحث وتصفية وترتيب، و«اكتب كوداً» مباشرة.
- * الأعداد (إعجاب/تعليق/مشاهدة) من النظام المركزي في AppContext.
- */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Platform, Pressable, RefreshControl, View, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { requestSignIn } from '@/services/webAccess';
+import { profilePath } from '@/services/profileLinks';
+import React,{useCallback,useEffect,useRef,useState} from 'react';
+import {Platform,RefreshControl,View,ActivityIndicator} from 'react-native';
+import {useRouter,useFocusEffect} from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
-import { Text, Row, Col, Button, Field, Chip, ChipBar, Sheet, EmptyState, ErrorState, ListSkeleton, useTheme, useBreakpoint } from '@/design';
-import { useAuth } from '@/contexts/AuthContext';
-import { useApp } from '@/contexts/AppContext';
-import { getPublicSnippets, getSnippetCounts, type FeedSnippet } from '@/services/codeFeedService';
-import { SnippetCard } from '@/features/community/SnippetCard';
-import { MessagesButton } from '@/components/ui/MessagesButton';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {Text,Row,Col,Button,Field,Chip,ChipBar,Segmented,Sheet,ListRow,EmptyState,ErrorState,ListSkeleton,useTheme,useBreakpoint} from '@/design';
+import {useAuth} from '@/contexts/AuthContext';
+import {useApp} from '@/contexts/AppContext';
+import {getSnippetCounts} from '@/services/codeFeedService';
+import {getCommunityFeed,getCommunityPost,watchCommunity,type CommunityItem,type FeedFilter,type FeedSort,type FeedCursor} from '@/services/communityService';
+import {LanguageIcon} from '@/components/editor/LanguageIcon';
+import {LanguagePicker} from '@/components/editor/LanguagePicker';
+import {SnippetCard,languageLabel} from '@/features/community/SnippetCard';
+import {DiscussionCard} from '@/features/community/DiscussionCard';
+import {CommunityList,type CommunityListHandle} from '@/features/community/CommunityList';
+import {MessagesButton} from '@/components/ui/MessagesButton';
+const LANGUAGES=['all','python','web','javascript','typescript','cpp','java','csharp','sql','react','go','rust','swift','kotlin','dart'];
+const TYPES:{value:FeedFilter;label:string}[]=[{value:'all',label:'الكل'},{value:'code',label:'الأكواد'},{value:'discussion',label:'النقاشات'}];
+const SORTS:{value:FeedSort;label:string}[]=[{value:'recent',label:'الأحدث'},{value:'popular',label:'الأكثر تفاعلاً'},{value:'most_liked',label:'الأكثر إعجاباً'},{value:'most_viewed',label:'الأكثر مشاهدة'}];
+type Cache={uid:string;items:CommunityItem[];filter:FeedFilter;query:string;lang:string;sort:FeedSort;cursor:FeedCursor|null;snapshot:string|null;offset:number};
+let cache:Cache|null=null;
+export default function CommunityScreen(){
+ const t=useTheme(),router=useRouter();const {userId,authVersion,isInitializing}=useAuth();const {isDesktop,gutter}=useBreakpoint();const app=useApp();
+ const activeUser=useRef(userId);activeUser.current=userId;
+ const initial=useRef(cache?.uid===userId?cache:null).current;
+ const [dataOwner,setDataOwner]=useState(initial?.uid||userId);
+ const [items,setItems]=useState<CommunityItem[]>(initial?.items||[]),[filter,setFilter]=useState<FeedFilter>(initial?.filter||'all'),[query,setQuery]=useState(initial?.query||''),[lang,setLang]=useState(initial?.lang||'all'),[sort,setSort]=useState<FeedSort>(initial?.sort||'recent');
+ const [loading,setLoading]=useState(!initial),[error,setError]=useState(''),[moreError,setMoreError]=useState(''),[loadingMore,setLoadingMore]=useState(false),[refreshing,setRefreshing]=useState(false),[hasMore,setHasMore]=useState(!!initial?.cursor),[create,setCreate]=useState(false),[picker,setPicker]=useState(false);
+ const list=useRef<CommunityListHandle>(null),cursor=useRef(initial?.cursor||null),snapshot=useRef(initial?.snapshot||null),generation=useRef(0),busy=useRef(false),offset=useRef(initial?.offset||0),skip=useRef(!!initial),itemsRef=useRef(items);itemsRef.current=items;
+ const load=useCallback(async(append=false)=>{
+  if(isInitializing||(!userId&&Platform.OS!=='web'))return;if(append&&(busy.current||!cursor.current))return;const token=append?generation.current:++generation.current;busy.current=true;
+  if(append){setLoadingMore(true);setMoreError('');}else{setLoading(true);setError('');cursor.current=null;snapshot.current=null;offset.current=0;}
+  try{const r=await getCommunityFeed({filter,search:query,language:filter==='code'?lang:'all',sort:filter==='code'?sort:'recent',cursor:append?cursor.current:null,snapshot:append?snapshot.current:null});if(token!==generation.current||userId!==activeUser.current)return;
+   setDataOwner(userId);cursor.current=r.next;snapshot.current=r.snapshot;setHasMore(!!r.next);setItems(prev=>append?[...prev,...r.items.filter(i=>!prev.some(p=>p.type===i.type&&p.id===i.id))]:r.items);if(!append)list.current?.scrollToOffset({offset:0,animated:false});
+   const ids=r.items.filter(i=>i.type==='code').map(i=>i.id);if(ids.length){getSnippetCounts(ids).then(c=>{app.updateLikeCounts(c.likeCounts);app.updateViewCounts(c.viewCounts);app.updateCommentCounts(c.commentCounts);}).catch(()=>undefined);if(userId)app.syncLikes(ids);}
+  }catch(e){if(token!==generation.current||userId!==activeUser.current)return;const m=e instanceof Error?e.message:'تعذّر تحميل المجتمع.';append?setMoreError(m):setError(m);}
+  finally{if(token===generation.current){busy.current=false;setLoading(false);setLoadingMore(false);setRefreshing(false);}}
+ },[filter,query,lang,sort,userId,isInitializing]);
+ useEffect(()=>{if(skip.current){skip.current=false;return;}const timer=setTimeout(()=>load(),query?350:0);return()=>clearTimeout(timer);},[load,authVersion]);
+ useEffect(()=>{cache=dataOwner===userId?{uid:userId||'',items,filter,query,lang,sort,cursor:cursor.current,snapshot:snapshot.current,offset:offset.current}:null;},[items,filter,query,lang,sort,userId,dataOwner]);
+ const refreshPost=useCallback(async(id:string,deleted=false)=>{if(deleted){setItems(prev=>prev.filter(i=>i.type!=='discussion'||i.id!==id));return;}try{const requestedUser=activeUser.current;const p=await getCommunityPost(id);if(requestedUser!==activeUser.current)return;setItems(prev=>{const updated=prev.map(i=>i.type==='discussion'&&i.id===id&&p?{type:'discussion' as const,id,data:p}:i).filter(i=>i.type!=='discussion'||i.id!==id||!!p);const term=query.trim().toLowerCase();const matches=p&&filter!=='code'&&(!term||[p.title,p.body,p.code,p.topic,p.language].some(v=>v?.toLowerCase().includes(term)));return matches&&!prev.some(i=>i.type==='discussion'&&i.id===id)?[{type:'discussion' as const,id,data:p!},...updated]:updated;});}catch{}},[filter,query]);
+ useEffect(()=>watchCommunity(refreshPost),[refreshPost]);useFocusEffect(useCallback(()=>{itemsRef.current.filter(i=>i.type==='discussion').forEach(i=>refreshPost(i.id));},[refreshPost]));
+ const like=async(id:string)=>{if(!userId){requestSignIn();return;}if(Platform.OS!=='web')Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(()=>undefined);await app.toggleLike(id);};const cols=isDesktop?2:1;
+ const header=<Col gap={12} style={{paddingBottom:14}}><Row gap={8}><Text variant="title" accessibilityRole="header" style={{flex:1}}>المجتمع</Text>{!!userId&&<MessagesButton userId={userId}/>}<Button label="إنشاء" icon="add" onPress={()=>userId?setCreate(true):requestSignIn()}/></Row><Segmented options={TYPES} value={filter} onChange={setFilter}/>
+  <Row gap={8} align="center"><View style={{flex:1,minWidth:0}}><Field hideLabel label="ابحث في المجتمع" placeholder={filter==='code'?'ابحث في الأكواد…':filter==='discussion'?'ابحث في النقاشات…':'ابحث في الأكواد والنقاشات…'} icon="search" value={query} maxLength={120} onChangeText={setQuery} returnKeyType="search"/></View><Button label="الأشخاص" accessibilityLabel="بحث عن أشخاص" icon="people-outline" size="sm" variant="secondary" onPress={()=>router.push('/people' as any)}/></Row>
+  {filter==='code'&&<><ChipBar>{LANGUAGES.map(id=><Chip key={id} leading={id!=='all'?<LanguageIcon language={id} size={18}/>:undefined} label={id==='all'?'كل اللغات':languageLabel(id)} selected={lang===id} onPress={()=>setLang(id)}/>)}</ChipBar><ChipBar>{SORTS.map(s=><Chip key={s.value} label={s.label} selected={sort===s.value} onPress={()=>setSort(s.value)}/>)}</ChipBar></>}
+ </Col>;
+ return <SafeAreaView edges={['top']} style={{flex:1,backgroundColor:t.colors.bg}}><CommunityList ref={list} columns={cols} items={loading||error||dataOwner!==userId?[]:items} gutter={gutter} maxWidth={t.layout.maxContent+gutter*2} header={header} initialOffset={initial?.offset}
+ onOffset={y=>{offset.current=y;if(cache&&cache.uid===userId)cache.offset=y;}} onMore={()=>{if(!loading&&!moreError)load(true);}}
+ renderItem={item=><View style={{flex:1,minWidth:0}}>{item.type==='code'?<SnippetCard snippet={item.data} liked={app.likedSnippets.has(item.id)} likes={app.getLikeCount(item.id,item.data.likes_count)} comments={app.getCommentCount(item.id,item.data.comments_count)} views={app.getViewCount(item.id,item.data.views_count)} onLike={userId?()=>like(item.id):undefined} onPress={()=>router.push(`/code/${item.id}` as any)} onAuthorPress={()=>router.push(item.data.user_id===userId?'/profile':profilePath(item.data.user_id!,item.data.profiles?.username) as any)}/>:<DiscussionCard post={item.data} onPress={()=>router.push(`/discussion/${item.id}` as any)} onAuthorPress={()=>item.data.user_id&&router.push(item.data.user_id===userId?'/profile':profilePath(item.data.user_id!,item.data.profiles?.username) as any)} onImageRetry={()=>refreshPost(item.id)}/>}</View>}
+ empty={loading?<ListSkeleton rows={3}/>:error?<ErrorState body={error} onRetry={()=>load()}/>:<EmptyState icon="chatbubbles-outline" title={query?'ماكو نتائج بهذا البحث':'ماكو منشورات بعد'} body={query?'جرّب كلمة ثانية أو غيّر الفلتر.':'شارك كودًا أو افتح نقاشًا.'} action={query?'امسح البحث':'إنشاء'} onAction={()=>query?setQuery(''):setCreate(true)}/>}
+ footer={loadingMore?<ActivityIndicator color={t.colors.brand} style={{marginVertical:16}}/>:moreError?<ErrorState body={moreError} onRetry={()=>load(true)}/>:hasMore?<Button label="عرض المزيد" variant="secondary" onPress={()=>load(true)}/>:null} refreshControl={<RefreshControl refreshing={refreshing} tintColor={t.colors.brand} onRefresh={()=>{setRefreshing(true);load();}}/>}/>
 
-const FILTERS = [
-  { id: 'all', label: 'الكل' },
-  { id: 'python', label: 'Python' },
-  { id: 'web', label: 'ويب' },
-  { id: 'javascript', label: 'JavaScript' },
-  { id: 'typescript', label: 'TypeScript' },
-  { id: 'cpp', label: 'C++' },
-  { id: 'java', label: 'Java' },
-  { id: 'csharp', label: 'C#' },
-  { id: 'sql', label: 'SQL' },
-  { id: 'react', label: 'React' },
-  { id: 'go', label: 'Go' },
-  { id: 'rust', label: 'Rust' },
-  { id: 'swift', label: 'Swift' },
-  { id: 'kotlin', label: 'Kotlin' },
-  { id: 'dart', label: 'Dart' },
-];
-type Sort = 'recent' | 'popular' | 'most_liked' | 'most_viewed' | 'most_commented';
-const SORTS: { id: Sort; label: string }[] = [
-  { id: 'recent', label: 'الأحدث' },
-  { id: 'popular', label: 'الأكثر تفاعلاً' },
-  { id: 'most_liked', label: 'الأكثر إعجاباً' },
-  { id: 'most_viewed', label: 'الأكثر مشاهدة' },
-];
-
-/** لغات «اكتب كوداً»: مجموعات صغيرة بدل بطاقات ضخمة */
-const NEW_CODE_GROUPS: { title: string; items: { id: string; label: string; hint: string }[] }[] = [
-  {
-    title: 'الأكثر استخداماً',
-    items: [
-      { id: 'python', label: 'Python', hint: 'برنامج بايثون يُشغَّل مباشرة' },
-      { id: 'web', label: 'مشروع ويب', hint: 'HTML و CSS و JavaScript مع معاينة' },
-      { id: 'javascript', label: 'JavaScript', hint: 'سكربت يُشغَّل ويطبع الناتج' },
-    ],
-  },
-  {
-    title: 'لغات أخرى',
-    items: [
-      { id: 'typescript', label: 'TypeScript', hint: '' },
-      { id: 'cpp', label: 'C++', hint: '' },
-      { id: 'java', label: 'Java', hint: '' },
-      { id: 'csharp', label: 'C#', hint: '' },
-      { id: 'go', label: 'Go', hint: '' },
-      { id: 'rust', label: 'Rust', hint: '' },
-      { id: 'sql', label: 'SQL', hint: '' },
-      { id: 'kotlin', label: 'Kotlin', hint: '' },
-      { id: 'swift', label: 'Swift', hint: '' },
-      { id: 'dart', label: 'Dart', hint: '' },
-    ],
-  },
-];
-
-const PAGE = 20;
-
-export default function CommunityScreen() {
-  const t = useTheme();
-  const router = useRouter();
-  const { user, authVersion } = useAuth();
-  const { isDesktop, gutter } = useBreakpoint();
-  const { likedSnippets, toggleLike, syncLikes, updateLikeCounts, getLikeCount, updateViewCounts, getViewCount, updateCommentCounts, getCommentCount, snippetLikeCounts } = useApp();
-
-  const [items, setItems] = useState<FeedSnippet[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(0);
-  const [query, setQuery] = useState('');
-  const [lang, setLang] = useState('all');
-  const [sort, setSort] = useState<Sort>('recent');
-  const [picker, setPicker] = useState(false);
-  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const load = useCallback(
-    async (p = 0, append = false) => {
-      if (p === 0 && !append) setLoading(true);
-      const { data, error: err } = await getPublicSnippets({ language: lang, sortBy: sort, search: query.trim() || undefined, page: p, limit: PAGE });
-      if (err) {
-        // C02: الخطأ لا يُعرض كقائمة فارغة
-        if (!append) setError(true);
-      } else {
-        setError(false);
-        setItems((prev) => (append ? [...prev, ...data.filter((d) => !prev.some((x) => x.id === d.id))] : data));
-        setHasMore(data.length === PAGE);
-        if (data.length) {
-          const ids = data.map((s) => s.id);
-          getSnippetCounts(ids)
-            .then(({ likeCounts, viewCounts, commentCounts }) => {
-              updateLikeCounts(likeCounts);
-              updateViewCounts(viewCounts);
-              updateCommentCounts(commentCounts);
-            })
-            .catch(() => undefined);
-          if (user?.id) syncLikes(ids);
-        }
-      }
-      setLoading(false);
-      setRefreshing(false);
-      setLoadingMore(false);
-    },
-    [lang, sort, query, user?.id, syncLikes, updateLikeCounts, updateViewCounts, updateCommentCounts]
-  );
-
-  useEffect(() => {
-    setPage(0);
-    load(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang, sort, authVersion]);
-  useEffect(() => {
-    if (debounce.current) clearTimeout(debounce.current);
-    debounce.current = setTimeout(() => {
-      setPage(0);
-      load(0);
-    }, 450);
-    return () => {
-      if (debounce.current) clearTimeout(debounce.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
-
-  const more = () => {
-    if (loadingMore || !hasMore || loading) return;
-    setLoadingMore(true);
-    setPage(page + 1);
-    load(page + 1, true);
-  };
-
-  const like = async (id: string) => {
-    if (!user?.id) return;
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-    await toggleLike(id);
-  };
-
-  const filtersActive = lang !== 'all' || !!query.trim();
-  const cols = isDesktop ? 2 : 1;
-
-  const header = (
-    <Col gap={14} style={{ paddingBottom: 14 }}>
-      <Row gap={8}>
-        <View style={{ flex: 1 }}>
-          <Text variant="title" accessibilityRole="header">
-            المجتمع
-          </Text>
-          <Text variant="bodySm" tone="secondary">
-            أكواد يكتبها المتعلمون — اقرأ، جرّب، وعلّق.
-          </Text>
-        </View>
-        {user?.id && <MessagesButton userId={user.id} />}
-        <Button label="اكتب كوداً" icon="add" onPress={() => setPicker(true)} />
-      </Row>
-      <Field label="ابحث في الأكواد" hideLabel placeholder="ابحث بعنوان أو وصف…" icon="search" value={query} onChangeText={setQuery} returnKeyType="search" />
-      <ChipBar>
-        {FILTERS.map((f) => (
-          <Chip key={f.id} label={f.label} selected={lang === f.id} onPress={() => setLang(f.id)} />
-        ))}
-      </ChipBar>
-      <Row gap={6} wrap style={{ justifyContent: 'flex-start' }} accessibilityRole="radiogroup" accessibilityLabel="الترتيب">
-        {SORTS.map((s) => (
-          <Pressable
-            key={s.id}
-            onPress={() => setSort(s.id)}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: sort === s.id }}
-            hitSlop={6}
-            style={{ paddingVertical: 4, paddingHorizontal: 6, borderBottomWidth: 2, borderBottomColor: sort === s.id ? t.colors.brand : 'transparent' }}
-          >
-            <Text variant="label" tone={sort === s.id ? 'default' : 'muted'}>
-              {s.label}
-            </Text>
-          </Pressable>
-        ))}
-      </Row>
-    </Col>
-  );
-
-  return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: t.colors.bg }}>
-      <FlatList
-        key={cols}
-        data={loading || error ? [] : items}
-        numColumns={cols}
-        keyExtractor={(s) => s.id}
-        columnWrapperStyle={cols > 1 ? { gap: 14, flexDirection: 'row-reverse' } : undefined}
-        contentContainerStyle={{ width: '100%', maxWidth: t.layout.maxContent + gutter * 2, alignSelf: 'center', paddingHorizontal: gutter, paddingTop: 10, paddingBottom: 32, gap: 14 }}
-        ListHeaderComponent={header}
-        renderItem={({ item }) => (
-          <View style={{ flex: 1 }}>
-            <SnippetCard
-              snippet={item}
-              liked={likedSnippets.has(item.id)}
-              likes={getLikeCount(item.id, item.likes_count)}
-              comments={getCommentCount(item.id, item.comments_count)}
-              views={getViewCount(item.id, item.views_count)}
-              onLike={user?.id ? () => like(item.id) : undefined}
-              onPress={() => router.push(`/code/${item.id}` as any)}
-              onAuthorPress={() => router.push(item.user_id === user?.id ? '/profile' : (`/user/${item.user_id}` as any))}
-            />
-          </View>
-        )}
-        extraData={[likedSnippets, snippetLikeCounts]}
-        ListEmptyComponent={
-          loading ? (
-            <ListSkeleton rows={3} />
-          ) : error ? (
-            <ErrorState onRetry={() => load(0)} />
-          ) : filtersActive ? (
-            <EmptyState
-              icon="search-outline"
-              title="ماكو أكواد بهذا البحث"
-              body="جرّب كلمة ثانية أو اختر «الكل»."
-              action="امسح البحث"
-              onAction={() => {
-                setQuery('');
-                setLang('all');
-              }}
-            />
-          ) : (
-            <EmptyState icon="code-slash-outline" title="المجتمع بانتظار أول كود" body="شارك أول برنامج كتبته — حتى لو صغير." action="اكتب كوداً" onAction={() => setPicker(true)} />
-          )
-        }
-        ListFooterComponent={loadingMore ? <ActivityIndicator color={t.colors.brand} style={{ marginVertical: 16 }} /> : hasMore && items.length >= PAGE ? <Button label="عرض المزيد" variant="secondary" onPress={more} style={{ marginTop: 4 }} /> : null}
-        onEndReached={more}
-        onEndReachedThreshold={0.4}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              setPage(0);
-              load(0);
-            }}
-            tintColor={t.colors.brand}
-          />
-        }
-      />
-
-      <Sheet visible={picker} onClose={() => setPicker(false)} title="بأي لغة تكتب؟" maxWidth={460}>
-        <Col gap={16}>
-          {NEW_CODE_GROUPS.map((g) => (
-            <View key={g.title} style={{ gap: 6 }}>
-              <Text variant="caption" tone="muted" weight="semibold">
-                {g.title}
-              </Text>
-              <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}>
-                {g.items.map((it) => (
-                  <Pressable
-                    key={it.id}
-                    onPress={() => {
-                      setPicker(false);
-                      router.push(`/code/add?lang=${it.id}` as any);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={it.hint ? `${it.label}، ${it.hint}` : it.label}
-                    style={(s: any) => ({
-                      flexBasis: it.hint ? '100%' : 96,
-                      flexGrow: it.hint ? 0 : 1,
-                      flexDirection: 'row-reverse',
-                      alignItems: 'center',
-                      gap: 10,
-                      minHeight: 48,
-                      paddingHorizontal: 12,
-                      borderRadius: t.radius.md,
-                      borderWidth: 1,
-                      borderColor: t.colors.border,
-                      backgroundColor: s.hovered || s.pressed ? t.colors.surfacePressed : t.colors.surface,
-                    })}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text variant="label" weight="semibold" ltr={!it.hint && !/[؀-ۿ]/.test(it.label)} align={it.hint ? 'right' : 'center'}>
-                        {it.label}
-                      </Text>
-                      {!!it.hint && (
-                        <Text variant="caption" tone="muted">
-                          {it.hint}
-                        </Text>
-                      )}
-                    </View>
-                    {!!it.hint && <Ionicons name="chevron-back" size={16} color={t.colors.textMuted} />}
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          ))}
-        </Col>
-      </Sheet>
-    </SafeAreaView>
-  );
+ <Sheet visible={create} title="إنشاء في المجتمع" onClose={()=>setCreate(false)}><Col gap={12}><ListRow title="مشاركة كود" subtitle="المحرر ومعاينة التشغيل" icon="code-slash-outline" onPress={()=>{setCreate(false);setPicker(true);}}/><ListRow title="كتابة منشور" subtitle="سؤال أو نقاش أو تجربة" icon="chatbox-outline" onPress={()=>{setCreate(false);router.push('/discussion/new');}}/></Col></Sheet>
+ <LanguagePicker visible={picker} onClose={()=>setPicker(false)} onSelect={id=>{setPicker(false);router.push(`/code/add?lang=${id}` as any);}}/></SafeAreaView>;
 }

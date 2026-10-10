@@ -1,3 +1,4 @@
+import { BrandMark } from '@/components/ui/BrandMark';
 /**
  * حول Kodax: ماذا يقدّم التطبيق بأرقام المحتوى الفعلية، والإصدار من البناء نفسه (لا رقم ثابت).
  * الشهادات: «شهادات إتمام قابلة للتحقق» بما يطابق شروط الاستخدام (F14).
@@ -19,7 +20,7 @@ export default function AboutScreen() {
   const features: { icon: IconName; title: string; body: string }[] = [
     { icon: 'school-outline', title: `${ALL_COURSES.length} دورة و${ALL_LESSONS.length} درساً`, body: 'شرح عربي مبسّط، أمثلة كود، واختبار قصير في نهاية كل درس.' },
     { icon: 'code-slash-outline', title: `${ALL_CHALLENGES.length} تحدياً برمجياً`, body: 'تكتب الحل وتشغّله، ويتحقق السيرفر من الاختبارات قبل منح XP.' },
-    { icon: 'sparkles-outline', title: 'مساعد Kodax', body: 'يشرح الدروس ويساعدك تتبع أخطاء كودك، بحصة يومية مجانية.' },
+    { icon: 'terminal-outline', title: 'مساعد Kodax', body: 'يشرح الدروس ويساعدك تتبع أخطاء كودك، بحصة يومية مجانية.' },
     { icon: 'people-outline', title: 'مجتمع المتعلمين', body: 'شارك أكوادك وعلّق وتابع غيرك وراسلهم.' },
     { icon: 'ribbon-outline', title: 'شهادات إتمام قابلة للتحقق', body: 'تُمنح عند إتمام متطلبات المسار، ولها رقم يمكن التحقق منه. ليست شهادة أكاديمية معتمدة.' },
   ];
@@ -28,7 +29,7 @@ export default function AboutScreen() {
     <Screen width="reading" header={<AppBar title="حول Kodax" fallback="/profile" />}>
       <Col gap={20}>
         <Col gap={10} align="center" style={{ paddingVertical: 12 }}>
-          <Image source={require('../assets/kodax-wordmark.png')} style={{ width: 170, height: 39 }} resizeMode="contain" accessibilityLabel="Kodax" />
+          <BrandMark width={170} />
           <Text variant="body" tone="secondary" align="center" style={{ maxWidth: 420 }}>
             تطبيق عراقي لتعلّم البرمجة بالعربية: دروس، تحديات حقيقية، ومجتمع يكتب الكود معك.
           </Text>

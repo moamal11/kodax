@@ -1,0 +1,1 @@
+SELECT jsonb_build_object('claim',pg_get_functiondef('public.push_claim_batch(integer)'::regprocedure),'duplicateUsernames',(SELECT count(*) FROM (SELECT lower(username) FROM profiles WHERE username IS NOT NULL GROUP BY lower(username) HAVING count(*)>1) d),'applied',EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261010020000')) audit;

@@ -1,0 +1,15 @@
+{
+  "file": "Kodax-Motion-V2-15s.mp4",
+  "duration_s": 15.0,
+  "size_mb": 5.69,
+  "width": 1920,
+  "height": 1080,
+  "fps": "60/1",
+  "video_codec": "h264",
+  "audio_codec": "aac",
+  "audio_channels": 2,
+  "audio_peak_dbfs": -2.21,
+  "tail_rms_dbfs": -200.0,
+  "direct_listening": false,
+  "music_in_composition": false
+}

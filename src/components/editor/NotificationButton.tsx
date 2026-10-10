@@ -2,11 +2,11 @@
  * زر الإشعارات داخل التطبيق: أيقونة بعدد غير المقروء + قائمة في ورقة (هاتف) أو نافذة صغيرة (Desktop).
  * البيانات من BadgeContext (app_notifications).
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBadges } from '@/contexts/BadgeContext';
-import { IconButton, Sheet, Text, Row, EmptyState, Button, useTheme, type IconName } from '@/design';
+import { IconButton, Sheet, Text, Row, Col, EmptyState, useTheme, type IconName } from '@/design';
 
 export interface Notification {
   id: string;
@@ -14,6 +14,7 @@ export interface Notification {
     | 'achievement'
     | 'like'
     | 'comment'
+    | 'post'
     | 'follow'
     | 'system'
     | 'badge'
@@ -42,6 +43,7 @@ interface NotificationButtonProps {
 const ICONS: Partial<Record<Notification['type'], IconName>> = {
   like: 'heart-outline',
   comment: 'chatbox-outline',
+  post: 'newspaper-outline',
   follow: 'person-add-outline',
   badge: 'ribbon-outline',
   achievement: 'trophy-outline',
@@ -69,6 +71,7 @@ export function timeAgo(d: Date): string {
 export function NotificationButton({ onNotificationPress }: NotificationButtonProps) {
   const t = useTheme();
   const [visible, setVisible] = useState(false);
+  const [readError, setReadError] = useState('');
   let ctx: ReturnType<typeof useBadges> | null = null;
   try {
     ctx = useBadges();
@@ -90,55 +93,125 @@ export function NotificationButton({ onNotificationPress }: NotificationButtonPr
     [ctx?.notifications]
   );
 
+  const unreadKey = items.filter(n => !n.read).map(n => n.id).join('|');
+  useEffect(() => {
+    if (!visible || !unread || !ctx) return;
+    let active = true;
+    setReadError('');
+    ctx.markAllAsRead().catch(() => { if (active) setReadError('تعذّر حفظ حالة القراءة. تُعاد المحاولة عند فتح الإشعارات مرة أخرى.'); });
+    return () => { active = false; };
+  }, [visible, unreadKey, ctx?.markAllAsRead]);
+  const shown = [...items].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  const dayKey = (date: Date) => date.toLocaleDateString('en-CA', { timeZone: 'Asia/Baghdad' });
+  const today = dayKey(new Date());
+  const yesterday = dayKey(new Date(Date.now() - 86400000));
+  const groups = [
+    { title: 'اليوم', items: shown.filter((n) => dayKey(n.timestamp) === today) },
+    { title: 'أمس', items: shown.filter((n) => dayKey(n.timestamp) === yesterday) },
+    { title: 'سابقًا', items: shown.filter((n) => ![today, yesterday].includes(dayKey(n.timestamp))) },
+  ].filter((g) => g.items.length);
+  const colorFor = (type: Notification['type']) => {
+    if (['achievement', 'badge', 'level_up', 'streak', 'xp'].includes(type)) return { text: t.colors.xp, soft: t.colors.xpSoft };
+    if (type === 'follow') return { text: t.colors.infoText, soft: t.colors.infoSoft };
+    if (type === 'like') return { text: t.colors.dangerText, soft: t.colors.dangerSoft };
+    if (['lesson', 'course', 'challenge'].includes(type)) return { text: t.colors.successText, soft: t.colors.successSoft };
+    return { text: t.colors.brandText, soft: t.colors.brandSoft };
+  };
   return (
     <>
-      <IconButton icon="notifications-outline" label={unread ? `الإشعارات، ${unread} غير مقروءة` : 'الإشعارات'} onPress={() => setVisible(true)} badge={unread} />
+      <IconButton
+        icon="notifications-outline"
+        label={unread ? `الإشعارات، ${unread} غير مقروءة` : 'الإشعارات'}
+        onPress={() => {
+          setReadError('');
+          setVisible(true);
+        }}
+        badge={unread}
+      />
       <Sheet
         visible={visible}
         onClose={() => setVisible(false)}
         title="الإشعارات"
-        maxWidth={440}
-        footer={unread > 0 ? <Button label="تعليم الكل كمقروء" variant="secondary" icon="checkmark-done-outline" onPress={() => ctx?.markAllAsRead()} full /> : undefined}
+        maxWidth={520}
       >
-        {items.length === 0 ? (
-          <EmptyState icon="notifications-off-outline" title="ماكو إشعارات بعد" body="هنا تظهر الإعجابات والتعليقات والمتابعات وإنجازاتك." compact />
-        ) : (
-          <View style={{ gap: 2 }}>
-            {items.map((n) => (
-              <Pressable
-                key={n.id}
-                onPress={() => {
-                  if (!n.read) ctx?.markAsRead(n.id);
-                  setVisible(false);
-                  onNotificationPress?.(n);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${n.read ? '' : 'غير مقروء: '}${n.title}. ${n.message}`}
-                style={(s: any) => ({ borderRadius: t.radius.md, backgroundColor: s.pressed || s.hovered ? t.colors.surfacePressed : 'transparent' })}
-              >
-                <Row gap={12} align="flex-start" style={{ paddingVertical: 10, paddingHorizontal: 8 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: n.read ? t.colors.surfaceSunken : t.colors.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name={ICONS[n.type] ?? 'notifications-outline'} size={18} color={n.read ? t.colors.textMuted : t.colors.brandText} />
-                  </View>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Row justify="space-between" gap={8}>
-                      <Text variant="label" weight={n.read ? 'medium' : 'semibold'} numberOfLines={1} style={{ flex: 1 }}>
-                        {n.title}
-                      </Text>
-                      <Text variant="caption" tone="muted">
-                        {timeAgo(n.timestamp)}
-                      </Text>
-                    </Row>
-                    <Text variant="bodySm" tone={n.read ? 'muted' : 'secondary'} numberOfLines={3}>
-                      {n.message}
-                    </Text>
-                  </View>
-                  {!n.read && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.colors.brand, marginTop: 6 }} accessibilityElementsHidden />}
-                </Row>
-              </Pressable>
-            ))}
-          </View>
-        )}
+        <Col gap={18}>
+          <Row gap={12} style={{ paddingBottom: 4 }}>
+            <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: t.colors.brandSoft, justifyContent: 'center', alignItems: 'center' }}>
+              <Ionicons name="notifications-outline" size={24} color={t.colors.brandText} />
+            </View>
+            <Col gap={3} flex={1}>
+              <Text variant="heading">{unread ? `${unread} إشعارات بانتظارك` : 'أنت متابع كل جديد'}</Text>
+              <Text variant="bodySm" tone="secondary">
+                نشاط مجتمعك وإنجازاتك، في مكان واحد.
+              </Text>
+            </Col>
+          </Row>
+          {!!readError && <Text variant="bodySm" tone="danger" accessibilityRole="alert">{readError}</Text>}
+          {shown.length === 0 ? (
+            <EmptyState
+              icon={items.length ? 'checkmark-done-outline' : 'notifications-off-outline'}
+              title={items.length ? 'ماكو إشعارات غير مقروءة' : 'ماكو إشعارات بعد'}
+              body={items.length ? 'اطّلعت على كل الجديد.' : 'تظهر هنا تفاعلات المجتمع وتقدمك في التعلم.'}
+              compact
+            />
+          ) : (
+            groups.map((g) => (
+              <Col key={g.title} gap={8}>
+                <Text variant="label" tone="secondary" weight="semibold">
+                  {g.title}
+                </Text>
+                <Col gap={8}>
+                  {g.items.map((n) => {
+                    const color = colorFor(n.type);
+                    return (
+                      <Pressable
+                        key={n.id}
+                        onPress={() => {
+                          setVisible(false);
+                          onNotificationPress?.(n);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${n.read ? '' : 'غير مقروء: '}${n.title}. ${n.message}`}
+                        style={({ pressed }) => ({
+                          padding: 14,
+                          minHeight: 88,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: n.read ? t.colors.border : t.colors.borderStrong,
+                          backgroundColor: pressed ? t.colors.surfacePressed : n.read ? t.colors.surface : t.colors.surfaceSunken,
+                        })}
+                      >
+                        <Row gap={12} align="flex-start">
+                          <View
+                            style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: color.soft, justifyContent: 'center', alignItems: 'center' }}
+                          >
+                            <Ionicons name={ICONS[n.type] ?? 'notifications-outline'} size={21} color={color.text} />
+                          </View>
+                          <Col flex={1} gap={5}>
+                            <Row gap={8}>
+                              <Text variant="bodySm" weight="semibold" style={{ flex: 1 }}>
+                                {n.title}
+                              </Text>
+                              {!n.read && (
+                                <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: t.colors.brand }} accessibilityElementsHidden />
+                              )}
+                            </Row>
+                            <Text variant="bodySm" tone="secondary">
+                              {n.message}
+                            </Text>
+                            <Text variant="caption" tone="secondary">
+                              {timeAgo(n.timestamp)}
+                            </Text>
+                          </Col>
+                        </Row>
+                      </Pressable>
+                    );
+                  })}
+                </Col>
+              </Col>
+            ))
+          )}
+        </Col>
       </Sheet>
     </>
   );

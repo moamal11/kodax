@@ -111,7 +111,9 @@ async function clickLabel(page, re) {
   // F23: «ويب» في المحرر المباشر
   await page.goto(`${WEB}/code/add`, { waitUntil: 'networkidle2' });
   await sleep(2500);
-  await clickLabel(page, /^ويب/);
+  await clickLabel(page, /^JavaScript$/);
+  await sleep(500);
+  await clickLabel(page, /^مشروع ويب$/);
   await sleep(800);
   const proj = await bodyText(page);
   check('F23 choosing «ويب» opens an HTML/CSS/JS project', /index\.html/.test(proj) && /style\.css/.test(proj) && /script\.js/.test(proj));
@@ -124,6 +126,7 @@ async function clickLabel(page, re) {
   const feedErr = await bodyText(page);
   check('C02 feed load error shows retry, not an empty feed', /تعذّر التحميل/.test(feedErr) && /حاول مرة أخرى/.test(feedErr));
 
+  fs.writeFileSync(path.join(outDir, `${size}-results.json`), JSON.stringify(results,null,2));
   await browser.close();
   const fail = results.filter((r) => !r.ok).length;
   console.log(`\n${results.length - fail} passed, ${fail} failed`);

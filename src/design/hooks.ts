@@ -26,22 +26,20 @@ export function useBreakpoint() {
 
 /** تقليل الحركة: إعداد النظام (Android/iOS) أو prefers-reduced-motion على الويب */
 export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(() => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    }
-    return false;
-  });
+  const [reduced, setReduced] = useState(false);
   useEffect(() => {
     if (Platform.OS === 'web') {
       if (typeof window === 'undefined' || !window.matchMedia) return;
       const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      setReduced(mq.matches);
       const on = () => setReduced(mq.matches);
       mq.addEventListener?.('change', on);
       return () => mq.removeEventListener?.('change', on);
     }
     let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((v) => alive && setReduced(v)).catch(() => undefined);
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((v) => alive && setReduced(v))
+      .catch(() => undefined);
     const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', (v) => setReduced(v));
     return () => {
       alive = false;

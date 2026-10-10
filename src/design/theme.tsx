@@ -6,7 +6,8 @@
  *
  * الأنماط تُبنى مرة واحدة لكل theme (cache)، فإضافة مود نهاري لاحقاً = تبديل قيمة الـprovider فقط.
  */
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, StyleSheet } from 'react-native';
 import { palettes, space, radius, fontFamily, typeScale, motion, layout, type ColorTokens, type ThemeMode } from './tokens';
 
@@ -24,7 +25,7 @@ export type Theme = {
 const build = (mode: ThemeMode): Theme => ({ mode, colors: palettes[mode], space, radius, font: fontFamily, type: typeScale, motion, layout });
 const THEMES: Record<ThemeMode, Theme> = { dark: build('dark'), light: build('light') };
 
-/** المود النهاري غير معروض للمستخدم: يُفحص فقط في التطوير (أو بناء فحص محلي EXPO_PUBLIC_THEME_PREVIEW=1) على الويب عبر ?theme=light */
+/** معاينة تطوير اختيارية؛ تفضيل المستخدم المحفوظ له الأولوية، والافتراضي داكن. */
 const PREVIEW_ALLOWED = __DEV__ || process.env.EXPO_PUBLIC_THEME_PREVIEW === '1';
 function initialMode(): ThemeMode {
   if (PREVIEW_ALLOWED && Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -41,13 +42,46 @@ function initialMode(): ThemeMode {
 }
 
 const ThemeContext = createContext<Theme>(THEMES.dark);
+const THEME_STORAGE_KEY = 'kodax-theme-mode';
+const ThemePreferenceContext = createContext({
+  ready: false,
+  setMode: async (_mode: ThemeMode): Promise<void> => {},
+});
 
 export function ThemeProvider({ children, mode }: { children: React.ReactNode; mode?: ThemeMode }) {
-  const value = useMemo(() => THEMES[mode ?? initialMode()], [mode]);
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  // Keep server and first browser render identical; restore the saved choice after mounting.
+  const [preferredMode, setPreferredMode] = useState<ThemeMode>('dark');
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(THEME_STORAGE_KEY)
+      .then(saved => {
+        if (active) setPreferredMode(saved === 'light' || saved === 'dark' ? saved : initialMode());
+      })
+      .catch(() => { /* Keep the default dark mode when storage is unavailable. */ })
+      .finally(() => { if (active) setReady(true); });
+    return () => { active = false; };
+  }, []);
+  const setMode = useCallback(async (next: ThemeMode) => {
+    await AsyncStorage.setItem(THEME_STORAGE_KEY, next);
+    setPreferredMode(next);
+  }, []);
+  const value = THEMES[mode ?? preferredMode];
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const root = document.documentElement;
+    root.style.colorScheme = value.mode;
+    root.style.backgroundColor = value.colors.bg;
+    root.style.setProperty('--kx-scroll-thumb', value.colors.borderStrong);
+    root.style.setProperty('--kx-scroll-hover', value.colors.textMuted);
+  }, [value]);
+  return <ThemePreferenceContext.Provider value={{ ready, setMode }}>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  </ThemePreferenceContext.Provider>;
 }
 
 export const useTheme = () => useContext(ThemeContext);
+export const useThemePreference = () => useContext(ThemePreferenceContext);
 export const useColors = () => useContext(ThemeContext).colors;
 
 export function makeStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<any>>(factory: (t: Theme) => T) {
@@ -62,4 +96,3 @@ export function makeStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.Name
     return s;
   };
 }
-

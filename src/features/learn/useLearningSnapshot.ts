@@ -54,7 +54,7 @@ function pickNext(progress: ProgressState | null, completed: Set<string>, lastCo
     const lesson = lessons.find((l) => !completed.has(l.id));
     if (!lesson) continue;
     const a = access.get(course.id);
-    const locked = a ? !a.accessible : false;
+    const locked = !a?.accessible;
     const requiresCourse = a?.requires_course_id ? ALL_COURSES.find((c) => c.id === a.requires_course_id) : undefined;
     return { course, lesson, done, total: lessons.length, locked, requiresCourse };
   }
@@ -111,7 +111,7 @@ export function useLearningSnapshot(userId?: string | null) {
           weekTarget: g?.weekly_target_days ?? 5,
         },
         week,
-        dailyChallenge: dailyId ? ALL_CHALLENGES.find((c) => c.id === dailyId) ?? null : null,
+        dailyChallenge: dailyId ? (ALL_CHALLENGES.find((c) => c.id === dailyId) ?? null) : null,
         completed,
         progress,
       });

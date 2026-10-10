@@ -1,7 +1,8 @@
 import React from 'react';
-import { ActivityIndicator, Platform, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
+import { useReducedMotion } from '../hooks';
 import { Text } from './Text';
 
 export type IconName = keyof typeof Ionicons.glyphMap;
@@ -13,6 +14,7 @@ type Props = {
   variant?: ButtonVariant;
   size?: 'sm' | 'md' | 'lg';
   icon?: IconName;
+  leading?: React.ReactNode;
   /** مكان الأيقونة بالنسبة للنص في القراءة العربية: start = يمين النص */
   iconPosition?: 'start' | 'end';
   loading?: boolean;
@@ -26,11 +28,27 @@ type Props = {
 
 const HEIGHT = { sm: 36, md: 44, lg: 52 } as const;
 
-export function Button({ label, onPress, variant = 'primary', size = 'md', icon, iconPosition = 'start', loading, disabled, full, style, accessibilityLabel, accessibilityHint, testID }: Props) {
+export function Button({
+  label,
+  onPress,
+  variant = 'primary',
+  size = 'md',
+  icon,
+  iconPosition = 'start',
+  leading,
+  loading,
+  disabled,
+  full,
+  style,
+  accessibilityLabel,
+  accessibilityHint,
+  testID,
+}: Props) {
   const t = useTheme();
+  const reduced = useReducedMotion();
   const c = t.colors;
   const palette: Record<ButtonVariant, { bg: string; bgPressed: string; fg: string; border?: string }> = {
-    primary: { bg: c.brand, bgPressed: c.brandStrong, fg: c.textOnAccent },
+    primary: { bg: t.mode === 'dark' ? c.brandStrong : c.brand, bgPressed: c.brandStrong, fg: c.textOnAccent },
     success: { bg: c.success, bgPressed: '#16a34a', fg: '#06240F' },
     danger: { bg: c.danger, bgPressed: '#dc2626', fg: c.textOnAccent },
     secondary: { bg: c.surfaceRaised, bgPressed: c.surfacePressed, fg: c.text, border: c.borderStrong },
@@ -39,6 +57,8 @@ export function Button({ label, onPress, variant = 'primary', size = 'md', icon,
   };
   const p = palette[variant];
   const inactive = disabled || loading;
+  const boxStyle = StyleSheet.flatten(style);
+  const growsLabel = full || !!boxStyle?.flex || !!boxStyle?.flexGrow || boxStyle?.width != null || boxStyle?.minWidth != null;
   const iconSize = size === 'sm' ? 16 : 18;
   const iconEl = icon ? <Ionicons name={icon} size={iconSize} color={p.fg} /> : null;
   return (
@@ -53,8 +73,9 @@ export function Button({ label, onPress, variant = 'primary', size = 'md', icon,
       hitSlop={size === 'sm' ? 4 : 0}
       style={(state: any) => [
         {
-          minHeight: HEIGHT[size],
+          minHeight: Math.max(44, HEIGHT[size]),
           paddingHorizontal: size === 'sm' ? 12 : size === 'lg' ? 22 : 16,
+          paddingVertical: size === 'lg' ? 12 : 10,
           borderRadius: t.radius.md,
           backgroundColor: state.pressed ? p.bgPressed : state.hovered && variant !== 'ghost' ? p.bgPressed : state.hovered ? c.surfacePressed : p.bg,
           borderWidth: p.border ? 1 : 0,
@@ -65,9 +86,9 @@ export function Button({ label, onPress, variant = 'primary', size = 'md', icon,
           gap: 8,
           opacity: disabled ? 0.45 : 1,
           alignSelf: full ? 'stretch' : 'auto',
-          transform: [{ scale: state.pressed ? 0.98 : 1 }],
+          transform: [{ scale: state.pressed && !reduced ? 0.98 : 1 }],
         },
-        Platform.OS === 'web' && state.focused ? { outlineWidth: 2, outlineStyle: 'solid', outlineColor: c.focus, outlineOffset: 2 } as any : null,
+        Platform.OS === 'web' && state.focused ? ({ outlineWidth: 2, outlineStyle: 'solid', outlineColor: c.focus, outlineOffset: 2 } as any) : null,
         style,
       ]}
     >
@@ -75,8 +96,21 @@ export function Button({ label, onPress, variant = 'primary', size = 'md', icon,
         <ActivityIndicator size="small" color={p.fg} />
       ) : (
         <>
+          {leading}
           {iconPosition === 'start' && iconEl}
-          <Text variant={size === 'sm' ? 'label' : 'label'} weight="semibold" style={{ color: p.fg, fontSize: size === 'lg' ? 16 : size === 'sm' ? 13 : 15 }} align="center" numberOfLines={1}>
+          <Text
+            variant="label"
+            weight="semibold"
+            style={{
+              color: p.fg,
+              flexGrow: growsLabel ? 1 : 0,
+              flexShrink: 1,
+              minWidth: 0,
+              fontSize: size === 'lg' ? 16 : size === 'sm' ? 13 : 15,
+              lineHeight: size === 'lg' ? 24 : 22,
+            }}
+            align="center"
+          >
             {label}
           </Text>
           {iconPosition === 'end' && iconEl}

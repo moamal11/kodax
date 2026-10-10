@@ -1,29 +1,32 @@
 /** ألوان وأبعاد صفحة مساعد Kodax */
 import { Platform } from 'react-native';
-import { darkColors, fontFamily } from '@/design/tokens';
+import { darkColors, fontFamily, type ColorTokens } from '@/design/tokens';
 
-/** ألوان صفحة المساعد = رموز نظام التصميم (المود الداكن) */
-export const C = {
-  bg: darkColors.bg,
-  bgAlt: darkColors.bg,
-  surface: darkColors.surface,
-  surfaceStrong: darkColors.surfaceRaised,
-  border: darkColors.border,
-  borderStrong: darkColors.borderStrong,
-  text: darkColors.text,
-  textSoft: darkColors.textSecondary,
-  muted: darkColors.textMuted,
-  accent: darkColors.brand,
-  accentSoft: darkColors.brandSoft,
-  accent2: darkColors.info,
-  userA: darkColors.brandStrong,
-  userB: darkColors.brandStrong,
-  success: darkColors.successText,
-  warning: darkColors.warningText,
-  danger: darkColors.dangerText,
-  inlineCodeBg: darkColors.brandSoft,
-  inlineCode: darkColors.brandText,
-};
+import { useTheme } from '@/design/theme';
+/** Chat uses the same semantic palette as every other screen. */
+export const chatColors = (colors: ColorTokens) => ({
+  bg: colors.bg,
+  bgAlt: colors.bg,
+  surface: colors.surface,
+  surfaceStrong: colors.surfaceRaised,
+  border: colors.border,
+  borderStrong: colors.borderStrong,
+  text: colors.text,
+  textSoft: colors.textSecondary,
+  muted: colors.textMuted,
+  accent: colors.brand,
+  accentSoft: colors.brandSoft,
+  accent2: colors.info,
+  userA: colors.brandStrong,
+  userB: colors.brandStrong,
+  success: colors.successText,
+  warning: colors.warningText,
+  danger: colors.dangerText,
+  inlineCodeBg: colors.brandSoft,
+  inlineCode: colors.brandText,
+});
+export const C = chatColors(darkColors);
+export function useChatColors() { return chatColors(useTheme().colors); }
 
 export const FONT_MONO = fontFamily.mono;
 

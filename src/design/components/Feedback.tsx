@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Image, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useReducedMotion } from '../hooks';
@@ -19,7 +19,7 @@ export function ProgressBar({ value, tone = 'brand', height = 6, label, style, a
     w.value = animated && !reduced ? withTiming(v, { duration: t.motion.enter, easing: Easing.out(Easing.cubic) }) : v;
   }, [v, animated, reduced]);
   const fill = useAnimatedStyle(() => ({ width: `${w.value * 100}%` }));
-  const color = { brand: c.brand, xp: c.xp, success: c.success, warning: c.warning }[tone];
+  const color = { brand: c.brand, xp: t.mode === 'light' ? '#D1A246' : c.xp, success: c.success, warning: c.warning }[tone];
   return (
     <View
       accessibilityRole="progressbar"
@@ -102,8 +102,9 @@ export function Skeleton({ width = '100%', height = 16, radius, style }: { width
   const reduced = useReducedMotion();
   const o = useSharedValue(0.55);
   useEffect(() => {
-    if (reduced) return;
+    if (reduced) { cancelAnimation(o); o.value = 1; return; }
     o.value = withRepeat(withSequence(withTiming(1, { duration: 700 }), withTiming(0.55, { duration: 700 })), 6, false);
+    return () => cancelAnimation(o);
   }, [reduced]);
   const st = useAnimatedStyle(() => ({ opacity: o.value }));
   return <Animated.View accessibilityElementsHidden importantForAccessibility="no" style={[{ width, height, borderRadius: radius ?? t.radius.sm, backgroundColor: t.colors.surfaceRaised }, st, style]} />;

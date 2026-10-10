@@ -1,0 +1,421 @@
+{
+  "music": false,
+  "duration_s": 15,
+  "cues": [
+    {
+      "time_s": 1.66,
+      "duration_s": 0.321,
+      "name": "bundled short whoosh, varied direction and speed"
+    },
+    {
+      "time_s": 5.69,
+      "duration_s": 0.357,
+      "name": "bundled short whoosh, varied direction and speed"
+    },
+    {
+      "time_s": 8.36,
+      "duration_s": 0.292,
+      "name": "bundled short whoosh, varied direction and speed"
+    },
+    {
+      "time_s": 11.16,
+      "duration_s": 0.383,
+      "name": "bundled short whoosh, varied direction and speed"
+    },
+    {
+      "time_s": 13.25,
+      "duration_s": 0.268,
+      "name": "bundled short whoosh, varied direction and speed"
+    },
+    {
+      "time_s": 1.51,
+      "duration_s": 0.157,
+      "name": "bundled quiet UI click"
+    },
+    {
+      "time_s": 4.48,
+      "duration_s": 0.157,
+      "name": "bundled quiet UI click"
+    },
+    {
+      "time_s": 5.53,
+      "duration_s": 0.157,
+      "name": "bundled quiet UI click"
+    },
+    {
+      "time_s": 10.03,
+      "duration_s": 0.157,
+      "name": "bundled quiet UI click"
+    },
+    {
+      "time_s": 0.1,
+      "duration_s": 0.72,
+      "name": "phone depth reveal"
+    },
+    {
+      "time_s": 1.64,
+      "duration_s": 0.57,
+      "name": "launch push through icon"
+    },
+    {
+      "time_s": 2.05,
+      "duration_s": 0.48,
+      "name": "editor unfurl"
+    },
+    {
+      "time_s": 2.85,
+      "duration_s": 0.62,
+      "name": "approach code"
+    },
+    {
+      "time_s": 4.4,
+      "duration_s": 0.55,
+      "name": "camera pull from code"
+    },
+    {
+      "time_s": 4.65,
+      "duration_s": 0.28,
+      "name": "result strip lift"
+    },
+    {
+      "time_s": 5.66,
+      "duration_s": 0.55,
+      "name": "publish control expansion"
+    },
+    {
+      "time_s": 6.2,
+      "duration_s": 0.47,
+      "name": "post surface formation"
+    },
+    {
+      "time_s": 7.4,
+      "duration_s": 0.34,
+      "name": "reaction arrives forward"
+    },
+    {
+      "time_s": 8.32,
+      "duration_s": 0.71,
+      "name": "approach comment controls"
+    },
+    {
+      "time_s": 10.16,
+      "duration_s": 0.36,
+      "name": "comment sends outward"
+    },
+    {
+      "time_s": 11.14,
+      "duration_s": 0.58,
+      "name": "camera returns from comment"
+    },
+    {
+      "time_s": 11.8,
+      "duration_s": 0.39,
+      "name": "interface collects"
+    },
+    {
+      "time_s": 13.23,
+      "duration_s": 0.37,
+      "name": "words collect into logo"
+    },
+    {
+      "time_s": 1.51,
+      "duration_s": 0.13,
+      "name": "dry mechanical tap"
+    },
+    {
+      "time_s": 4.48,
+      "duration_s": 0.13,
+      "name": "dry mechanical tap"
+    },
+    {
+      "time_s": 5.53,
+      "duration_s": 0.13,
+      "name": "dry mechanical tap"
+    },
+    {
+      "time_s": 10.03,
+      "duration_s": 0.13,
+      "name": "dry mechanical tap"
+    },
+    {
+      "time_s": 2.15,
+      "duration_s": 0.3,
+      "name": "short weighted landing"
+    },
+    {
+      "time_s": 4.68,
+      "duration_s": 0.3,
+      "name": "short weighted landing"
+    },
+    {
+      "time_s": 6.24,
+      "duration_s": 0.3,
+      "name": "short weighted landing"
+    },
+    {
+      "time_s": 7.48,
+      "duration_s": 0.3,
+      "name": "short weighted landing"
+    },
+    {
+      "time_s": 10.17,
+      "duration_s": 0.3,
+      "name": "short weighted landing"
+    },
+    {
+      "time_s": 13.45,
+      "duration_s": 0.3,
+      "name": "short weighted landing"
+    },
+    {
+      "time_s": 2.87,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 2.921111111111111,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 2.9722222222222223,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.0233333333333334,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.0744444444444445,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.1255555555555556,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.1766666666666667,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.227777777777778,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.278888888888889,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.33,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.4,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.444166666666667,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.4883333333333333,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.5324999999999998,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.5766666666666667,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.6208333333333336,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.665,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.7091666666666665,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.7533333333333334,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.7975000000000003,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.841666666666667,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.8858333333333333,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 3.93,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 4.0,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 4.051428571428572,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 4.102857142857143,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 4.154285714285715,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 4.2057142857142855,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 4.257142857142857,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 4.308571428571429,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 4.36,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.1,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.17,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.24,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.309999999999999,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.379999999999999,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.45,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.52,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.59,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.66,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.729999999999999,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.799999999999999,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 9.87,
+      "duration_s": 0.048,
+      "name": "keyboard switch"
+    },
+    {
+      "time_s": 6.39,
+      "duration_s": 0.15,
+      "name": "short ceramic interface accent"
+    },
+    {
+      "time_s": 6.57,
+      "duration_s": 0.15,
+      "name": "short ceramic interface accent"
+    },
+    {
+      "time_s": 7.52,
+      "duration_s": 0.15,
+      "name": "short ceramic interface accent"
+    },
+    {
+      "time_s": 10.2,
+      "duration_s": 0.15,
+      "name": "short ceramic interface accent"
+    },
+    {
+      "time_s": 12.01,
+      "duration_s": 0.15,
+      "name": "short ceramic interface accent"
+    },
+    {
+      "time_s": 12.16,
+      "duration_s": 0.15,
+      "name": "short ceramic interface accent"
+    },
+    {
+      "time_s": 12.31,
+      "duration_s": 0.15,
+      "name": "short ceramic interface accent"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "method": "Whisper small.en plus VAD; automated speech screening; no transcript retained",
+  "vad_speech_duration_s": 0.0,
+  "candidate_segments": []
+}

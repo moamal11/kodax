@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
+import { PublicHome } from '@/features/web/PublicCourseList';
 
 /**
  * Root route (/) — Navigation hub
@@ -26,11 +27,7 @@ export default function Index() {
 
     // If auth is ready and user is NOT authenticated...
     if (!isInitializing && !isAuthenticated) {
-      // On web: go to download page (landing page with login button)
-      // On mobile: go to login page
-      if (Platform.OS === 'web') {
-        router.replace('/download');
-      } else {
+      if (Platform.OS !== 'web') {
         router.replace('/(auth)/login');
       }
       return;
@@ -40,5 +37,5 @@ export default function Index() {
   }, [isInitializing, isAuthenticated, router]);
 
   // Return null while routing is in progress
-  return null;
+  return Platform.OS === 'web' && !isInitializing && !isAuthenticated ? <PublicHome /> : null;
 }

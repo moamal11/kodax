@@ -1,3 +1,4 @@
+import { JourneyNode } from '@/features/rewards/JourneyVisuals';
 /**
  * الدورة التي لم تُفتح بعد — تُستخدم في صفحة الدورة وصفحة الدرس.
  *
@@ -51,7 +52,7 @@ export default function LockedCourseScreen({ course, lockedLessonTitle }: Locked
   }, [course.id]);
 
   const prereq = useMemo(() => ALL_COURSES.find((c) => c.id === access?.requires_course_id) ?? null, [access?.requires_course_id]);
-  const requiredPct = Math.round((access?.required_ratio ?? 0.7) * 100);
+  const requiredPct = access?.required_ratio != null ? Math.round(access.required_ratio * 100) : null;
   const prereqPct = Math.min(100, Math.round((access?.prereq_progress ?? 0) * 100));
   const lessons = useMemo(() => [...getLessonsByCourse(course.id)].sort((a, b) => a.order - b.order), [course.id]);
   const previewId = lessons[0]?.id;
@@ -91,10 +92,10 @@ export default function LockedCourseScreen({ course, lockedLessonTitle }: Locked
         )}
 
         {/* الطريق المجاني: التقدم في الدورة السابقة */}
-        {prereq && (
+        {prereq && requiredPct != null && (
           <Surface padding={16}>
             <Row gap={10} align="flex-start">
-              <Ionicons name="trail-sign-outline" size={20} color={t.colors.successText} />
+              <JourneyNode state="locked" size={44} />
               <View style={{ flex: 1, gap: 8 }}>
                 <Text variant="heading">تُفتح مجاناً بالتعلم</Text>
                 <Text variant="bodySm" tone="secondary">
@@ -104,7 +105,13 @@ export default function LockedCourseScreen({ course, lockedLessonTitle }: Locked
                 <Text variant="caption" tone="muted">
                   أنت عند {prereqPct}% من {requiredPct}%
                 </Text>
-                <Button label={`تابع «${prereq.title}»`} variant="success" icon="play" onPress={() => router.push(`/course/${prereq.id}` as any)} style={{ alignSelf: 'flex-start' }} />
+                <Button
+                  label={`تابع «${prereq.title}»`}
+                  variant="success"
+                  icon="play"
+                  onPress={() => router.push(`/course/${prereq.id}` as any)}
+                  style={{ alignSelf: 'flex-start' }}
+                />
               </View>
             </Row>
           </Surface>
@@ -127,7 +134,9 @@ export default function LockedCourseScreen({ course, lockedLessonTitle }: Locked
 
         {showBundle && (
           <Surface padding={16}>
-            <Text variant="heading">كل دورات المسار ({lockedInField.length}) — وفّر {Math.round(FULL_FIELD_DISCOUNT * 100)}%</Text>
+            <Text variant="heading">
+              كل دورات المسار ({lockedInField.length}) — وفّر {Math.round(FULL_FIELD_DISCOUNT * 100)}%
+            </Text>
             <Text variant="bodySm" tone="secondary" style={{ marginTop: 4 }}>
               {fieldPricing.discountedRemaining.toLocaleString('en-US')} كوين بدل {fieldPricing.remaining.toLocaleString('en-US')}
             </Text>
@@ -161,7 +170,15 @@ export default function LockedCourseScreen({ course, lockedLessonTitle }: Locked
                   accessibilityLabel={`${i + 1}. ${l.title}${preview ? '، معاينة مجانية' : '، مقفل'}`}
                   style={(s: any) => ({ backgroundColor: preview && (s.hovered || s.pressed) ? t.colors.surfacePressed : 'transparent' })}
                 >
-                  <Row gap={12} style={{ paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: i === lessons.length - 1 ? 0 : 1, borderBottomColor: t.colors.border }}>
+                  <Row
+                    gap={12}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      borderBottomWidth: i === lessons.length - 1 ? 0 : 1,
+                      borderBottomColor: t.colors.border,
+                    }}
+                  >
                     <Text variant="caption" tone="muted" tabular style={{ width: 22 }} align="center">
                       {i + 1}
                     </Text>

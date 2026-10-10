@@ -1,3 +1,4 @@
+import { profilePath } from '@/services/profileLinks';
 /**
  * قائمة المتابِعين / المتابَعين (F09: الأرقام في الملف الشخصي صارت تفتح قائمة فعلية).
  */
@@ -6,7 +7,7 @@ import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getFollowers, getFollowing } from '@/services/followService';
-import { Sheet, Segmented, Text, Row, Avatar, ListSkeleton, EmptyState, useTheme } from '@/design';
+import { Sheet, Segmented, Text, Row, Avatar, ListSkeleton, EmptyState, ErrorState, useTheme } from '@/design';
 import { useAuth } from '@/contexts/AuthContext';
 
 type Tab = 'followers' | 'following';
@@ -17,7 +18,10 @@ export function FollowListSheet({ userId, visible, initialTab, onClose, counts }
   const router = useRouter();
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>(initialTab);
-  const [people, setPeople] = useState<Person[] | null>(null);
+  const [result, setResult] = useState<{ key: string; people: Person[] | null; error?: string }>({ key: '', people: null });
+  const [retry, setRetry] = useState(0);
+  const key = `${userId}:${tab}`;
+  const people = result.key === key ? result.people : null;
 
   useEffect(() => {
     if (visible) setTab(initialTab);
@@ -25,12 +29,12 @@ export function FollowListSheet({ userId, visible, initialTab, onClose, counts }
   useEffect(() => {
     if (!visible) return;
     let alive = true;
-    setPeople(null);
-    (tab === 'followers' ? getFollowers(userId) : getFollowing(userId)).then((r) => alive && setPeople(r as Person[]));
+    setResult({ key, people: null });
+    (tab === 'followers' ? getFollowers(userId) : getFollowing(userId)).then((r) => alive && setResult({ key, people: r as Person[] })).catch(e => alive && setResult({ key, people: [], error: e.message }));
     return () => {
       alive = false;
     };
-  }, [visible, tab, userId]);
+  }, [visible, tab, userId, retry]);
 
   return (
     <Sheet visible={visible} onClose={onClose} title="المتابعات" maxWidth={440}>
@@ -43,7 +47,9 @@ export function FollowListSheet({ userId, visible, initialTab, onClose, counts }
         ]}
         style={{ marginBottom: 12 }}
       />
-      {!people ? (
+      {result.key === key && result.error ? (
+        <ErrorState body={result.error} onRetry={() => setRetry(v => v + 1)} />
+      ) : !people ? (
         <ListSkeleton rows={3} />
       ) : people.length === 0 ? (
         <EmptyState icon="people-outline" title={tab === 'followers' ? 'ماكو متابِعين بعد' : 'لا يتابع أحداً بعد'} compact />
@@ -56,7 +62,7 @@ export function FollowListSheet({ userId, visible, initialTab, onClose, counts }
                 key={p.id}
                 onPress={() => {
                   onClose();
-                  router.push(p.id === user?.id ? '/profile' : (`/user/${p.id}` as any));
+                  router.push(p.id === user?.id ? '/profile' : (profilePath(p.id,p.username) as any));
                 }}
                 accessibilityRole="link"
                 accessibilityLabel={`ملف ${name}`}

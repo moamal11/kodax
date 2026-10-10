@@ -69,7 +69,9 @@ class CertificateService {
       throw new Error(errorData.error || `Server error: ${response.status}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    if (data?.error) throw new Error(data.error);
+    return data;
   }
 
   // ===== Private: Cache helpers =====

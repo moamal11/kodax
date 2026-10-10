@@ -62,6 +62,8 @@ export interface CoinState {
   balance: number;
   lifetimeEarned: number;
   unlockedCourses: string[];
+  /** Courses explicitly unlocked with coins, excluding free progression. */
+  purchasedCourses: string[];
   learningStreak: number;
   daily: {
     rewards: number[];
@@ -232,6 +234,7 @@ function mapState(raw: any): CoinState {
     unlockedCourses: Array.isArray(raw?.unlocked_courses)
       ? raw.unlocked_courses
       : [],
+    purchasedCourses: Array.isArray(raw?.purchased_courses) ? raw.purchased_courses : [],
     learningStreak: raw?.learning_streak ?? 0,
     daily: {
       rewards: Array.isArray(d.rewards)

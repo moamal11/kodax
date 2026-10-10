@@ -70,7 +70,8 @@ export function useHybridProgress({
   // جلب التقدم من Supabase
   const fetchProgress = useCallback(async () => {
     if (!courseId || !userId) {
-      setState((prev) => ({ ...prev, isLoading: false }));
+      setState({ completedLessons: [], completedCount: 0, totalLessons: getLessonsByCourse(courseId).length,
+        progressPercent: 0, lastCompletedOrder: 0, isLoading: false, isSaving: false, lastSyncedAt: null });
       return;
     }
 

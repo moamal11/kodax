@@ -7,7 +7,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { supportService, type SupportTicket, type SupportMessage, type SupportNotification } from '@/services/supportService';
 import { timeAgo } from '@/components/editor/NotificationButton';
-import { Screen, AppBar, Text, Row, Col, Segmented, Field, Button, IconButton, Surface, Tag, ListGroup, ListRow, EmptyState, ListSkeleton, SectionHeader, useTheme, type IconName } from '@/design';
+import {
+  Screen,
+  AppBar,
+  Text,
+  Row,
+  Col,
+  Segmented,
+  Field,
+  Button,
+  IconButton,
+  Surface,
+  Tag,
+  ListGroup,
+  ListRow,
+  EmptyState,
+  ListSkeleton,
+  ErrorState,
+  SectionHeader,
+  useTheme,
+  type IconName,
+} from '@/design';
 
 const SOCIAL: { name: string; icon: IconName; url: string; handle: string }[] = [
   { name: 'Telegram', icon: 'paper-plane-outline', url: 'https://t.me/mo7za', handle: '@mo7za' },
@@ -35,13 +55,23 @@ export default function SupportScreen() {
   const [ticket, setTicket] = useState<SupportTicket | null>(null);
   const [chat, setChat] = useState<SupportMessage[]>([]);
   const [loadingChat, setLoadingChat] = useState(false);
+  const [ticketsError, setTicketsError] = useState(false);
+  const [chatError, setChatError] = useState(false);
+  const [replyError, setReplyError] = useState(false);
+  const [replyBusy, setReplyBusy] = useState(false);
   const [reply, setReply] = useState('');
   const unsubRef = useRef<null | (() => void)>(null);
 
   const loadTickets = useCallback(async () => {
     setLoadingTickets(true);
-    setTickets(await supportService.getUserTickets());
-    setLoadingTickets(false);
+    try {
+      setTickets(await supportService.getUserTickets(true));
+      setTicketsError(false);
+    } catch {
+      setTicketsError(true);
+    } finally {
+      setLoadingTickets(false);
+    }
   }, []);
   useEffect(() => {
     loadTickets();
@@ -50,8 +80,14 @@ export default function SupportScreen() {
 
   const loadChat = async (id: string) => {
     setLoadingChat(true);
-    setChat(await supportService.getTicketMessages(id));
-    setLoadingChat(false);
+    try {
+      setChat(await supportService.getTicketMessages(id, true));
+      setChatError(false);
+    } catch {
+      setChatError(true);
+    } finally {
+      setLoadingChat(false);
+    }
     await supportService.markNotificationsRead(id);
     setNotifications((prev) => prev.filter((n) => n.ticket_id !== id));
   };
@@ -91,11 +127,14 @@ export default function SupportScreen() {
     } else setSendError(r.error || 'تعذّر إرسال الرسالة. حاول مرة أخرى.');
   };
   const sendReply = async () => {
-    if (!reply.trim() || !ticket) return;
+    if (!reply.trim() || !ticket || replyBusy) return;
+    setReplyBusy(true);
+    setReplyError(false);
     if (await supportService.sendMessage(ticket.id, reply.trim())) {
       setReply('');
       loadChat(ticket.id);
-    }
+    } else setReplyError(true);
+    setReplyBusy(false);
   };
 
   const unreadFor = (id: string) => notifications.filter((n) => n.ticket_id === id).length;
@@ -103,23 +142,48 @@ export default function SupportScreen() {
   if (ticket) {
     const st = STATUS[ticket.status ?? 'open'] ?? STATUS.open;
     return (
-      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: t.colors.bg }}
+        behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
+      >
         <Screen
           width="reading"
-          header={<AppBar title={ticket.subject || 'تذكرة دعم'} subtitle={st.label} back={false} actions={<IconButton icon="close" label="العودة للتذاكر" onPress={close} />} border />}
+          header={
+            <AppBar
+              title={ticket.subject || 'تذكرة دعم'}
+              subtitle={st.label}
+              back={false}
+              actions={<IconButton icon="close" label="العودة للتذاكر" onPress={close} />}
+              border
+            />
+          }
           footer={
             ticket.status === 'closed' ? undefined : (
               <View style={{ borderTopWidth: 1, borderTopColor: t.colors.border, padding: 12 }}>
                 <Row gap={8} align="flex-end" style={{ width: '100%', maxWidth: t.layout.readingWidth, alignSelf: 'center' }}>
                   <Field label="ردّك" hideLabel placeholder="اكتب ردك…" value={reply} onChangeText={setReply} multiline minHeight={48} style={{ flex: 1 }} />
-                  <IconButton icon="send" label="إرسال الرد" variant="brand" onPress={sendReply} disabled={!reply.trim()} style={{ marginBottom: 2, transform: [{ scaleX: -1 }] }} />
+                  <IconButton
+                    icon="send"
+                    label="إرسال الرد"
+                    variant="brand"
+                    onPress={sendReply}
+                    disabled={!reply.trim() || replyBusy}
+                    style={{ marginBottom: 2, transform: [{ scaleX: -1 }] }}
+                  />
                 </Row>
+                {replyError && (
+                  <Text variant="bodySm" tone="danger">
+                    تعذّر إرسال الرد. أعد المحاولة.
+                  </Text>
+                )}
               </View>
             )
           }
         >
           {loadingChat ? (
             <ListSkeleton rows={2} />
+          ) : chatError ? (
+            <ErrorState title="تعذّر تحميل الردود" onRetry={() => loadChat(ticket.id)} />
           ) : (
             <Col gap={10}>
               {chat.map((m) => {
@@ -131,11 +195,20 @@ export default function SupportScreen() {
                         فريق Kodax
                       </Text>
                     )}
-                    <View style={{ maxWidth: '85%', padding: 12, borderRadius: 14, backgroundColor: mine ? t.colors.brandStrong : t.colors.surfaceRaised, borderWidth: mine ? 0 : 1, borderColor: t.colors.border }}>
+                    <View
+                      style={{
+                        maxWidth: '85%',
+                        padding: 12,
+                        borderRadius: 14,
+                        backgroundColor: mine ? t.colors.brandStrong : t.colors.surfaceRaised,
+                        borderWidth: mine ? 0 : 1,
+                        borderColor: t.colors.border,
+                      }}
+                    >
                       <Text variant="body" selectable style={{ color: mine ? '#fff' : t.colors.text }}>
                         {m.message}
                       </Text>
-                      <Text variant="caption" style={{ color: mine ? 'rgba(255,255,255,0.7)' : t.colors.textMuted, fontSize: 11, marginTop: 2 }}>
+                      <Text variant="caption" style={{ color: mine ? 'rgba(255,255,255,0.7)' : t.colors.textMuted, fontSize: 12, marginTop: 2 }}>
                         {timeAgo(new Date(m.created_at))}
                       </Text>
                     </View>
@@ -165,7 +238,7 @@ export default function SupportScreen() {
             <Surface variant="success" padding={16}>
               <Text variant="heading">وصلت رسالتك</Text>
               <Text variant="bodySm" tone="secondary" style={{ marginTop: 4 }}>
-                يرد الفريق عادةً خلال يوم. يصلك إشعار عند الرد، وتلقى المحادثة في «تذاكري».
+                تقدر تتابع الرد في «تذاكري». يصلك إشعار عند رد الفريق.
               </Text>
               <Row gap={8} style={{ marginTop: 12 }}>
                 <Button label="تذاكري" onPress={() => setTab('tickets')} />
@@ -174,24 +247,67 @@ export default function SupportScreen() {
             </Surface>
           ) : (
             <Col gap={12}>
-              <Text variant="bodySm" tone="secondary">
-                اكتب مشكلتك أو اقتراحك بالتفصيل (مثلاً اسم الدرس أو التحدي). نرسل الرد هنا وكإشعار.
-              </Text>
-              <Field label="رسالتك" placeholder="شنو صار وياك؟" value={message} onChangeText={setMessage} multiline minHeight={140} maxLength={2000} error={sendError} hint={user?.email ? `من: ${user.email}` : undefined} />
+              <Row gap={12} style={{ paddingVertical: 12 }}>
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: t.colors.borderStrong,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="help-buoy-outline" size={24} color={t.colors.brandText} />
+                </View>
+                <Col gap={2} flex={1}>
+                  <Text variant="heading">رسالة للدعم</Text>
+                  <Text variant="bodySm" tone="secondary">
+                    اذكر اسم الدرس أو التحدي وشنو صار. تتابع الرد من تذاكرك.
+                  </Text>
+                </Col>
+              </Row>
+              <Field
+                label="رسالتك"
+                placeholder="شنو صار وياك؟"
+                value={message}
+                onChangeText={setMessage}
+                multiline
+                minHeight={140}
+                maxLength={2000}
+                error={sendError}
+                hint={user?.email ? `من: ${user.email}` : undefined}
+              />
               <Button label="أرسل للدعم" icon="send-outline" onPress={send} loading={sending} disabled={!message.trim()} size="lg" />
             </Col>
           )
         ) : loadingTickets ? (
           <ListSkeleton rows={3} />
+        ) : ticketsError ? (
+          <ErrorState title="تعذّر تحميل التذاكر" onRetry={loadTickets} />
         ) : tickets.length === 0 ? (
-          <EmptyState icon="chatbubbles-outline" title="ماكو تذاكر بعد" body="أرسل رسالتك الأولى من «رسالة جديدة»." action="رسالة جديدة" onAction={() => setTab('compose')} compact />
+          <EmptyState
+            icon="chatbubbles-outline"
+            title="ماكو تذاكر بعد"
+            body="أرسل رسالتك الأولى من «رسالة جديدة»."
+            action="رسالة جديدة"
+            onAction={() => setTab('compose')}
+            compact
+          />
         ) : (
           <Surface padding={0}>
             {tickets.map((tk, i) => {
               const st = STATUS[tk.status ?? 'open'] ?? STATUS.open;
               const unread = unreadFor(tk.id);
               return (
-                <Pressable key={tk.id} onPress={() => open(tk)} accessibilityRole="button" accessibilityLabel={`${tk.subject || 'تذكرة'}، ${st.label}${unread ? '، رد جديد' : ''}`} style={(s: any) => ({ backgroundColor: s.hovered || s.pressed ? t.colors.surfacePressed : 'transparent' })}>
+                <Pressable
+                  key={tk.id}
+                  onPress={() => open(tk)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${tk.subject || 'تذكرة'}، ${st.label}${unread ? '، رد جديد' : ''}`}
+                  style={(s: any) => ({ backgroundColor: s.hovered || s.pressed ? t.colors.surfacePressed : 'transparent' })}
+                >
                   <Row gap={10} style={{ padding: 14, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: t.colors.border }}>
                     <View style={{ flex: 1, gap: 4 }}>
                       <Text variant="label" weight={unread ? 'bold' : 'semibold'} numberOfLines={1}>
@@ -217,7 +333,15 @@ export default function SupportScreen() {
           <SectionHeader title="تابعنا وراسلنا" />
           <ListGroup>
             {SOCIAL.map((s, i) => (
-              <ListRow key={s.name} icon={s.icon} title={s.name} value={s.handle} onPress={() => Linking.openURL(s.url).catch(() => undefined)} last={i === SOCIAL.length - 1} accessibilityHint="يفتح خارج التطبيق" />
+              <ListRow
+                key={s.name}
+                icon={s.icon}
+                title={s.name}
+                value={s.handle}
+                onPress={() => Linking.openURL(s.url).catch(() => undefined)}
+                last={i === SOCIAL.length - 1}
+                accessibilityHint="يفتح خارج التطبيق"
+              />
             ))}
           </ListGroup>
         </View>

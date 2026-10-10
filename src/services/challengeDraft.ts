@@ -6,13 +6,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PREFIX = 'kodax_challenge_draft_v1';
 
-const keyFor = (userId: string | undefined, challengeId: string) =>
-  `${PREFIX}:${userId ?? 'guest'}:${challengeId}`;
+/** Stored, non-starter drafts only; merely opening a challenge is not an attempt. */
+export async function getChallengeDraftIds(userId: string): Promise<string[]> {
+  const prefix = `${PREFIX}:${userId}:`;
+  try {
+    return (await AsyncStorage.getAllKeys()).filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length));
+  } catch {
+    return [];
+  }
+}
 
-export async function loadChallengeDraft(
-  userId: string | undefined,
-  challengeId: string
-): Promise<string | null> {
+const keyFor = (userId: string | undefined, challengeId: string) => `${PREFIX}:${userId ?? 'guest'}:${challengeId}`;
+
+export async function loadChallengeDraft(userId: string | undefined, challengeId: string): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(keyFor(userId, challengeId));
   } catch {
@@ -20,12 +26,7 @@ export async function loadChallengeDraft(
   }
 }
 
-export async function saveChallengeDraft(
-  userId: string | undefined,
-  challengeId: string,
-  code: string,
-  starterCode: string
-): Promise<void> {
+export async function saveChallengeDraft(userId: string | undefined, challengeId: string, code: string, starterCode: string): Promise<void> {
   try {
     const key = keyFor(userId, challengeId);
     // لا داعي لحفظ الكود الابتدائي كما هو

@@ -1,7 +1,8 @@
+import { profilePath } from '@/services/profileLinks';
 /**
  * لوحة الصدارة: كل العراق أو محافظة واحدة (التصفية على السيرفر، لا من أفضل 50 فقط)، وترتيبك.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -23,10 +24,13 @@ export default function LeaderboardScreen() {
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  const request=useRef(0);
   const load = useCallback(async () => {
+    const version=++request.current;
     let q = supabase.from('profiles').select('id, full_name, username, avatar_url, xp, province, is_verified').order('xp', { ascending: false }).limit(50);
     if (province) q = q.eq('province', province);
     const { data, error: err } = await q;
+    if(version!==request.current)return;
     setError(!!err);
     if (!err) setRows((data ?? []) as Row_[]);
     setLoading(false);
@@ -70,7 +74,7 @@ export default function LeaderboardScreen() {
             </ChipBar>
             {!loading && !error && (
               <Surface variant="brand" padding={12}>
-                <Text variant="label">{myIndex >= 0 ? `ترتيبك: ${myIndex + 1} من ${rows.length}` : province ? `لست ضمن أفضل 50 في ${province} بعد` : 'لست ضمن أفضل 50 بعد'}</Text>
+                <Text variant="label">{myIndex >= 0 ? `ترتيبك ${myIndex + 1} ضمن المتصدرين` : province ? `لست ضمن أفضل 50 في ${province} بعد` : 'لست ضمن أفضل 50 بعد'}</Text>
                 <Text variant="caption" tone="secondary">
                   الترتيب حسب XP. كل درس وتحدٍّ جديد يقرّبك.
                 </Text>
@@ -84,7 +88,7 @@ export default function LeaderboardScreen() {
           ) : error ? (
             <ErrorState onRetry={load} />
           ) : (
-            <EmptyState icon="podium-outline" title={`ماكو متعلمين من ${province} بعد`} body="كن أول من يتصدّر محافظته." compact />
+            <EmptyState icon="podium-outline" title={province?`ماكو متعلمين من ${province} بعد`:'الصدارة بانتظار أول متعلّم'} body="كل درس جديد يضيف خطوة لترتيبك." action="تابع التعلم" onAction={()=>router.push('/learn' as any)} compact />
           )
         }
         renderItem={({ item, index }) => {
@@ -93,7 +97,7 @@ export default function LeaderboardScreen() {
           const medal = index < 3;
           return (
             <Pressable
-              onPress={() => router.push(me ? '/profile' : (`/user/${item.id}` as any))}
+              onPress={() => router.push(me ? '/profile' : (profilePath(item.id,item.username) as any))}
               accessibilityRole="link"
               accessibilityLabel={`المركز ${index + 1}: ${name}${me ? ' (أنت)' : ''}، ${item.xp ?? 0} XP${item.province ? `، ${item.province}` : ''}`}
               style={(s: any) => ({ borderRadius: t.radius.md, backgroundColor: me ? t.colors.brandSoft : s.hovered || s.pressed ? t.colors.surfacePressed : 'transparent' })}

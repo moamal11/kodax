@@ -4,9 +4,10 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { isWebVisitor, publicWebDocument } from './publicWebService';
 
 // Simple UUID v4 generator (no external dependency needed)
-function generateUUID(): string {
+export function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = (Math.random() * 16) | 0;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
@@ -39,12 +40,16 @@ export interface FeedSnippet {
 }
 
 export interface SnippetComment {
+  unavailable?: boolean;
   id: string;
-  user_id: string;
+  user_id: string | null;
   snippet_id: string;
   content: string;
   created_at: string;
   updated_at: string;
+  parent_id: string | null;
+  edited_at: string | null;
+  deleted_at: string | null;
   profiles: {
     username: string;
     full_name: string;
@@ -72,6 +77,10 @@ export async function getPublicSnippets(
   options?: FeedOptions
 ): Promise<{ data: FeedSnippet[]; error: string | null }> {
   try {
+    if (await isWebVisitor()) {
+      const r = await supabase.rpc('public_web_feed', { p_filter: 'code', p_search: options?.search || '', p_language: options?.language || 'all', p_sort: options?.sortBy || 'recent', p_limit: Math.min(options?.limit || 20, 50), p_user: options?.userId || null, p_page: options?.page || 0 });
+      return { data: (r.data?.items || []).map((i: any) => i.data), error: r.error?.message || null };
+    }
     const page = options?.page || 0;
     const limit = options?.limit || 20;
     const offset = page * limit;
@@ -165,6 +174,7 @@ export async function getSnippetById(
   id: string
 ): Promise<{ data: FeedSnippet | null; error: string | null }> {
   try {
+    if (await isWebVisitor()) return { data: await publicWebDocument('code', id), error: null };
     const { data, error } = await supabase
       .from('code_snippets')
       .select(
@@ -259,6 +269,12 @@ export async function getSnippetCounts(snippetIds: string[]): Promise<{
   commentCounts: Record<string, number>;
 }> {
   try {
+    if (await isWebVisitor()) {
+      const docs = await Promise.all(snippetIds.slice(0,50).map(id => publicWebDocument('code',id)));
+      const result = { likeCounts: {} as Record<string,number>, viewCounts: {} as Record<string,number>, commentCounts: {} as Record<string,number> };
+      for (const s of docs) if (s) { result.likeCounts[s.id]=s.likes_count||0; result.viewCounts[s.id]=s.views_count||0; result.commentCounts[s.id]=s.comments_count||0; }
+      return result;
+    }
     if (!snippetIds.length) {
       return {
         likeCounts: {},
@@ -311,7 +327,7 @@ export async function getSnippetCounts(snippetIds: string[]): Promise<{
       const { data: commentsData, error: commentsError } = await supabase
         .from('code_comments')
         .select('snippet_id')
-        .in('snippet_id', snippetIds);
+        .in('snippet_id', snippetIds).is('deleted_at', null);
 
       if (!commentsError) {
         for (const id of snippetIds) {
@@ -422,6 +438,7 @@ export async function getComments(
   snippetId: string
 ): Promise<{ data: SnippetComment[]; error: string | null }> {
   try {
+    if (await isWebVisitor()) { const r = await supabase.rpc('public_web_comments', { p_kind: 'code', p_id: snippetId }); return { data: r.data || [], error: r.error?.message || null }; }
     const { data, error } = await supabase
       .from('code_comments')
       .select(
@@ -448,42 +465,23 @@ export async function getComments(
 /**
  * Add a comment to a snippet
  */
-export async function addComment(
-  userId: string,
-  snippetId: string,
-  content: string
-): Promise<{ success: boolean; error: string | null }> {
-  try {
-    // Generate UUID client-side to avoid server-side uuid_generate_v4() error
-    const commentId = generateUUID();
-    const { error } = await supabase.from('code_comments').insert({
-      id: commentId,
-      user_id: userId,
-      snippet_id: snippetId,
-      content,
-    });
-
-    if (error) throw error;
-
-    // Update comment count
-    const { count } = await supabase
-      .from('code_comments')
-      .select('*', { count: 'exact', head: true })
-      .eq('snippet_id', snippetId);
-
-    await supabase
-      .from('code_snippets')
-      .update({ comments_count: count || 0 })
-      .eq('id', snippetId);
-
-    return { success: true, error: null };
-  } catch (error) {
-    console.error('addComment error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'فشل إضافة التعليق',
-    };
+export async function addComment(userId: string, snippetId: string, content: string, parentId: string | null = null, requestId?: string): Promise<{ success: boolean; error: string | null }> {
+  const id = requestId || generateUUID();
+  const { error } = await supabase.from('code_comments').insert({ id, user_id: userId, snippet_id: snippetId, content: content.trim(), parent_id: parentId });
+  // A retry after a lost response uses the same UUID. A matching row confirms the original write.
+  if (error?.code === '23505') {
+    const { data } = await supabase.from('code_comments').select('id,content,user_id,parent_id').eq('id', id).single();
+    if (data?.user_id === userId && data.content === content.trim() && data.parent_id === parentId) return { success: true, error: null };
   }
+  return { success: !error, error: error ? 'لم يُرسل التعليق. احتفظنا بالنص؛ حاول مرة أخرى.' : null };
+}
+export async function editComment(id: string, content: string) {
+  const { error } = await supabase.rpc('edit_code_comment', { p_id: id, p_content: content.trim() });
+  return { success: !error, error: error ? 'تعذّر تعديل التعليق. حاول مرة أخرى.' : null };
+}
+export async function deleteComment(id: string) {
+  const { error } = await supabase.rpc('delete_code_comment', { p_id: id });
+  return { success: !error, error: error ? 'تعذّر حذف التعليق. حاول مرة أخرى.' : null };
 }
 
 // ==================== Snippet CRUD ====================

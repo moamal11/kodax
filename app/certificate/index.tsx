@@ -1,694 +1,283 @@
+import { supabase } from '@/lib/supabase';
+import { PROGRAMMING_FIELDS } from '@/constants';
+import { ALL_COURSES, getCoursesByField, getLessonsByCourse, getChallengesByCourse } from '@/constants/courseData';
 /**
- * 🎓 My Certificates Screen - Kodax
- * صفحة الشهادات في البروفايل
- * عرض جميع الشهادات مع تصنيف وفلترة
+ * شهاداتي: شهادات الإتمام حسب المستوى، والتحقق من أي شهادة برقمها.
+ * الحالة الفارغة تشرح كيف تُكتسب الشهادة (F26: صياغة «لا توجد شهادات ذهبية بعد»).
  */
-
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator,
-  Platform,
-  RefreshControl,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Pressable, RefreshControl, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
-import Animated, {
-  FadeInDown,
-  FadeInUp,
-  FadeIn,
-} from 'react-native-reanimated';
-import { THEME_COLORS, BORDER_RADIUS, SHADOWS } from '@/styles/theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { certificateService } from '@/services/certificateService';
+import { CERTIFICATE_LEVEL_CONFIG, type CertificateLevel, type UserCertificatesSummary } from '@/types/certificate';
 import {
-  CertificateLevel,
-  CertificateSummaryItem,
-  UserCertificatesSummary,
-  CERTIFICATE_LEVEL_CONFIG,
-} from '@/types/certificate';
-import { useAuth } from '../_layout';
-import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+  Screen,
+  AppBar,
+  Text,
+  Row,
+  Col,
+  Segmented,
+  Surface,
+  Tag,
+  Button,
+  IconButton,
+  EmptyState,
+  ErrorState,
+  ListSkeleton,
+  ProgressBar,
+  useTheme,
+} from '@/design';
 
-type FilterType = 'all' | CertificateLevel;
+type Filter = 'all' | CertificateLevel;
+const EMPTY_LABEL: Record<CertificateLevel, string> = { silver: 'فضية', gold: 'ذهبية', platinum: 'بلاتينية' };
 
-export default function MyCertificatesScreen() {
-  const { user } = useAuth();
-  const { isLargeScreen } = useResponsiveLayout();
-
+export default function CertificatesScreen() {
+  const t = useTheme();
+  const router = useRouter();
+  const { user, fullName } = useAuth();
   const [summary, setSummary] = useState<UserCertificatesSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [filter, setFilter] = useState<FilterType>('all');
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
+  const [how, setHow] = useState(false);
+  const [completed, setCompleted] = useState<Set<string> | null>(null);
+  const request = useRef(0);
+  const [filter, setFilter] = useState<Filter>('all');
 
-  const fetchCertificates = useCallback(
-    async (showRefresh = false) => {
-      if (!user?.id) return;
-
-      if (showRefresh) setIsRefreshing(true);
-      else setIsLoading(true);
-
-      try {
-        certificateService.setUser(user.id);
-        const data = await certificateService.getUserCertificates();
-        setSummary(data);
-        setError(null);
-      } catch (err: any) {
-        // Try offline cache
-        const offline = await certificateService.getCertificatesOffline();
-        if (offline) {
-          setSummary(offline);
-        } else {
-          setError('فشل في تحميل الشهادات');
-        }
-      } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
-      }
-    },
-    [user?.id]
-  );
-
-  useEffect(() => {
-    if (user?.id) {
-      fetchCertificates();
+  const load = useCallback(async () => {
+    if (!user?.id) return;
+    const version = ++request.current;
+    try {
+      certificateService.setUser(user.id);
+      const [certs, progress] = await Promise.all([
+        certificateService.getUserCertificates(),
+        supabase.from('user_lesson_progress').select('lesson_id').eq('user_id', user.id).eq('completed', true),
+      ]);
+      if (version !== request.current) return;
+      setSummary(certs);
+      setCompleted(progress.error ? null : new Set((progress.data ?? []).map((r) => r.lesson_id)));
+      setError(false);
+    } catch {
+      if (version !== request.current) return;
+      const offline = await certificateService.getCertificatesOffline();
+      if (offline) {
+        setSummary(offline);
+        setError(false);
+      } else setError(true);
+    } finally {
+      if (version === request.current) setLoading(false);
     }
   }, [user?.id]);
-
   useFocusEffect(
     useCallback(() => {
-      fetchCertificates();
-    }, [fetchCertificates])
+      setLoading(true);
+      setSummary(null);
+      setCompleted(null);
+      load();
+      return () => {
+        request.current++;
+      };
+    }, [load])
   );
 
-  // Filter certificates
-  const filteredCertificates = useMemo(() => {
-    if (!summary?.certificates) return [];
-    if (filter === 'all') return summary.certificates;
-    return summary.certificates.filter((c) => c.level === filter);
-  }, [summary?.certificates, filter]);
+  const list = useMemo(() => (summary?.certificates ?? []).filter((c) => filter === 'all' || c.level === filter), [summary, filter]);
 
-  // Group by course
-  const groupedByCourse = useMemo(() => {
-    const grouped: Record<
-      string,
-      {
-        courseTitle: string;
-        courseTitleAr?: string;
-        certs: CertificateSummaryItem[];
-      }
-    > = {};
+  const certs = summary?.certificates ?? [];
+  const counts = {
+    all: certs.length,
+    silver: certs.filter((c) => c.level === 'silver').length,
+    gold: certs.filter((c) => c.level === 'gold').length,
+    platinum: certs.filter((c) => c.level === 'platinum').length,
+  };
+  const nearest = completed
+    ? PROGRAMMING_FIELDS.map((field) => {
+        const courses = getCoursesByField(field.id);
+        const lessons = courses.flatMap((c) => getLessonsByCourse(c.id));
+        const challenges = courses.flatMap((c) => getChallengesByCourse(c.id));
+        const lessonDone = lessons.filter((l) => completed.has(l.id)).length;
+        const challengeDone = challenges.filter((c) => completed.has(c.id)).length;
+        const lp = lessons.length ? Math.round((100 * lessonDone) / lessons.length) : 0;
+        const cp = challenges.length ? Math.round((100 * challengeDone) / challenges.length) : 100;
+        return { field, courses, lessons, challenges, lessonDone, challengeDone, lp, cp, score: (Math.min(lp / 50, 1) + Math.min(cp / 25, 1)) / 2 };
+      })
+        .filter((f) => f.lessons.length > 0 && f.lessonDone + f.challengeDone > 0)
+        .sort((a, b) => b.score - a.score)[0]
+    : null;
 
-    for (const cert of filteredCertificates) {
-      if (!cert.course_id) continue;
-      if (!grouped[cert.course_id]) {
-        grouped[cert.course_id] = {
-          courseTitle: cert.course_title || 'Unknown Course',
-          courseTitleAr: cert.course_title_ar,
-          certs: [],
-        };
-      }
-      grouped[cert.course_id].certs.push(cert);
-    }
-
-    return Object.entries(grouped);
-  }, [filteredCertificates]);
-
-  const filters: { key: FilterType; label: string; count: number }[] = [
-    { key: 'all', label: 'الكل', count: summary?.total || 0 },
-    { key: 'platinum', label: 'Platinum', count: summary?.platinum || 0 },
-    { key: 'gold', label: 'Gold', count: summary?.gold || 0 },
-    { key: 'silver', label: 'Silver', count: summary?.silver || 0 },
-  ];
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <LinearGradient
-          colors={['#0f0f1e', '#1a1a3e', '#0f0f1e']}
-          style={StyleSheet.absoluteFill}
+  return (
+    <Screen
+      width="reading"
+      header={
+        <AppBar
+          title="شهاداتي"
+          fallback="/profile"
+          actions={<IconButton icon="shield-checkmark-outline" label="التحقق من شهادة" onPress={() => router.push('/certificate/verify')} />}
         />
-        <ActivityIndicator size="large" color={THEME_COLORS.accent} />
-        <Text style={styles.loadingText}>جاري تحميل الشهادات...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#0f0f1e', '#1a1a3e', '#0f0f1e']}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>شهاداتي</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/certificate/verify')}
-          style={styles.verifyButton}
-        >
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={22}
-            color={THEME_COLORS.accent}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          isLargeScreen && styles.scrollContentLarge,
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={() => fetchCertificates(true)}
-            tintColor={THEME_COLORS.accent}
-          />
-        }
-      >
-        {/* Stats Cards */}
-        <Animated.View
-          entering={FadeInDown.delay(100).duration(500)}
-          style={styles.statsRow}
-        >
-          <StatCard
-            iconName="medal"
-            label="Silver"
-            count={summary?.silver || 0}
-            color="#C0C0C0"
-          />
-          <StatCard
-            iconName="trophy"
-            label="Gold"
-            count={summary?.gold || 0}
-            color="#FFD700"
-          />
-          <StatCard
-            iconName="diamond"
-            label="Platinum"
-            count={summary?.platinum || 0}
-            color="#E5E4E2"
-          />
-        </Animated.View>
-
-        {/* Filter Tabs */}
-        <Animated.View entering={FadeInDown.delay(200).duration(500)}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterContainer}
-          >
-            {filters.map((f) => (
-              <TouchableOpacity
-                key={f.key}
-                style={[
-                  styles.filterTab,
-                  filter === f.key && styles.filterTabActive,
-                ]}
-                onPress={() => setFilter(f.key)}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    filter === f.key && styles.filterTextActive,
-                  ]}
-                >
-                  {f.label} ({f.count})
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </Animated.View>
-
-        {/* Certificates List */}
-        {error && (
-          <View style={styles.errorContainer}>
-            <Ionicons name="warning" size={24} color={THEME_COLORS.warning} />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {filteredCertificates.length === 0 ? (
-          <Animated.View
-            entering={FadeIn.delay(300).duration(500)}
-            style={styles.emptyState}
-          >
-            <Ionicons
-              name="ribbon-outline"
-              size={64}
-              color={THEME_COLORS.textMuted}
-            />
-            <Text style={styles.emptyTitle}>
-              {filter === 'all'
-                ? 'لا توجد شهادات بعد'
-                : `لا توجد شهادات ${
-                    CERTIFICATE_LEVEL_CONFIG[filter as CertificateLevel]
-                      ?.labelAr || ''
-                  }`}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              أكمل الكورسات واجتز الاختبارات النهائية للحصول على الشهادات
-            </Text>
-            <TouchableOpacity
-              style={styles.startButton}
-              onPress={() => router.push('/(tabs)')}
-            >
-              <Text style={styles.startButtonText}>ابدأ التعلم الآن</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ) : (
-          <View style={styles.certificatesList}>
-            {groupedByCourse.map(([courseId, group], groupIndex) => (
-              <Animated.View
-                key={courseId}
-                entering={FadeInUp.delay(300 + groupIndex * 100).duration(500)}
-              >
-                {/* Course Header */}
-                <Text style={styles.courseGroupTitle}>
-                  {group.courseTitleAr || group.courseTitle}
-                </Text>
-
-                {group.certs.map((cert, certIndex) => (
-                  <CertificateCard
-                    key={cert.id}
-                    certificate={cert}
-                    index={certIndex}
-                  />
-                ))}
-              </Animated.View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  );
-}
-
-// ===== Sub-components =====
-
-function StatCard({
-  iconName,
-  label,
-  count,
-  color,
-}: {
-  iconName: string;
-  label: string;
-  count: number;
-  color: string;
-}) {
-  return (
-    <View style={[styles.statCard, { borderColor: `${color}30` }]}>
-      <Ionicons name={iconName as any} size={22} color={color} />
-      <Text style={[styles.statCount, { color }]}>{count}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function CertificateCard({
-  certificate,
-  index,
-}: {
-  certificate: CertificateSummaryItem;
-  index: number;
-}) {
-  const config = CERTIFICATE_LEVEL_CONFIG[certificate.level];
-  const isArchived = certificate.status === 'archived';
-
-  return (
-    <TouchableOpacity
-      style={[
-        styles.certCard,
-        {
-          borderColor: isArchived
-            ? THEME_COLORS.borderDark
-            : config.borderColor,
-        },
-        isArchived && styles.certCardArchived,
-      ]}
-      onPress={() =>
-        router.push({
-          pathname: '/certificate/[id]',
-          params: { id: certificate.id },
-        })
       }
-      activeOpacity={0.8}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={async () => {
+            setRefreshing(true);
+            await load();
+            setRefreshing(false);
+          }}
+          tintColor={t.colors.brand}
+        />
+      }
     >
-      <View style={styles.certCardHeader}>
-        {/* Level Badge */}
-        <LinearGradient
-          colors={config.gradientColors}
-          style={styles.certLevelBadge}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.certLevelEmoji}>
-            <Ionicons name={config.iconName as any} size={14} color="#1a1a2e" />
-          </Text>
-          <Text style={styles.certLevelText}>{config.label}</Text>
-        </LinearGradient>
-
-        {/* Status */}
-        <View style={styles.certStatusContainer}>
-          {isArchived ? (
-            <View style={styles.archivedBadge}>
-              <Ionicons
-                name="archive"
-                size={14}
-                color={THEME_COLORS.textMuted}
+      {loading ? (
+        <ListSkeleton rows={3} />
+      ) : error ? (
+        <ErrorState title="تعذّر تحميل الشهادات" onRetry={load} />
+      ) : (
+        <Col gap={16}>
+          <Row gap={10}>
+            <Ionicons name="ribbon-outline" size={30} color={t.colors.brandText} />
+            <Col flex={1} gap={2}>
+              <Text variant="heading">إنجاز يستحق ينحفظ</Text>
+              <Text variant="bodySm" tone="secondary">
+                {certs.length ? `${certs.length} شهادات إتمام، لكل واحدة رحلة ورقم تحقق.` : 'خطواتك في التعلّم تقرّبك من أول شهادة.'}
+              </Text>
+            </Col>
+          </Row>
+          <Segmented
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: 'all', label: 'الكل', count: counts.all },
+              { value: 'silver', label: 'فضية', count: counts.silver },
+              { value: 'gold', label: 'ذهبية', count: counts.gold },
+              { value: 'platinum', label: 'بلاتينية', count: counts.platinum },
+            ]}
+          />
+          {list.length === 0 ? (
+            <Col gap={14}>
+              <EmptyState
+                icon="ribbon-outline"
+                title={filter === 'all' ? 'ما عندك شهادات بعد' : `لا توجد شهادات ${EMPTY_LABEL[filter]} بعد`}
+                body={filter === 'all' ? 'خطوتك الأولى تبدأ من درس، وتكتمل بالتحديات.' : 'جرّب فلتر الكل لعرض بقية شهاداتك.'}
+                action={filter === 'all' ? 'تابع التعلم' : 'عرض كل الشهادات'}
+                onAction={() => (filter === 'all' ? router.push('/learn' as any) : setFilter('all'))}
               />
-              <Text style={styles.archivedText}>مؤرشفة</Text>
-            </View>
+              {filter === 'all' && nearest && (
+                <Surface padding={18}>
+                  <Col gap={10}>
+                    <Text variant="label" tone="brand">
+                      أقرب مسار لأول شهادة فضية
+                    </Text>
+                    <Text variant="heading">{nearest.field.nameAr}</Text>
+                    <Text variant="bodySm" tone="secondary">
+                      تقدمك الحالي: {nearest.lessonDone} من {nearest.lessons.length} درس، و{nearest.challengeDone} من {nearest.challenges.length} تحدٍّ.
+                    </Text>
+                    <ProgressBar value={nearest.lp / 50} label="تقدم الدروس نحو الفضية" />
+                    <Text variant="caption" tone="secondary">
+                      الدروس: {nearest.lp}% · المطلوب 50%
+                    </Text>
+                    <ProgressBar value={nearest.cp / 25} label="تقدم التحديات نحو الفضية" />
+                    <Text variant="caption" tone="secondary">
+                      التحديات: {nearest.cp}% · المطلوب 25%
+                    </Text>
+                    <Text variant="caption" tone="muted">
+                      التقدم الحالي للتوجيه فقط؛ الأهلية والاستلام في صفحة الدورة.
+                    </Text>
+                    <Button label="كمّل هذا المسار" onPress={() => router.push(`/learn?field=${nearest.field.id}` as any)} />
+                  </Col>
+                </Surface>
+              )}
+            </Col>
           ) : (
-            <View style={styles.validBadge}>
-              <Ionicons
-                name="checkmark-circle"
-                size={14}
-                color={THEME_COLORS.success}
-              />
-              <Text style={styles.validText}>صالحة</Text>
-            </View>
+            <Col gap={10}>
+              {list.map((c) => {
+                const cfg = CERTIFICATE_LEVEL_CONFIG[c.level];
+                const archived = c.status === 'archived';
+                return (
+                  <Surface key={c.id} padding={16}>
+                    <Col gap={12}>
+                      <Row gap={14} align="flex-start">
+                        <View
+                          accessible
+                          accessibilityLabel={`معاينة شهادة ${cfg.labelAr}`}
+                          style={{
+                            width: 90,
+                            minHeight: 112,
+                            backgroundColor: t.colors.brandSoft,
+                            borderWidth: 1,
+                            borderColor: t.colors.borderStrong,
+                            borderRadius: 6,
+                            padding: 9,
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <Ionicons name="ribbon-outline" size={24} color={t.colors.brandText} />
+                          <Text variant="caption" align="center" tone="brand">
+                            شهادة إتمام
+                          </Text>
+                          <View style={{ width: '80%', height: 2, backgroundColor: t.colors.borderStrong }} />
+                          <Text variant="caption" align="center" numberOfLines={2}>
+                            {fullName || 'Kodax'}
+                          </Text>
+                          <Text variant="caption" align="center" tone="secondary">
+                            {cfg.labelAr}
+                          </Text>
+                        </View>
+                        <Col flex={1} gap={5}>
+                          <Text variant="heading">{c.field_name_ar || c.field_name || c.course_title_ar || c.course_title}</Text>
+                          <Text variant="bodySm" tone="secondary">
+                            شهادة إتمام {cfg.labelAr}
+                          </Text>
+                          <Tag
+                            label={c.status === 'revoked' ? 'ملغاة' : archived ? 'مؤرشفة' : 'صالحة'}
+                            tone={c.status === 'revoked' ? 'danger' : archived ? 'muted' : 'success'}
+                          />
+                          <Text variant="caption" tone="secondary">
+                            {new Date(c.issued_at).toLocaleDateString('ar-IQ-u-nu-latn', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                              timeZone: 'Asia/Baghdad',
+                            })}
+                          </Text>
+                        </Col>
+                      </Row>
+                      <Button label="عرض الشهادة" icon="ribbon-outline" variant="secondary" onPress={() => router.push(`/certificate/${c.id}` as any)} />
+                    </Col>
+                  </Surface>
+                );
+              })}
+            </Col>
           )}
-        </View>
-      </View>
-
-      <Text
-        style={[
-          styles.certCourseTitle,
-          isArchived && styles.certCourseTitleArchived,
-        ]}
-        numberOfLines={1}
-      >
-        {certificate.course_title_ar || certificate.course_title}
-      </Text>
-
-      <View style={styles.certFooter}>
-        <Text style={styles.certDate}>
-          {new Date(certificate.issued_at).toLocaleDateString('ar-IQ-u-nu-latn', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          })}
-        </Text>
-        <Ionicons
-          name="chevron-back"
-          size={18}
-          color={THEME_COLORS.textMuted}
-        />
-      </View>
-
-      {/* Achievement mini stats */}
-      {certificate.achievement_snapshot && (
-        <View style={styles.miniStats}>
-          <MiniStat
-            label="دروس"
-            value={`${certificate.achievement_snapshot.lessons_percent}%`}
-          />
-          <MiniStat
-            label="تحديات"
-            value={`${certificate.achievement_snapshot.challenges_percent}%`}
-          />
-        </View>
+          <Surface padding={14}>
+            <Button label="كيف أحصل على شهادة؟" icon={how ? 'chevron-up' : 'chevron-down'} variant="ghost" onPress={() => setHow(!how)} />
+            {how && (
+              <Col gap={10} style={{ paddingTop: 12 }}>
+                <Text variant="bodySm" tone="secondary">
+                  كل مسار له ثلاثة مستويات. أكمل الدروس والتحديات، ثم استلم شهادتك من صفحة الدورة عند تحقق الأهلية.
+                </Text>
+                {[
+                  ['الفضية', '50% دروس · 25% تحديات'],
+                  ['الذهبية', '75% دروس · 60% تحديات'],
+                  ['البلاتينية', '100% دروس · 100% تحديات بلا أخطاء حرجة'],
+                ].map(([level, req]) => (
+                  <Col key={level} gap={2}>
+                    <Text variant="label">{level}</Text>
+                    <Text variant="bodySm" tone="secondary">
+                      {req}
+                    </Text>
+                  </Col>
+                ))}
+                <Text variant="caption" tone="muted">
+                  شهادة Kodax توثّق إتمامك وتقدمك، وليست اعتمادًا أكاديميًا. التحقق متاح لمن لديه حساب.
+                </Text>
+              </Col>
+            )}
+          </Surface>
+          <Button label="التحقق من شهادة برقمها" icon="shield-checkmark-outline" variant="secondary" onPress={() => router.push('/certificate/verify')} />
+        </Col>
       )}
-    </TouchableOpacity>
+    </Screen>
   );
 }
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.miniStatItem}>
-      <Text style={styles.miniStatValue}>{value}</Text>
-      <Text style={styles.miniStatLabel}>{label}</Text>
-    </View>
-  );
-}
-
-// ===== Styles =====
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: THEME_COLORS.backgroundDark,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: THEME_COLORS.backgroundDark,
-  },
-  loadingText: {
-    color: THEME_COLORS.textMuted,
-    marginTop: 12,
-    fontSize: 14,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 56 : 40,
-    paddingBottom: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  verifyButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  scrollContentLarge: {
-    maxWidth: 700,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: THEME_COLORS.backgroundMedium,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    gap: 4,
-  },
-  statEmoji: {
-    fontSize: 24,
-  },
-  statCount: {
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: THEME_COLORS.textMuted,
-    fontWeight: '600',
-  },
-  filterContainer: {
-    gap: 8,
-    marginBottom: 20,
-    paddingHorizontal: 2,
-  },
-  filterTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: THEME_COLORS.backgroundLight,
-    borderWidth: 1,
-    borderColor: THEME_COLORS.borderDark,
-  },
-  filterTabActive: {
-    backgroundColor: THEME_COLORS.accent,
-    borderColor: THEME_COLORS.accent,
-  },
-  filterText: {
-    fontSize: 13,
-    color: THEME_COLORS.textMuted,
-    fontWeight: '600',
-  },
-  filterTextActive: {
-    color: '#fff',
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 16,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderRadius: BORDER_RADIUS.lg,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: THEME_COLORS.warning,
-    fontSize: 14,
-    flex: 1,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    gap: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: THEME_COLORS.textMuted,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 20,
-  },
-  startButton: {
-    marginTop: 12,
-    backgroundColor: THEME_COLORS.accent,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: BORDER_RADIUS.lg,
-  },
-  startButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  certificatesList: {
-    gap: 16,
-  },
-  courseGroupTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: THEME_COLORS.textSecondary,
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  certCard: {
-    backgroundColor: THEME_COLORS.backgroundMedium,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: 16,
-    borderWidth: 1.5,
-    marginBottom: 10,
-    ...SHADOWS.default,
-  },
-  certCardArchived: {
-    opacity: 0.6,
-  },
-  certCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  certLevelBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: BORDER_RADIUS.full,
-    gap: 4,
-  },
-  certLevelEmoji: {
-    fontSize: 14,
-  },
-  certLevelText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#1a1a2e',
-  },
-  certStatusContainer: {},
-  archivedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  archivedText: {
-    fontSize: 11,
-    color: THEME_COLORS.textMuted,
-  },
-  validBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  validText: {
-    fontSize: 11,
-    color: THEME_COLORS.success,
-  },
-  certCourseTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  certCourseTitleArchived: {
-    color: THEME_COLORS.textMuted,
-  },
-  certFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  certDate: {
-    fontSize: 12,
-    color: THEME_COLORS.textMuted,
-  },
-  miniStats: {
-    flexDirection: 'row',
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    paddingTop: 10,
-    marginTop: 4,
-  },
-  miniStatItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
-  },
-  miniStatValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: THEME_COLORS.textSecondary,
-  },
-  miniStatLabel: {
-    fontSize: 10,
-    color: THEME_COLORS.textMuted,
-  },
-});

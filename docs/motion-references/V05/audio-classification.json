@@ -1,0 +1,620 @@
+{
+  "id": "V05",
+  "method": "YAMNet ONNX automated inference; not direct listening; class scores are not calibrated probabilities",
+  "top_mean_classes": [
+    {
+      "class": "Music",
+      "score": 0.6685
+    },
+    {
+      "class": "Glass",
+      "score": 0.0653
+    },
+    {
+      "class": "Chink, clink",
+      "score": 0.06
+    },
+    {
+      "class": "Drip",
+      "score": 0.0324
+    },
+    {
+      "class": "Turkey",
+      "score": 0.0265
+    },
+    {
+      "class": "Gobble",
+      "score": 0.0204
+    },
+    {
+      "class": "Liquid",
+      "score": 0.018
+    },
+    {
+      "class": "Animal",
+      "score": 0.0132
+    },
+    {
+      "class": "Squish",
+      "score": 0.0116
+    },
+    {
+      "class": "Ping",
+      "score": 0.0111
+    }
+  ],
+  "windows": [
+    {
+      "start_s": 0.0,
+      "end_s": 0.96,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.3361
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.0555
+        },
+        {
+          "class": "Percussion",
+          "score": 0.0391
+        },
+        {
+          "class": "Glockenspiel",
+          "score": 0.0325
+        },
+        {
+          "class": "Jingle, tinkle",
+          "score": 0.0294
+        }
+      ]
+    },
+    {
+      "start_s": 0.48,
+      "end_s": 1.44,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.4184
+        },
+        {
+          "class": "Percussion",
+          "score": 0.1045
+        },
+        {
+          "class": "Drum",
+          "score": 0.0939
+        },
+        {
+          "class": "Drum kit",
+          "score": 0.0562
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.0479
+        }
+      ]
+    },
+    {
+      "start_s": 0.96,
+      "end_s": 1.92,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9429
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.0098
+        },
+        {
+          "class": "Background music",
+          "score": 0.0089
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0086
+        },
+        {
+          "class": "Soundtrack music",
+          "score": 0.0076
+        }
+      ]
+    },
+    {
+      "start_s": 1.44,
+      "end_s": 2.4,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.8114
+        },
+        {
+          "class": "Glass",
+          "score": 0.0206
+        },
+        {
+          "class": "Ping",
+          "score": 0.0197
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0172
+        },
+        {
+          "class": "Smash, crash",
+          "score": 0.0172
+        }
+      ]
+    },
+    {
+      "start_s": 1.92,
+      "end_s": 2.88,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9603
+        },
+        {
+          "class": "Drum",
+          "score": 0.0456
+        },
+        {
+          "class": "Percussion",
+          "score": 0.0253
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.0239
+        },
+        {
+          "class": "Jazz",
+          "score": 0.0234
+        }
+      ]
+    },
+    {
+      "start_s": 2.4,
+      "end_s": 3.36,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.7921
+        },
+        {
+          "class": "Whack, thwack",
+          "score": 0.0187
+        },
+        {
+          "class": "Smash, crash",
+          "score": 0.0123
+        },
+        {
+          "class": "Inside, small room",
+          "score": 0.0087
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.0068
+        }
+      ]
+    },
+    {
+      "start_s": 2.88,
+      "end_s": 3.84,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6196
+        },
+        {
+          "class": "Glass",
+          "score": 0.2999
+        },
+        {
+          "class": "Chink, clink",
+          "score": 0.234
+        },
+        {
+          "class": "Ping",
+          "score": 0.0558
+        },
+        {
+          "class": "Drip",
+          "score": 0.0356
+        }
+      ]
+    },
+    {
+      "start_s": 3.36,
+      "end_s": 4.32,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.8587
+        },
+        {
+          "class": "Liquid",
+          "score": 0.014
+        },
+        {
+          "class": "Bicycle",
+          "score": 0.0106
+        },
+        {
+          "class": "Water",
+          "score": 0.0086
+        },
+        {
+          "class": "Drip",
+          "score": 0.0064
+        }
+      ]
+    },
+    {
+      "start_s": 3.84,
+      "end_s": 4.8,
+      "top": [
+        {
+          "class": "Chink, clink",
+          "score": 0.6706
+        },
+        {
+          "class": "Glass",
+          "score": 0.5946
+        },
+        {
+          "class": "Music",
+          "score": 0.4894
+        },
+        {
+          "class": "Liquid",
+          "score": 0.0537
+        },
+        {
+          "class": "Dishes, pots, and pans",
+          "score": 0.0232
+        }
+      ]
+    },
+    {
+      "start_s": 4.32,
+      "end_s": 5.28,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6596
+        },
+        {
+          "class": "Glass",
+          "score": 0.1739
+        },
+        {
+          "class": "Chink, clink",
+          "score": 0.1006
+        },
+        {
+          "class": "Inside, large room or hall",
+          "score": 0.013
+        },
+        {
+          "class": "Percussion",
+          "score": 0.0085
+        }
+      ]
+    },
+    {
+      "start_s": 4.8,
+      "end_s": 5.76,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.61
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0127
+        },
+        {
+          "class": "Smash, crash",
+          "score": 0.0105
+        },
+        {
+          "class": "Burst, pop",
+          "score": 0.0062
+        },
+        {
+          "class": "Dubstep",
+          "score": 0.0057
+        }
+      ]
+    },
+    {
+      "start_s": 5.28,
+      "end_s": 6.24,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9645
+        },
+        {
+          "class": "Soundtrack music",
+          "score": 0.012
+        },
+        {
+          "class": "Background music",
+          "score": 0.0089
+        },
+        {
+          "class": "Electronic music",
+          "score": 0.008
+        },
+        {
+          "class": "Electronica",
+          "score": 0.0051
+        }
+      ]
+    },
+    {
+      "start_s": 5.76,
+      "end_s": 6.72,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.906
+        },
+        {
+          "class": "Independent music",
+          "score": 0.0159
+        },
+        {
+          "class": "Percussion",
+          "score": 0.0139
+        },
+        {
+          "class": "Background music",
+          "score": 0.0116
+        },
+        {
+          "class": "Musical instrument",
+          "score": 0.0115
+        }
+      ]
+    },
+    {
+      "start_s": 6.24,
+      "end_s": 7.2,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6658
+        },
+        {
+          "class": "Drip",
+          "score": 0.0784
+        },
+        {
+          "class": "Glass",
+          "score": 0.0398
+        },
+        {
+          "class": "Liquid",
+          "score": 0.0342
+        },
+        {
+          "class": "Chink, clink",
+          "score": 0.0319
+        }
+      ]
+    },
+    {
+      "start_s": 6.72,
+      "end_s": 7.68,
+      "top": [
+        {
+          "class": "Turkey",
+          "score": 0.5546
+        },
+        {
+          "class": "Gobble",
+          "score": 0.4288
+        },
+        {
+          "class": "Animal",
+          "score": 0.1814
+        },
+        {
+          "class": "Fowl",
+          "score": 0.1602
+        },
+        {
+          "class": "Livestock, farm animals, working animals",
+          "score": 0.1344
+        }
+      ]
+    },
+    {
+      "start_s": 7.2,
+      "end_s": 8.16,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.2885
+        },
+        {
+          "class": "Drip",
+          "score": 0.1607
+        },
+        {
+          "class": "Liquid",
+          "score": 0.0848
+        },
+        {
+          "class": "Bow-wow",
+          "score": 0.0767
+        },
+        {
+          "class": "Dog",
+          "score": 0.074
+        }
+      ]
+    },
+    {
+      "start_s": 7.68,
+      "end_s": 8.64,
+      "top": [
+        {
+          "class": "Drip",
+          "score": 0.3707
+        },
+        {
+          "class": "Music",
+          "score": 0.2655
+        },
+        {
+          "class": "Squish",
+          "score": 0.1766
+        },
+        {
+          "class": "Liquid",
+          "score": 0.1109
+        },
+        {
+          "class": "Chink, clink",
+          "score": 0.0462
+        }
+      ]
+    },
+    {
+      "start_s": 8.16,
+      "end_s": 9.12,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6409
+        },
+        {
+          "class": "Chink, clink",
+          "score": 0.0431
+        },
+        {
+          "class": "Glass",
+          "score": 0.0278
+        },
+        {
+          "class": "Tools",
+          "score": 0.0174
+        },
+        {
+          "class": "Smash, crash",
+          "score": 0.0161
+        }
+      ]
+    },
+    {
+      "start_s": 8.64,
+      "end_s": 9.6,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.6959
+        },
+        {
+          "class": "Glass",
+          "score": 0.0454
+        },
+        {
+          "class": "Chink, clink",
+          "score": 0.0397
+        },
+        {
+          "class": "Ping",
+          "score": 0.0217
+        },
+        {
+          "class": "Plop",
+          "score": 0.019
+        }
+      ]
+    },
+    {
+      "start_s": 9.12,
+      "end_s": 10.08,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.7017
+        },
+        {
+          "class": "Glass",
+          "score": 0.1001
+        },
+        {
+          "class": "Ding",
+          "score": 0.0926
+        },
+        {
+          "class": "Chink, clink",
+          "score": 0.078
+        },
+        {
+          "class": "Jingle, tinkle",
+          "score": 0.0474
+        }
+      ]
+    },
+    {
+      "start_s": 9.6,
+      "end_s": 10.56,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9869
+        },
+        {
+          "class": "Drum",
+          "score": 0.005
+        },
+        {
+          "class": "Percussion",
+          "score": 0.0039
+        },
+        {
+          "class": "Bass drum",
+          "score": 0.0037
+        },
+        {
+          "class": "Drum kit",
+          "score": 0.0036
+        }
+      ]
+    },
+    {
+      "start_s": 10.08,
+      "end_s": 11.04,
+      "top": [
+        {
+          "class": "Music",
+          "score": 0.9592
+        },
+        {
+          "class": "Jingle (music)",
+          "score": 0.0026
+        },
+        {
+          "class": "Sound effect",
+          "score": 0.0018
+        },
+        {
+          "class": "Background music",
+          "score": 0.0015
+        },
+        {
+          "class": "Spray",
+          "score": 0.0014
+        }
+      ]
+    }
+  ]
+}

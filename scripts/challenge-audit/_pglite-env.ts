@@ -54,6 +54,20 @@ export async function createEnv(): Promise<TestEnv> {
     CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.role', true), '') $$;
     CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT '{}'::jsonb $$;
     GRANT USAGE ON SCHEMA auth, extensions, public TO anon, authenticated, service_role;
+    CREATE SCHEMA storage;
+    CREATE TABLE storage.buckets (id text PRIMARY KEY, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+    CREATE TABLE storage.objects (id uuid DEFAULT gen_random_uuid() PRIMARY KEY, bucket_id text REFERENCES storage.buckets(id), name text, owner uuid, UNIQUE(bucket_id,name));
+    CREATE FUNCTION storage.foldername(name text) RETURNS text[] LANGUAGE sql IMMUTABLE AS $$ SELECT (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1)-1] $$;
+    ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+    GRANT USAGE ON SCHEMA storage TO anon,authenticated,service_role;
+    GRANT ALL ON storage.objects TO authenticated,service_role;
+    GRANT SELECT ON storage.buckets TO anon,authenticated,service_role;
+    GRANT SELECT ON storage.objects TO anon;
+    INSERT INTO storage.buckets VALUES ('avatars','avatars',true,5242880,ARRAY['image/jpeg','image/png','image/webp']);
+    CREATE POLICY avatar_read ON storage.objects FOR SELECT USING(bucket_id='avatars');
+    CREATE POLICY avatar_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK(bucket_id='avatars' AND (storage.foldername(name))[1]=auth.uid()::text);
+    CREATE POLICY avatar_delete ON storage.objects FOR DELETE TO authenticated USING(bucket_id='avatars' AND (storage.foldername(name))[1]=auth.uid()::text);
+    CREATE POLICY avatar_update ON storage.objects FOR UPDATE TO authenticated USING(bucket_id='avatars' AND (storage.foldername(name))[1]=auth.uid()::text) WITH CHECK(bucket_id='avatars' AND (storage.foldername(name))[1]=auth.uid()::text);
   `);
   const schema = read(SCHEMA)
     .replace(/^\\(un)?restrict .*$/gm, '')

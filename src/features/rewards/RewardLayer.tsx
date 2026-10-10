@@ -10,8 +10,8 @@
  * - التمرير/تغيير الحجم: مصدر الشرارات يُقاس لحظة الإطلاق، والهدف يُعاد قياسه عند تغيير الحجم أثناء الطيران.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Dimensions, Platform, View, type View as RNView } from 'react-native';
-import Animated, { Easing, FadeIn, FadeOut, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming, type SharedValue } from 'react-native-reanimated';
+import { AccessibilityInfo, Dimensions, Platform, View, useWindowDimensions, type View as RNView } from 'react-native';
+import Animated, { Easing, FadeIn, FadeOut, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming, cancelAnimation, type SharedValue } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, useReducedMotion, Text, Row } from '@/design';
 import { formatXp, levelForXp } from './level';
@@ -86,11 +86,14 @@ export function RewardProvider({ children, profileXp }: { children: React.ReactN
   const currentTarget = () => targets.current[targets.current.length - 1];
 
   const aimAtTarget = useCallback(async () => {
-    const r = await measure(currentTarget());
-    if (r) {
-      toX.value = r.x + r.w / 2;
-      toY.value = r.y + r.h / 2;
-      return true;
+    const { width, height } = Dimensions.get('window');
+    for (const target of [...targets.current].reverse()) {
+      const r = await measure(target);
+      if (r && r.x >= 0 && r.y >= 0 && r.x + r.w <= width + 1 && r.y + r.h <= height + 1) {
+        toX.value = r.x + r.w / 2;
+        toY.value = r.y + r.h / 2;
+        return true;
+      }
     }
     return false;
   }, []);
@@ -136,7 +139,7 @@ export function RewardProvider({ children, profileXp }: { children: React.ReactN
       AccessibilityInfo.announceForAccessibility?.(`حصلت على ${award} نقطة خبرة`);
       (async () => {
         if (reduced) {
-          setTimeout(() => setShown(c.xpAfter), 250);
+          setShown(c.xpAfter);
           return;
         }
         let hasTarget = await aimAtTarget();
@@ -163,6 +166,13 @@ export function RewardProvider({ children, profileXp }: { children: React.ReactN
     },
     [reduced, aimAtTarget, setShown]
   );
+
+  useEffect(() => {
+    if (reduced && flight) {
+      flightRef.current = null;
+      setFlight(null); setGhost(false); setShown(finalXp.current);
+    }
+  }, [reduced, flight, setShown]);
 
   const onArrive = useCallback(() => {
     const f = flightRef.current;
@@ -231,6 +241,7 @@ function Spark({ i, from, toX, toY, onArrive, color }: { i: number; from: { x: n
         if (done) runOnJS(onArrive)();
       })
     );
+    return () => cancelAnimation(p);
   }, []);
   const st = useAnimatedStyle(() => {
     const k = p.value;
@@ -281,24 +292,24 @@ function LevelUpBurst({ level, toX, toY, reduced }: { level: number; toX: Shared
     opacity: 1 - ring.value,
     transform: [{ translateX: toX.value - 40 }, { translateY: toY.value - 40 }, { scale: 0.4 + ring.value * 1.8 }],
   }));
-  const { width } = Dimensions.get('window');
+  const { width } = useWindowDimensions();
   return (
     <>
       {!reduced && <Animated.View style={[{ position: 'absolute', left: 0, top: 0, width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: t.colors.xp }, ringSt]} />}
       {!reduced && Array.from({ length: 14 }).map((_, i) => <Confetti key={i} i={i} toX={toX} toY={toY} />)}
       <Animated.View entering={reduced ? undefined : FadeIn.duration(220)} exiting={reduced ? undefined : FadeOut.duration(300)} style={{ position: 'absolute', top: 72, left: 0, width, alignItems: 'center' }}>
-        <LevelCard level={level} />
+        <LevelCard level={level} reduced={reduced} />
       </Animated.View>
     </>
   );
 }
 
-function LevelCard({ level }: { level: number }) {
+function LevelCard({ level, reduced }: { level: number; reduced: boolean }) {
   const t = useTheme();
-  const s = useSharedValue(0.85);
+  const s = useSharedValue(reduced ? 1 : 0.85);
   useEffect(() => {
-    s.value = withSequence(withSpring(1.04, { damping: 9, stiffness: 180 }), withSpring(1, { damping: 14 }));
-  }, []);
+    s.value = reduced ? 1 : withSequence(withSpring(1.04, { damping: 9, stiffness: 180 }), withSpring(1, { damping: 14 }));
+  }, [reduced]);
   const st = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
   return (
     <Animated.View
@@ -353,11 +364,12 @@ function Confetti({ i, toX, toY }: { i: number; toX: SharedValue<number>; toY: S
 /** عداد عائم يظهر أثناء المكافأة إذا لم يكن في الشاشة عداد XP */
 function GhostMeter({ xp, registerTarget }: { xp: number; registerTarget: (r: TargetRef) => () => void }) {
   const t = useTheme();
+  const reduced = useReducedMotion();
   const ref = useRef<RNView>(null);
   useEffect(() => registerTarget(ref), [registerTarget]);
-  const { width } = Dimensions.get('window');
+  const { width } = useWindowDimensions();
   return (
-    <Animated.View entering={FadeIn.duration(160)} exiting={FadeOut.duration(260)} style={{ position: 'absolute', top: 56, left: 0, width, alignItems: 'center' }}>
+    <Animated.View entering={reduced ? undefined : FadeIn.duration(160)} exiting={reduced ? undefined : FadeOut.duration(260)} style={{ position: 'absolute', top: 56, left: 0, width, alignItems: 'center' }}>
       <View ref={ref} collapsable={false} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, height: 36, borderRadius: 18, backgroundColor: t.colors.surfaceRaised, borderWidth: 1, borderColor: t.colors.border }}>
         <Ionicons name="flash" size={16} color={t.colors.xp} />
         <Text variant="label" weight="bold" ltr tabular>
