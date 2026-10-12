@@ -142,6 +142,13 @@ export async function handleVerify(deps: VerifyDeps, token: string, body: unknow
     prelude: spec.prelude,
   });
 
+  if (result.serviceError) {
+    return {
+      status: 503,
+      body: { error: 'execution_unavailable', verified: false, results: publicResults(result) },
+    };
+  }
+
   const allPassed = result.allPassed && !result.serviceError;
   const record = await deps.recordSubmission({
     userId,
@@ -157,12 +164,6 @@ export async function handleVerify(deps: VerifyDeps, token: string, body: unknow
     return { status: 403, body: { error: 'challenge_locked', requiredCourseId: access.required_course_id } };
   }
 
-  if (result.serviceError) {
-    return {
-      status: 503,
-      body: { error: 'execution_unavailable', verified: false, results: publicResults(result) },
-    };
-  }
 
   let coins: CoinResult | null = null;
   if (allPassed && record.first_time) {

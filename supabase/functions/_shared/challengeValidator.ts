@@ -623,7 +623,7 @@ async function runTestCase(
       ...base,
       passed: false,
       kind: result.timedOut ? 'service_error' : 'service_error',
-      message: 'تعذّر الوصول لخادم التشغيل — تحقق من الإنترنت وحاول مرة أخرى',
+      message: 'خادم التشغيل غير متاح مؤقتاً — كودك محفوظ، حاول مرة أخرى بعد قليل',
       error: result.error,
     };
   }
@@ -1157,9 +1157,47 @@ export async function validateChallenge(
     findEntryFunction(starterCode, lang) ||
     findEntryFunction(userCode, lang);
 
+  // Run Python cases in one provider request. Separate namespaces and captured
+  // streams keep test outputs independent while avoiding per-case rate limits.
+  let testExecutor = execute;
+  if (lang === 'python' && !options.execute && testCases.length > 1) {
+    const source = options.prelude ? `${options.prelude.replace(/\s*\n\s*/g, ' ')};${userCode}` : userCode;
+    const programs = testCases.map(tc => buildTestProgram(lang, source, tc.input ?? '', entry));
+    const batchCode = `import io as _io, json as _json, contextlib as _ctx, traceback as _tb
+_programs = _json.loads(${JSON.stringify(JSON.stringify(programs))})
+_results = []
+for _source in _programs:
+    _out, _err, _ok = _io.StringIO(), _io.StringIO(), True
+    with _ctx.redirect_stdout(_out), _ctx.redirect_stderr(_err):
+        try:
+            exec(compile(_source, '<kodax-test>', 'exec'), {'__name__': '__main__'})
+        except SystemExit as _exit:
+            if _exit.code not in (None, 0):
+                _ok = False
+                _tb.print_exc()
+        except BaseException:
+            _ok = False
+            _tb.print_exc()
+    _results.append({'success': _ok, 'output': _out.getvalue(), 'error': _err.getvalue()})
+print(_json.dumps(_results, ensure_ascii=True))`;
+    const batch = await execute({ language: lang, code: batchCode });
+    if (batch.serviceError || !batch.success) {
+      testExecutor = async () => batch;
+    } else {
+      let rows: CodeExecutionResult[];
+      try {
+        rows = JSON.parse(batch.output ?? '');
+        if (!Array.isArray(rows) || rows.length !== testCases.length || rows.some(row => typeof row.success !== 'boolean' || typeof row.output !== 'string' || typeof row.error !== 'string')) throw new Error('Invalid batch');
+      } catch {
+        rows = testCases.map(() => ({ success: false, serviceError: true, error: 'تعذّر قراءة نتائج خادم التشغيل' }));
+      }
+      let index = 0;
+      testExecutor = async () => rows[index++];
+    }
+  }
   const results: ValidationResult[] = [];
   for (const tc of testCases) {
-    const r = await runTestCase(lang, userCode, tc, entry, execute, options.prelude);
+    const r = await runTestCase(lang, userCode, tc, entry, testExecutor, options.prelude);
     results.push(r);
     // خطأ في كتابة الكود أو مشكلة في الخادم: كل الاختبارات ستفشل بنفس السبب
     if (r.kind === 'syntax_error' || r.kind === 'service_error') {

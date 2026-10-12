@@ -197,7 +197,8 @@ export async function executeCode(
 async function executeWandbox(
   request: CodeExecutionRequest,
   compiler: string,
-  startTime: number
+  startTime: number,
+  attempt = 0
 ): Promise<CodeExecutionResult> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -218,6 +219,16 @@ async function executeWandbox(
     });
 
     clearTimeout(timeoutId);
+
+    // A burst of test cases can hit the provider's temporary rate limit.
+    // Retry only transport failures, never compiler errors or user programs.
+    if ([429, 502, 503, 504].includes(response.status) && attempt < 2) {
+      const retryAfter = Number(response.headers.get('Retry-After'));
+      const delay = Math.min(8000, Math.max(2000 * (attempt + 1), Number.isFinite(retryAfter) ? retryAfter * 1000 : 0));
+      await response.text();
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return executeWandbox(request, compiler, startTime, attempt + 1);
+    }
 
     if (!response.ok) {
       let body = '';

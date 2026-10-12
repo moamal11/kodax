@@ -219,10 +219,10 @@ export default function ChallengeScreen() {
       setOutcome({ kind: 'error', message: sub.message });
       return;
     }
+    setRunCode(code);
+    setSummary({ results: sub.results, passedTests: sub.passedTests, totalTests: sub.totalTests, allPassed: sub.verified, mode: sub.mode });
     if (!sub.verified) {
       if (sub.attempts) applyAttemptState(sub.attempts);
-      setRunCode(code);
-      setSummary({ results: sub.results, passedTests: sub.passedTests, totalTests: sub.totalTests, allPassed: false, mode: sub.mode });
       setOutcome({ kind: 'not_verified', passed: sub.passedTests, total: sub.totalTests });
       return;
     }
@@ -272,6 +272,12 @@ export default function ChallengeScreen() {
     setRunning(true);
     setSummary(null);
     try {
+      // The server already runs every test and records the outcome securely.
+      // Avoid doubling compiler requests with a preliminary client run.
+      if (user?.id) {
+        await submit();
+        return;
+      }
       const r = await validateChallenge(code, challenge.starterCode, challenge.language, challenge.testCases, validateOptions);
       setRunCode(code);
       setSummary({
