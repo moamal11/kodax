@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { validateChallenge, type CodeExecutor } from '../../src/services/challengeValidator';
+import { validateChallenge, normalizeLanguage, type CodeExecutor } from '../../src/services/challengeValidator';
 import { executeCode } from '../../src/services/codeExecution';
 import { ALL_CHALLENGES } from '../../src/constants/courseData';
+import { localExecute } from './localExecutor';
 
 const localNode: CodeExecutor = async req => {
+  // Windows caps command-line length; Wandbox receives the batch as a file.
+  if (req.code.length > 20000) return localExecute(req);
   const r = spawnSync(process.execPath, ['-e', req.code], { encoding: 'utf8', timeout: req.code.includes('const rows =') ? 15000 : 3000 });
   return { success: r.status === 0, output: r.stdout, error: r.error ? 'Time limit exceeded' : r.stderr };
 };
@@ -47,7 +50,7 @@ async function main() {
   });
   assert.equal(fallback.allPassed,true); assert.equal(fallbackCalls,3);
   console.log('PASS: JS process isolation, async, wrong answers, runtime, syntax, timeout, hidden privacy, legacy fallback');
-  for (const c of ALL_CHALLENGES.filter(c => !process.argv.includes('--quick') && c.language === 'JavaScript' && c.solution)) {
+  for (const c of ALL_CHALLENGES.filter(c => !process.argv.includes('--quick') && normalizeLanguage(c.language) === 'javascript' && c.solution)) {
     const options = { execute:localNode, checks:c.checks, prelude:c.prelude, entryFunction:c.entryFunction, validation:c.validation };
     const original = await validateChallenge(c.solution!, c.starterCode, c.language, c.testCases, options);
     const batched = await validateChallenge(c.solution!, c.starterCode, c.language, c.testCases, {...options,batchExecution:true});

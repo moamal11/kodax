@@ -82,7 +82,7 @@ export interface ChallengeValidationResult {
 
 export interface ValidateOptions {
   execute?: CodeExecutor;
-  /** Server-only opt-in. Old clients keep the original per-case execution path. */
+  /** Server-only opt-in. Omission preserves legacy execution behavior. */
   batchExecution?: boolean;
   checks?: ChallengeCheck[];
   /** اسم الدالة التي تُستدعى بمدخلات الاختبار (افتراضياً: أول دالة في الكود الابتدائي) */
@@ -308,7 +308,8 @@ function findEntryFunction(code: string, lang: string): string | null {
   } else if (lang === 'cpp' || lang === 'java') {
     const re =
       /^(?:static\s+|inline\s+|public\s+|private\s+)*(?:const\s+)?(?:[\w:<>,]+[\s*&]+)+(\w+)\s*\([^;{)]*\)\s*(?:const\s*)?\{/gm;
-    for (const x of code.matchAll(re)) {
+    const memberSource = lang === 'java' ? code.replace(/^[ \t]+/gm, '') : code;
+    for (const x of memberSource.matchAll(re)) {
       if (!['main', 'if', 'for', 'while', 'switch'].includes(x[1])) return x[1];
     }
   }
@@ -505,9 +506,10 @@ function javaWrapper(userCode: string, input: string, entry: string | null): str
   const classMatch = userCode.match(/class\s+\w+\s*\{([\s\S]*)\}/);
   const members = removeMain(classMatch ? classMatch[1] : userCode);
   const kind = classifyInput(input, 'java');
-  if (kind === 'program') return userCode.replace(/public\s+class\s+\w+/, 'public class Main');
+  // Wandbox compiles prog.java; a package-private Main works there and locally.
+  if (kind === 'program') return userCode.replace(/public\s+class\s+\w+/, 'class Main');
   const expr = kind === 'call' ? input : `${entry ?? 'solution'}(${input})`;
-  return `import java.util.*;\npublic class Main {\n${members}\n    public static void main(String[] args) {\n        System.out.println(${expr});\n    }\n}\n`;
+  return `import java.util.*;\nclass Main {\n${members}\n    public static void main(String[] args) {\n        System.out.println(${expr});\n    }\n}\n`;
 }
 
 /** One provider request, but a fresh OS process for every JavaScript case. */
@@ -519,6 +521,95 @@ const rows = ${JSON.stringify(programs)}.map(source => {
   return { success: r.status === 0 && !r.error, output: r.stdout || '', error: timedOut ? 'Time limit exceeded' : (r.stderr || (r.error ? r.error.message : (r.status !== 0 ? 'Runtime error' : ''))), timedOut: !!timedOut, serviceError: !!r.error && ['EPERM', 'EACCES', 'ENOENT', 'EAGAIN'].includes(r.error.code) };
 });
 console.log(JSON.stringify(rows));`;
+}
+
+/** Fresh interpreters also isolate imported modules and interpreter settings. */
+function pyProcessBatch(programs: string[]): string {
+  return `import subprocess, sys, json, os
+programs = json.loads(${JSON.stringify(JSON.stringify(programs))})
+rows = []
+for source in programs:
+    try:
+        r = subprocess.run([sys.executable, '-c', source], input='', capture_output=True, encoding='utf-8', errors='replace', env=dict(os.environ, PYTHONIOENCODING='utf-8'), timeout=2)
+        rows.append(dict(success=r.returncode == 0, output=r.stdout, error=r.stderr or ('Runtime error' if r.returncode else '')))
+    except subprocess.TimeoutExpired:
+        rows.append(dict(success=False, output='', error='Time limit exceeded', timedOut=True))
+    except OSError:
+        rows.append(dict(success=False, output='', error='Batch unavailable', serviceError=True))
+print(json.dumps(rows, ensure_ascii=True))`;
+}
+
+/** Compile all cases once, run each in its own JVM (including static state). */
+function javaBatch(programs: string[]): string {
+  const classes = programs.map((program, i) => program
+    .replace('import java.util.*;\n', '')
+    .replace('class Main {', `public static class Case${i} {`)
+    .replace('public static void main(String[] args)', 'public static void run()')).join('\n');
+  return `import java.util.*;
+import java.io.*;
+import java.nio.file.*;
+import java.util.concurrent.TimeUnit;
+class Main {
+${classes}
+static String quote(String s) {
+    StringBuilder b = new StringBuilder("\\\"");
+    for (char c : s.toCharArray()) {
+        if (c == '"' || c == '\\\\') b.append('\\\\').append(c);
+        else if (c < 32) b.append(String.format("\\\\u%04x", (int)c));
+        else b.append(c);
+    }
+    return b.append('"').toString();
+}
+static String read(Path p) throws IOException {
+    try (InputStream in = Files.newInputStream(p)) {
+        return new String(in.readNBytes(1048576), java.nio.charset.StandardCharsets.UTF_8);
+    }
+}
+public static void main(String[] args) throws Exception {
+    // Wandbox discovers main methods; expose only this one launcher.
+    if (args.length > 0) {
+        switch (Integer.parseInt(args[0])) {
+${programs.map((_, i) => `            case ${i}: Case${i}.run(); return;`).join('\n')}
+        }
+        throw new IllegalArgumentException("Unknown case");
+    }
+    System.out.print("[");
+    for (int i=0; i<${programs.length}; i++) {
+        if (i>0) System.out.print(",");
+        Path out=null, err=null;
+        Process p=null;
+        try {
+            out=Files.createTempFile("kx-out", ".txt"); err=Files.createTempFile("kx-err", ".txt");
+            p=new ProcessBuilder(System.getProperty("java.home")+"/bin/java", "-Dfile.encoding=UTF-8", "-cp", System.getProperty("java.class.path"), "Main", String.valueOf(i))
+                .redirectOutput(out.toFile()).redirectError(err.toFile()).start();
+            p.getOutputStream().close();
+            boolean done=p.waitFor(2, TimeUnit.SECONDS);
+            if (!done) { p.destroyForcibly(); p.waitFor(); }
+            String error=done ? read(err) : "Time limit exceeded";
+            if (done && p.exitValue()!=0 && error.isEmpty()) error="Runtime error";
+            System.out.print("{\\\"success\\\":"+(done && p.exitValue()==0)+",\\\"output\\\":"+quote(read(out))+",\\\"error\\\":"+quote(error)+",\\\"timedOut\\\":"+(!done)+"}");
+        } catch (IOException ex) {
+            System.out.print("{\\\"success\\\":false,\\\"output\\\":\\\"\\\",\\\"error\\\":\\\"Batch unavailable\\\",\\\"serviceError\\\":true}");
+        } finally {
+            if (p!=null && p.isAlive()) p.destroyForcibly();
+            if (out!=null) Files.deleteIfExists(out);
+            if (err!=null) Files.deleteIfExists(err);
+        }
+    }
+    System.out.println("]");
+}
+}`;
+}
+
+/** SQLite CLI opens an independent in-memory database for every case. */
+function sqlBatch(programs: string[]): { code: string; markers: string[] } | null {
+  // CLI commands and connection-level features keep the original execution path.
+  if (programs.some(p => /^\s*\./m.test(p) || /\b(?:ATTACH|DETACH|PRAGMA|load_extension)\b/i.test(stripComments(p, 'sql')))) return null;
+  const token = `__kx_${Math.random().toString(36).slice(2)}_`;
+  const markers = programs.map((_, i) => `${token}${i}__`);
+  markers.push(`${token}end__`);
+  return { markers, code: '.bail on\n' + programs.map((p, i) =>
+    `.open :memory:\n.print ${markers[i]}\n${p}\n;\n`).join('') + `.print ${markers[programs.length]}\n` };
 }
 
 /** Compile once; fork each case from a pristine parent to isolate global state. */
@@ -1244,18 +1335,26 @@ export async function validateChallenge(
     findEntryFunction(starterCode, lang) ||
     findEntryFunction(userCode, lang);
 
-  // Run Python cases in one provider request. Separate namespaces and captured
-  // streams keep test outputs independent while avoiding per-case rate limits.
+  // Server opt-in; installed clients retain their original execution contract.
   let testExecutor = execute;
-  if (options.batchExecution && testCases.length > 1 && testCases.length <= 8 &&
-      (lang === 'javascript' || lang === 'cpp')) {
+  if (options.batchExecution && testCases.length > 1 && testCases.length <= (lang === 'python' ? 16 : 8) &&
+      ['python', 'javascript', 'cpp', 'java'].includes(lang)) {
     const source = options.prelude ? `${options.prelude.replace(/\s*\n\s*/g, ' ')};${userCode}` : userCode;
+    const programs = testCases.map(tc => buildTestProgram(lang, source, tc.input ?? '', entry));
+    // Unusual Java class/package/import layouts retain the established wrapper.
+    const javaEligible = !/^\s*(?:import|package)\b/m.test(source) &&
+      testCases.every(tc => classifyInput(tc.input ?? '', 'java') !== 'program') &&
+      (source.match(/\b(?:Main|Solution)\b/g)?.length ?? 0) <= 1;
     const batchCode = lang === 'javascript'
-      ? jsBatch(testCases.map(tc => buildTestProgram(lang, source, tc.input ?? '', entry)))
+      ? jsBatch(programs)
+      : lang === 'python' ? pyProcessBatch(programs)
+      : lang === 'java' ? (javaEligible ? javaBatch(programs) : null)
       : cppBatch(source, testCases.map(tc => tc.input ?? ''), entry);
     if (batchCode) {
-      const batch = await execute({ language: lang, code: batchCode, timeoutMs: lang === 'cpp' ? 40000 : undefined });
-      if (batch.error?.includes('__KODAX_BATCH_UNAVAILABLE__') || (batch.serviceError && batch.timedOut)) {
+      const batch = await execute({ language: lang, code: batchCode, timeoutMs:
+        ['cpp', 'java'].includes(lang) || (lang === 'python' && testCases.length > 8) ? 40000 : undefined });
+      if (batch.error?.includes('__KODAX_BATCH_UNAVAILABLE__') || (batch.serviceError && batch.timedOut) ||
+          (lang === 'java' && !batch.serviceError && !batch.success)) {
         testExecutor = execute;
       } else if (batch.serviceError || !batch.success) {
         testExecutor = async () => ({ ...batch, error: batch.error || 'Runtime error' });
@@ -1282,7 +1381,30 @@ export async function validateChallenge(
       }
     }
   }
-  if (lang === 'python' && !options.execute && testCases.length > 1) {
+  if (options.batchExecution && lang === 'sql' && testCases.length > 1 && testCases.length <= 8) {
+    const plan = sqlBatch(testCases.map(tc => buildTestProgram(lang, userCode, tc.input ?? '', entry)));
+    if (plan) {
+      const batch = await execute({ language: lang, code: plan.code });
+      if (batch.serviceError && !batch.timedOut) {
+        testExecutor = async () => batch;
+      } else if (batch.success && !batch.error) {
+        // Require exact framing, including empty result sets and a final marker.
+        const lines = (batch.output ?? '').replace(/\r\n/g, '\n').split('\n');
+        const positions = plan.markers.map(marker => lines.indexOf(marker));
+        if (positions[0] === 0 && positions.every((pos, i) => pos >= 0 &&
+            (i === 0 || pos > positions[i - 1]) && lines.lastIndexOf(plan.markers[i]) === pos) &&
+            lines.slice(positions[positions.length - 1] + 1).every(line => line === '')) {
+          let index = 0;
+          testExecutor = async () => {
+            const i = index++;
+            return { success: true, output: lines.slice(positions[i] + 1, positions[i + 1]).join('\n'), error: '' };
+          };
+        }
+      }
+      // SQL errors, unsupported CLI framing and timeouts use the original cases.
+    }
+  }
+  if (lang === 'python' && !options.batchExecution && !options.execute && testCases.length > 1) {
     const source = options.prelude ? `${options.prelude.replace(/\s*\n\s*/g, ' ')};${userCode}` : userCode;
     const programs = testCases.map(tc => buildTestProgram(lang, source, tc.input ?? '', entry));
     const batchCode = `import io as _io, json as _json, contextlib as _ctx, traceback as _tb

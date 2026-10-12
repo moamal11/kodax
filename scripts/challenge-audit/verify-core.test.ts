@@ -96,7 +96,7 @@ function check(name: string, cond: boolean, detail = '') {
   }
 
   // لغات أخرى عبر نفس المسار
-  for (const id of ['web-ch-camelcase-001', 'cpp-ch-beg-1', 'backend-ch-2', 'css-ch-4', 'backend-ch-3']) {
+  for (const id of ['web-ch-camelcase-001', 'cpp-ch-beg-1', 'backend-ch-2', 'css-ch-4', 'backend-ch-3', 'sql-ch-005']) {
     const { deps } = makeDeps();
     const r = await handleVerify(deps, 'good-token', { challengeId: id, code: sol(id) });
     const b = r.body as any;
