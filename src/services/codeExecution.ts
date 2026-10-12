@@ -11,6 +11,8 @@ export interface CodeExecutionRequest {
   code: string;
   input?: string;
   userId?: string;
+  /** Internal provider deadline for a compiled batch; ordinary calls keep 20s. */
+  timeoutMs?: number;
 }
 
 export interface CodeExecutionResult {
@@ -200,7 +202,9 @@ async function executeWandbox(
   attempt = 0
 ): Promise<CodeExecutionResult> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  const timeoutMs = Number.isFinite(request.timeoutMs)
+    ? Math.max(20000, Math.min(40000, request.timeoutMs!)) : 20000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch('https://wandbox.org/api/compile.json', {
@@ -309,7 +313,7 @@ async function executeWandbox(
         serviceError: true,
         timedOut: true,
         error:
-          'انتهت مهلة الاتصال بخادم التنفيذ (20 ثانية).\nتأكد من اتصالك بالإنترنت وحاول مرة أخرى.',
+          `انتهت مهلة الاتصال بخادم التنفيذ (${timeoutMs / 1000} ثانية).\nتأكد من اتصالك بالإنترنت وحاول مرة أخرى.`,
         logs: [
           {
             type: 'error',

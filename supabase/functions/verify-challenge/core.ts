@@ -62,6 +62,7 @@ export interface CoinResult {
 }
 
 export interface VerifyDeps {
+  batchExecution?: boolean;
   specs: Record<string, ChallengeSpec>;
   getUserId: (token: string) => Promise<string | null>;
   /** الوصول من بيانات السيرفر فقط (challenge_access_check) — لا شيء يرسله العميل */
@@ -136,6 +137,7 @@ export async function handleVerify(deps: VerifyDeps, token: string, body: unknow
 
   const validate = deps.validate ?? validateChallenge;
   const result = await validate(code, spec.starterCode, spec.language, spec.testCases, {
+    batchExecution: deps.batchExecution === true,
     checks: spec.checks,
     entryFunction: spec.entryFunction,
     validation: spec.validation,

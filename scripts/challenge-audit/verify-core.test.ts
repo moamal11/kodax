@@ -12,6 +12,7 @@ function makeDeps(opts: { validUser?: string; lockedIds?: string[] } = {}) {
   const completed = new Set<string>();
   const rewarded = new Set<string>();
   const deps: VerifyDeps = {
+    batchExecution: true,
     specs: CHALLENGE_SPECS,
     getUserId: async (t) => (t === 'good-token' ? opts.validUser ?? 'user-a' : null),
     checkAccess: async (_u, id) =>
@@ -46,7 +47,7 @@ function check(name: string, cond: boolean, detail = '') {
   const sol = (id: string) => ALL_CHALLENGES.find((c) => c.id === id)!.solution;
 
   // المواصفات المولّدة مطابقة للتطبيق
-  check('specs cover all 169 challenges', Object.keys(CHALLENGE_SPECS).length === ALL_CHALLENGES.length);
+  check('specs cover all catalog challenges', Object.keys(CHALLENGE_SPECS).length === ALL_CHALLENGES.length);
   check('hidden tests present in server specs', Object.values(CHALLENGE_SPECS).some((s) => s.testCases.some((t) => t.hidden)));
 
   {

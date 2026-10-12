@@ -31,6 +31,8 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
 const deps: VerifyDeps = {
+  // Emergency rollback without changing the public API or installed clients.
+  batchExecution: Deno.env.get('CHALLENGE_BATCH_EXECUTION') !== 'false',
   specs: CHALLENGE_SPECS,
   async getUserId(token) {
     const { data, error } = await admin.auth.getUser(token);

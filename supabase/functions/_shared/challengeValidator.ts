@@ -82,6 +82,8 @@ export interface ChallengeValidationResult {
 
 export interface ValidateOptions {
   execute?: CodeExecutor;
+  /** Server-only opt-in. Old clients keep the original per-case execution path. */
+  batchExecution?: boolean;
   checks?: ChallengeCheck[];
   /** اسم الدالة التي تُستدعى بمدخلات الاختبار (افتراضياً: أول دالة في الكود الابتدائي) */
   entryFunction?: string;
@@ -506,6 +508,91 @@ function javaWrapper(userCode: string, input: string, entry: string | null): str
   if (kind === 'program') return userCode.replace(/public\s+class\s+\w+/, 'public class Main');
   const expr = kind === 'call' ? input : `${entry ?? 'solution'}(${input})`;
   return `import java.util.*;\npublic class Main {\n${members}\n    public static void main(String[] args) {\n        System.out.println(${expr});\n    }\n}\n`;
+}
+
+/** One provider request, but a fresh OS process for every JavaScript case. */
+function jsBatch(programs: string[]): string {
+  return `const { spawnSync } = require('child_process');
+const rows = ${JSON.stringify(programs)}.map(source => {
+  const r = spawnSync(process.execPath, ['-e', source], { timeout: 2000, maxBuffer: 1024 * 1024, encoding: 'utf8', input: '' });
+  const timedOut = r.error && r.error.code === 'ETIMEDOUT';
+  return { success: r.status === 0 && !r.error, output: r.stdout || '', error: timedOut ? 'Time limit exceeded' : (r.stderr || (r.error ? r.error.message : (r.status !== 0 ? 'Runtime error' : ''))), timedOut: !!timedOut, serviceError: !!r.error && ['EPERM', 'EACCES', 'ENOENT', 'EAGAIN'].includes(r.error.code) };
+});
+console.log(JSON.stringify(rows));`;
+}
+
+/** Compile once; fork each case from a pristine parent to isolate global state. */
+function cppBatch(userCode: string, inputs: string[], entry: string | null): string | null {
+  // Whole-program cases and preprocessor tricks retain the proven legacy path.
+  if (inputs.some(input => classifyInput(input, 'cpp') === 'program') ||
+      /^\s*#\s*(?!include\b)\w+/m.test(userCode)) return null;
+  const code = removeMain(userCode);
+  const bodies = inputs.map(input => {
+    const program = cppWrapper(userCode, input, entry);
+    const prefixLength = `${CPP_HEADERS}${code}\n${CPP_PRINT}\nint main() {`.length;
+    return program.slice(prefixLength, -'    return 0;\n}\n'.length);
+  });
+  return `${CPP_HEADERS}
+#include <unistd.h>
+#include <sys/wait.h>
+#include <signal.h>
+#line 3
+${code}
+${CPP_PRINT}
+namespace __kx_batch {
+string quote(const string& s) {
+  string r = "\\\"";
+  const char* hex = "0123456789abcdef";
+  for (unsigned char c : s) {
+    if (c == '"' || c == '\\\\') { r += '\\\\'; r += c; }
+    else if (c < 32) { r += "\\\\u00"; r += hex[c >> 4]; r += hex[c & 15]; }
+    else r += c;
+  }
+  return r + "\\\"";
+}
+string read(FILE* f) {
+  rewind(f); string out; char buf[4096]; size_t n;
+  while ((n = fread(buf, 1, sizeof(buf), f)) && out.size() < 1024 * 1024) out.append(buf, n);
+  return out;
+}
+int run(int index) {
+  switch (index) {
+${bodies.map((body, i) => `case ${i}: { ${body} break; }`).join('\n')}
+  }
+  return 0;
+}
+}
+int main() {
+  cout << "[";
+  for (int i = 0; i < ${inputs.length}; ++i) {
+    FILE* out = tmpfile(); FILE* err = tmpfile();
+    if (!out || !err) { cerr << "__KODAX_BATCH_UNAVAILABLE__"; return 70; }
+    cout.flush(); cerr.flush(); fflush(NULL);
+    pid_t pid = fork();
+    if (pid < 0) { cerr << "__KODAX_BATCH_UNAVAILABLE__"; return 70; }
+    if (pid == 0) {
+      dup2(fileno(out), STDOUT_FILENO); dup2(fileno(err), STDERR_FILENO);
+      alarm(2);
+      int status = 0;
+      try { status = __kx_batch::run(i); }
+      catch (const exception& e) { cerr << "Runtime error: " << e.what(); status = 1; }
+      catch (...) { cerr << "Runtime error"; status = 1; }
+      cout.flush(); cerr.flush(); fflush(NULL); exit(status);
+    }
+    int status = 0; if (waitpid(pid, &status, 0) < 0) { cerr << "__KODAX_BATCH_UNAVAILABLE__"; return 70; }
+    bool ok = WIFEXITED(status) && WEXITSTATUS(status) == 0;
+    bool timeout = WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM;
+    string output = __kx_batch::read(out), error = __kx_batch::read(err);
+    fclose(out); fclose(err);
+    if (!ok && error.empty()) error = timeout ? "Time limit exceeded" : "Runtime error";
+    if (i) cout << ",";
+    cout << "{\\\"success\\\":" << (ok ? "true" : "false")
+         << ",\\\"output\\\":" << __kx_batch::quote(output)
+         << ",\\\"error\\\":" << __kx_batch::quote(error)
+         << ",\\\"timedOut\\\":" << (timeout ? "true" : "false") << "}";
+  }
+  cout << "]" << endl;
+}`;
 }
 
 function buildTestProgram(
@@ -1160,6 +1247,41 @@ export async function validateChallenge(
   // Run Python cases in one provider request. Separate namespaces and captured
   // streams keep test outputs independent while avoiding per-case rate limits.
   let testExecutor = execute;
+  if (options.batchExecution && testCases.length > 1 && testCases.length <= 8 &&
+      (lang === 'javascript' || lang === 'cpp')) {
+    const source = options.prelude ? `${options.prelude.replace(/\s*\n\s*/g, ' ')};${userCode}` : userCode;
+    const batchCode = lang === 'javascript'
+      ? jsBatch(testCases.map(tc => buildTestProgram(lang, source, tc.input ?? '', entry)))
+      : cppBatch(source, testCases.map(tc => tc.input ?? ''), entry);
+    if (batchCode) {
+      const batch = await execute({ language: lang, code: batchCode, timeoutMs: lang === 'cpp' ? 40000 : undefined });
+      if (batch.error?.includes('__KODAX_BATCH_UNAVAILABLE__') || (batch.serviceError && batch.timedOut)) {
+        testExecutor = execute;
+      } else if (batch.serviceError || !batch.success) {
+        testExecutor = async () => ({ ...batch, error: batch.error || 'Runtime error' });
+      } else {
+        try {
+          const rows: CodeExecutionResult[] = JSON.parse(batch.output ?? '');
+          if (!Array.isArray(rows) || rows.length !== testCases.length || rows.some(row =>
+            !row || typeof row.success !== 'boolean' || typeof row.output !== 'string' || typeof row.error !== 'string')) {
+            throw new Error('Invalid batch');
+          }
+          if (rows.some(row => row.serviceError)) throw new Error('Batch unavailable');
+          let index = 0;
+          // A slow but valid solution keeps the legacy execution allowance.
+          // The short batch child deadline must not change acceptance criteria.
+          testExecutor = async request => {
+            const row = rows[index++];
+            return row.timedOut ? execute(request) : row;
+          };
+        } catch {
+          // Unrecognized provider framing: use the original execution path.
+          // Real code failures above are never retried as successful batches.
+          testExecutor = execute;
+        }
+      }
+    }
+  }
   if (lang === 'python' && !options.execute && testCases.length > 1) {
     const source = options.prelude ? `${options.prelude.replace(/\s*\n\s*/g, ' ')};${userCode}` : userCode;
     const programs = testCases.map(tc => buildTestProgram(lang, source, tc.input ?? '', entry));
