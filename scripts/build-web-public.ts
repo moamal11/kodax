@@ -13,6 +13,9 @@ for(const name of ['sitemap.xml','sitemap-0.xml']){
 for(const [from,to] of [['code/add.html','code-create.html'],['discussion/new.html','discussion-create.html']]){
  const source=path.join(out,from);if(fs.existsSync(source))fs.copyFileSync(source,path.join(out,to));
 }
+const landingAssets=path.join(out,'landing');fs.mkdirSync(landingAssets,{recursive:true});
+for(const name of ['learn','lesson','rewards'])fs.copyFileSync(path.resolve('assets/download-gallery',name+'.png'),path.join(landingAssets,name+'.png'));
+fs.copyFileSync(path.resolve('assets/branding/kodax-full-purple-transparent.png'),path.join(landingAssets,'logo.png'));
 const docs=staticDocuments();
 const generated=path.resolve('web-server/generated');fs.mkdirSync(generated,{recursive:true});
 // Only shared, public build artefacts are placed in the function bundle.

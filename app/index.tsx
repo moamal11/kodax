@@ -2,17 +2,17 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
-import { PublicHome } from '@/features/web/PublicCourseList';
+import PublicLandingPage from '@/features/download/PublicLandingPage';
 
 /**
  * Root route (/) — Navigation hub
  *
  * يعتمد على NavigationGuard في app/_layout.tsx للتوجيه بناءً على حالة المصادقة:
- * - غير مسجل + web → /download (صفحة التحميل)
+ * - غير مسجل + web → صفحة تعريف المنصة على /
  * - غير مسجل + mobile → /(auth)/login (صفحة تسجيل الدخول)
  * - مسجل dخول → /(tabs) (التطبيق)
  *
- * النافذة index.tsx نفسها لا تفعل شيئاً — فقط تنتظر التوجيه التلقائي.
+ * على الويب تعرض الرئيسية العامة أثناء استعادة الجلسة، ثم تفتح التطبيق للمسجّل.
  */
 export default function Index() {
   const { isInitializing, isAuthenticated } = useAuth();
@@ -36,6 +36,6 @@ export default function Index() {
     // Still initializing — just wait (don't render anything)
   }, [isInitializing, isAuthenticated, router]);
 
-  // Return null while routing is in progress
-  return Platform.OS === 'web' && !isInitializing && !isAuthenticated ? <PublicHome /> : null;
+  // The build supplies the public landing HTML while the session is restored.
+  return Platform.OS === 'web' && !isInitializing && !isAuthenticated ? <PublicLandingPage /> : null;
 }

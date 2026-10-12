@@ -11,6 +11,8 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'succ
 type Props = {
   label: string;
   onPress?: () => void;
+  /** Semantic web link, with onPress retained for native navigation. */
+  href?: string;
   variant?: ButtonVariant;
   size?: 'sm' | 'md' | 'lg';
   icon?: IconName;
@@ -31,6 +33,7 @@ const HEIGHT = { sm: 36, md: 44, lg: 52 } as const;
 export function Button({
   label,
   onPress,
+  href,
   variant = 'primary',
   size = 'md',
   icon,
@@ -66,7 +69,8 @@ export function Button({
       testID={testID}
       onPress={onPress}
       disabled={inactive}
-      accessibilityRole="button"
+      {...(Platform.OS === 'web' && href ? { href } as any : {})}
+      accessibilityRole={Platform.OS === 'web' && href ? 'link' : 'button'}
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}

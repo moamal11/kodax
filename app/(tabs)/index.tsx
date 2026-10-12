@@ -8,7 +8,7 @@ import { HomeContinuation } from '@/features/learn/HomeContinuation';
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Platform, RefreshControl, View, Pressable, useWindowDimensions } from 'react-native';
-import { PublicHome } from '@/features/web/PublicCourseList';
+import PublicLandingPage from '@/features/download/PublicLandingPage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -194,7 +194,7 @@ export default function HomeScreen() {
     </Col>
   );
 
-  if (Platform.OS === 'web' && !userId) return <PublicHome />;
+  if (Platform.OS === 'web' && !userId) return <PublicLandingPage />;
   return (
     <Screen inTabs header={header} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.colors.brand} />}>
       {isDesktop ? (
