@@ -130,6 +130,21 @@ Deno.serve(async (req) => {
         },
         // @ts-ignore: Deno runtime
         apiKey: Deno.env.get('GEMINI_API_KEY'),
+        // @ts-ignore: Deno runtime
+        groqApiKey: Deno.env.get('GROQ_API_KEY'),
+        // Explicit rollout switch: existing Gemini behavior until validated.
+        // @ts-ignore: Deno runtime
+        routingEnabled: Deno.env.get('AI_ROUTING_ENABLED') === 'true',
+        // @ts-ignore: Deno runtime
+        routingTestUserIds: (Deno.env.get('AI_ROUTING_TEST_USER_IDS') || '').split(',').filter(Boolean),
+        // @ts-ignore: Deno runtime
+        routingTestGroqFirst: Deno.env.get('AI_ROUTING_TEST_GROQ_FIRST') === 'true',
+        groqModels: {
+          // @ts-ignore: Deno runtime
+          model: Deno.env.get('GROQ_MODEL') || undefined,
+          // @ts-ignore: Deno runtime
+          lite: Deno.env.get('GROQ_MODEL_LITE') || undefined,
+        },
         models: {
           // @ts-ignore: Deno runtime
           model: Deno.env.get('GEMINI_MODEL') || undefined,
