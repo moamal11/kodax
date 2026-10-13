@@ -32,3 +32,5 @@ npx --yes deno check --no-config supabase/functions/ai-chat/index.ts
 ```
 
 Live QA outputs and rollout decision: `reports/ai-routing-20261013/`. Test account quota reservations are restored after each completed trial; real-user quotas are untouched.
+
+2026-10-13 rollout: the old OpenAI key returned `invalid_api_key` and was replaced by the user. Seven OpenAI quality cases passed review; four final routing cases confirmed Groq summarization, OpenAI code correction, Gemini 429 → OpenAI recovery, and debug explanation without the complete solution. Global routing is enabled with a $2.50 lifetime app ceiling. Provider failures and quota exhaustion can still make all eligible providers unavailable; user quota is refunded on that path. This is a sampled evaluation, not a guarantee that every model answer is correct.

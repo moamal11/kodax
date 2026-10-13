@@ -20,4 +20,3 @@ const { clients } = require('../dev/live-profile-client.cjs');
     console.log('Anonymous denied, parallel cap atomic, settlement idempotent');
   } finally { for (const id of holds) await admin.rpc('ai_provider_spend_settle', { p_id: id, p_micro_usd: 0 }); }
 })().catch(e=>{console.error(e.message);process.exitCode=1;});
-
