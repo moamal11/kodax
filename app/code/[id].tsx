@@ -5,7 +5,7 @@ import { requestSignIn } from '@/services/webAccess';
  * التعديل للمالك ونسخة خاصة لغيره عبر المحرر. الأعداد من النظام المركزي (AppContext).
  */
 import React, { useCallback, useEffect, useMemo, useState,useRef } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, View, ActivityIndicator,ScrollView } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, View, ActivityIndicator,ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -16,7 +16,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
 import { getSnippetById, incrementViews, getSnippetCounts, type FeedSnippet } from '@/services/codeFeedService';
 import { checkIsFollowing } from '@/services/followService';
-import { executeCode } from '@/services/codeExecution';
+import { executeSnippet } from '@/services/snippetExecution';
+import { needsEditorInput } from '@/services/editorInput';
 import { SnippetComments } from '@/features/community/SnippetComments';
 import { SocialActions } from '@/features/community/SocialActions';
 import FollowButton from '@/components/ui/FollowButton';
@@ -35,6 +36,7 @@ import {
   IconButton,
   CodeView,
   Field,
+  Sheet,
   Segmented,
   Surface,
   Tag,
@@ -63,25 +65,6 @@ function previewDoc(p: ProjectFiles): string {
     .replace(/<script[^>]*src=["']script\.js["'][^>]*><\/script>/gi, '')}<script>${p.js}<\/script></body></html>`;
 }
 
-/** تشغيل JS داخل الصفحة بالتقاط console */
-function runJs(code: string): string {
-  const logs: string[] = [];
-  const fmt = (a: any[]) => a.map((x) => (typeof x === 'object' ? JSON.stringify(x, null, 2) : String(x))).join(' ');
-  const c = {
-    log: (...a: any[]) => logs.push(fmt(a)),
-    error: (...a: any[]) => logs.push('خطأ: ' + fmt(a)),
-    warn: (...a: any[]) => logs.push('تحذير: ' + fmt(a)),
-    info: (...a: any[]) => logs.push(fmt(a)),
-  };
-  try {
-    const r = new Function('__c', code.replace(/console\.(log|error|warn|info)/g, '__c.$1'))(c);
-    if (r !== undefined && !logs.length) logs.push('→ ' + String(r));
-  } catch (e: any) {
-    logs.push('خطأ: ' + (e?.message || String(e)));
-  }
-  return logs.join('\n');
-}
-
 type Run = { state: 'running' } | { state: 'done'; ok: boolean; output: string };
 
 export default function SnippetScreen() {
@@ -102,6 +85,18 @@ export default function SnippetScreen() {
   const [preview, setPreview] = useState(false);
   const [moderation, setModeration] = useState(false);
   const [run, setRun] = useState<Run | null>(null);
+  const [runInput, setRunInput] = useState('');
+  const [inputReady, setInputReady] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const [showOutput, setShowOutput] = useState(false);
+  const runBusy = useRef(false);
+  const runGeneration = useRef(0);
+  useEffect(() => {
+    runGeneration.current++;
+    runBusy.current = false;
+    setRun(null); setRunInput(''); setInputReady(false); setShowInput(false); setShowOutput(false);
+    return () => { runGeneration.current++; };
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -149,21 +144,33 @@ export default function SnippetScreen() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  const execute = useCallback(async () => {
-    if (!snippet) return;
+  const execute = useCallback(async (input: string) => {
+    if (!snippet || runBusy.current) return;
     if (project || snippet.language === 'html') return setPreview(true);
-    if (['javascript', 'typescript', 'react'].includes(snippet.language)) {
-      const out = runJs(snippet.code);
-      return setRun({ state: 'done', ok: !out.startsWith('خطأ'), output: out || 'تم التنفيذ بنجاح (بلا مخرجات)' });
-    }
+    Keyboard.dismiss();
+    runBusy.current = true;
+    const generation = runGeneration.current;
     setRun({ state: 'running' });
+    setShowOutput(true);
     try {
-      const r = await executeCode({ language: snippet.language, code: snippet.code });
-      setRun({ state: 'done', ok: !!r.success, output: r.success ? r.output?.trim() || 'تم التنفيذ بنجاح (بلا مخرجات)' : r.error || 'خطأ غير معروف' });
+      const r = await executeSnippet(snippet.language, snippet.code, input);
+      if (generation !== runGeneration.current) return;
+      setRun({ state: 'done', ok: !!r.success, output: r.success ? r.output?.trim() || 'تم التنفيذ بنجاح (بلا مخرجات)'
+        : [r.output?.trim(), r.error || 'خطأ غير معروف'].filter(Boolean).join('\n\n') });
     } catch (e: any) {
+      if (generation !== runGeneration.current) return;
       setRun({ state: 'done', ok: false, output: `تعذّر الاتصال بخادم التشغيل: ${e?.message || 'تحقق من الإنترنت'}` });
+    } finally {
+      if (generation === runGeneration.current) runBusy.current = false;
     }
   }, [snippet, project]);
+  const handleRun = useCallback(() => {
+    if (!snippet || runBusy.current) return;
+    if (!project && snippet.language !== 'html' && needsEditorInput(snippet.code) && !inputReady) {
+      setShowInput(true); return;
+    }
+    void execute(runInput);
+  }, [snippet, project, inputReady, execute, runInput]);
   const openEditor = () => {
     if (!snippet) return;
     router.push({
@@ -272,10 +279,12 @@ export default function SnippetScreen() {
                 label={runnable ? 'معاينة' : 'شغّل'}
                 icon={runnable ? 'eye-outline' : 'play'}
                 variant="success"
-                onPress={execute}
+                onPress={handleRun}
                 style={{ flex: 1 }}
                 loading={run?.state === 'running'}
               />
+              {!runnable && <IconButton icon="terminal-outline" label="مدخلات التشغيل" disabled={run?.state === 'running'} onPress={() => setShowInput(true)} />}
+              {!isDesktop && run && <IconButton icon="reader-outline" label="عرض الناتج" onPress={() => setShowOutput(true)} />}
               <Button
                 label={isOwner ? 'تعديل' : 'نسخة لي'}
                 icon={isOwner ? 'create-outline' : 'git-branch-outline'}
@@ -338,7 +347,7 @@ export default function SnippetScreen() {
 
           <SocialActions item={{type:'code',id:snippet.id,title:snippet.title}} likes={likes} comments={commentCount} views={views} liked={liked} onLike={like} onComments={()=>scroll.current?.scrollTo({y:commentsTop.current,animated:false})}/>
 
-          {run && (
+          {isDesktop && run && (
             <Surface padding={0} style={{ overflow: 'hidden' }} accessibilityLiveRegion="polite">
               <Row justify="space-between" style={{ paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.colors.border }}>
                 <Row gap={6}>
@@ -368,6 +377,27 @@ export default function SnippetScreen() {
           {commentsBlock}
         </Col>
       </Screen>
+
+      <Sheet visible={!isDesktop && showOutput && !!run} onClose={() => setShowOutput(false)}
+        title={run?.state === 'running' ? 'جارٍ التشغيل…' : 'الناتج'} maxWidth={800}
+        footer={<Row gap={8}>
+          <Button label="المدخلات" icon="terminal-outline" variant="ghost" disabled={run?.state === 'running'} onPress={() => { setShowOutput(false); setShowInput(true); }} />
+          <Button label="شغّل مجدداً" icon="refresh" loading={run?.state === 'running'} onPress={handleRun} style={{ flex: 1 }} />
+        </Row>}>
+        {run?.state === 'running' ? <Row gap={10}><ActivityIndicator size="small" color={t.colors.brand} /><Text tone="secondary">جاري تنفيذ الكود…</Text></Row>
+          : run?.state === 'done' ? <Text mono ltr variant="bodySm" selectable
+            style={{ padding: 12, color: run.ok ? t.colors.codeText : t.colors.dangerText, backgroundColor: t.colors.codeBg, borderRadius: t.radius.md }}>
+            {run.output}
+          </Text> : null}
+      </Sheet>
+
+      <Sheet visible={showInput} onClose={() => setShowInput(false)} title="مدخلات التشغيل" maxWidth={640}
+        footer={<Row gap={8}><Button label="شغّل بالمدخلات" icon="play" disabled={run?.state === 'running'} onPress={() => {
+          setInputReady(true); setShowInput(false); void execute(runInput);
+        }} style={{ flex: 1 }} /><Button label="إلغاء" variant="ghost" onPress={() => setShowInput(false)} /></Row>}>
+        <Field label="البيانات التي يقرأها الكود" placeholder={'أحمد\n25'} value={runInput} onChangeText={setRunInput} multiline minHeight={120} maxLength={20000} />
+        <Text variant="bodySm" tone="secondary">اكتب كل قيمة بسطر وبالترتيب الذي يطلبه البرنامج. إذا كانت عندك قائمة متكررة، أضف اختيار الخروج في النهاية.</Text>
+      </Sheet>
 
       <Modal visible={preview} animationType="slide" onRequestClose={() => setPreview(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg }}>
