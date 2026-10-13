@@ -26,6 +26,13 @@ export async function getCommunityFeed(o:{filter:FeedFilter;search:string;langua
   await Promise.all(data.items.map(async i=>{if(i.type==='discussion')i.data.image_url=await signedPostImage(i.data.image_path);}));
   return data;
 }
+export async function getProfilePublications(userId:string, cursor:FeedCursor|null=null, snapshot:string|null=null){
+  const r=await supabase.rpc('profile_publications',{p_user:userId,p_cursor:cursor,p_snapshot:snapshot,p_limit:10});
+  if(r.error)throw new Error('تعذّر تحميل المنشورات. حاول مرة أخرى.');
+  const data=r.data as {items:CommunityItem[];next:FeedCursor|null;snapshot:string};
+  await Promise.all(data.items.map(async item=>{if(item.type==='discussion')item.data.image_url=await signedPostImage(item.data.image_path);}));
+  return data;
+}
 export async function getCommunityPost(id:string){
   if(await isWebVisitor()){const post=await publicWebDocument('discussion',id) as CommunityPost|null;if(post)post.image_url=await signedPostImage(post.image_path);return post;}
   const r=await supabase.from('community_posts').select('*,profiles:user_id(username,full_name,avatar_url,is_verified)').eq('id',id).maybeSingle();

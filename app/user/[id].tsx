@@ -1,26 +1,28 @@
 /**
  * الملف العام لعضو: الهوية والتقدم، متابعة/مراسلة (عرض كامل لكل زر)، وخيارات المشاركة والإبلاغ والحظر
- * في قائمة منفصلة، ثم أكواده المنشورة بنفس أرقام المجتمع (F20).
+ * في قائمة منفصلة، ثم منشوراته بنفس أرقام المجتمع (F20).
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Share, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
 import { getPublicProfile, type ProfileData } from '@/services/profileService';
 import { checkIsFollowing } from '@/services/followService';
-import { getPublicSnippets, getSnippetCounts, blockUser, unblockUser, isUserBlocked, type FeedSnippet } from '@/services/codeFeedService';
+import { getSnippetCounts, blockUser, unblockUser, isUserBlocked } from '@/services/codeFeedService';
 import { getOrCreateConversation } from '@/services/messageService';
 import ReportUserSheet from '@/components/social/ReportUserSheet';
 import FollowButton from '@/components/ui/FollowButton';
 import { showToast } from '@/components/ui/Toast';
 import { Screen, AppBar, Text, Row, Col, Button, IconButton, Sheet, ListGroup, ListRow, Surface, SectionHeader, EmptyState, ListSkeleton, useBreakpoint } from '@/design';
 import { ProfileHeader } from '@/features/community/ProfileHeader';
+import { getProfilePublications, type CommunityItem, type FeedCursor } from '@/services/communityService';
+import { DiscussionCard } from '@/features/community/DiscussionCard';
 import { SnippetCard } from '@/features/community/SnippetCard';
 import { profilePath } from '@/services/profileLinks';
 import { requestSignIn } from '@/services/webAccess';
 
-const PAGE = 10;
+
 
 export default function UserProfileScreen() {
   const { id: identifier } = useLocalSearchParams<{ id: string }>();
@@ -30,10 +32,14 @@ export default function UserProfileScreen() {
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [snippets, setSnippets] = useState<FeedSnippet[]>([]);
+  const [snippets, setSnippets] = useState<CommunityItem[]>([]);
   const [snippetsLoading, setSnippetsLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(false);
-  const [page, setPage] = useState(0);
+  const [cursor, setCursor] = useState<FeedCursor | null>(null);
+  const [snapshot, setSnapshot] = useState<string | null>(null);
+  const [publicationsError, setPublicationsError] = useState('');
+  const [moreLoading, setMoreLoading] = useState(false);
+  const publicationRequest = useRef(0);
+  const publicationBusy = useRef(false);
   const [following, setFollowing] = useState(false);
   const [followers, setFollowers] = useState(0);
   const [blocked, setBlocked] = useState(false);
@@ -70,33 +76,41 @@ export default function UserProfileScreen() {
     return()=>{active=false;};
   }, [identifier, user?.id]);
 
-  const loadSnippets = useCallback(
-    async (p = 0, append = false) => {
-      if (!id) return;
-      if (!append) setSnippetsLoading(true);
-      const { data } = await getPublicSnippets({ limit: PAGE, page: p, userId: id });
-      const list = data ?? [];
-      setSnippets((prev) => (append ? [...prev, ...list.filter((d) => !prev.some((x) => x.id === d.id))] : list));
-      setHasMore(list.length === PAGE);
-      if (list.length) {
-        const ids = list.map((s) => s.id);
-        // F20: نفس مصدر الأرقام في المجتمع وصفحة الكود
-        getSnippetCounts(ids)
-          .then(({ likeCounts, viewCounts, commentCounts }) => {
-            updateLikeCounts(likeCounts);
-            updateViewCounts(viewCounts);
-            updateCommentCounts(commentCounts);
-          })
-          .catch(() => undefined);
+  const loadSnippets = useCallback(async (next: FeedCursor | null = null, snap: string | null = null) => {
+    if (!id || publicationBusy.current) return;
+    const request = ++publicationRequest.current;
+    publicationBusy.current = true;
+    if (next) setMoreLoading(true); else setSnippetsLoading(true);
+    setPublicationsError('');
+    try {
+      const result = await getProfilePublications(id, next, snap);
+      if (request !== publicationRequest.current) return;
+      setSnippets(previous => next ? [...previous, ...result.items.filter(item => !previous.some(old => old.type === item.type && old.id === item.id))] : result.items);
+      setCursor(result.next);
+      setSnapshot(result.snapshot);
+      const ids = result.items.filter(item => item.type === 'code').map(item => item.id);
+      if (ids.length) {
+        getSnippetCounts(ids).then(({ likeCounts, viewCounts, commentCounts }) => {
+          if (request !== publicationRequest.current) return;
+          updateLikeCounts(likeCounts); updateViewCounts(viewCounts); updateCommentCounts(commentCounts);
+        }).catch(() => undefined);
         if (user?.id) syncLikes(ids);
       }
-      setSnippetsLoading(false);
-    },
-    [id, user?.id]
-  );
+    } catch (error) {
+      if (request === publicationRequest.current) setPublicationsError(error instanceof Error ? error.message : 'تعذّر تحميل المنشورات.');
+    } finally {
+      if (request === publicationRequest.current) {
+        publicationBusy.current = false; setSnippetsLoading(false); setMoreLoading(false);
+      }
+    }
+  }, [id, user?.id, syncLikes, updateLikeCounts, updateViewCounts, updateCommentCounts]);
   useEffect(() => {
-    if (!isOwn) loadSnippets(0);
-  }, [loadSnippets, isOwn]);
+    publicationRequest.current++;
+    publicationBusy.current = false;
+    setSnippets([]); setCursor(null); setSnapshot(null); setPublicationsError(''); setMoreLoading(false);
+    if (!isOwn && !blocked) void loadSnippets();
+    return () => { publicationRequest.current++; publicationBusy.current = false; };
+  }, [loadSnippets, isOwn, blocked]);
 
   const name = profile?.full_name || profile?.username || 'عضو';
 
@@ -127,7 +141,7 @@ export default function UserProfileScreen() {
       showToast.success(`تم حظر ${name}`);
     } else {
       showToast.success(`تم إلغاء حظر ${name}`);
-      loadSnippets(0);
+      loadSnippets();
     }
   };
 
@@ -159,7 +173,7 @@ export default function UserProfileScreen() {
   const actions = blocked ? (
     <Surface variant="danger" padding={12}>
       <Text variant="bodySm" style={{ marginBottom: 8 }}>
-        حظرت {name}. لا يستطيع مراسلتك ولا ترى أكواده.
+        حظرت {name}. لا يستطيع مراسلتك ولا ترى منشوراته.
       </Text>
       <Button label="إلغاء الحظر" variant="secondary" onPress={toggleBlock} loading={busy} style={{ alignSelf: 'flex-start' }} />
     </Surface>
@@ -197,16 +211,26 @@ export default function UserProfileScreen() {
 
         {!blocked && (
           <View style={{ paddingHorizontal: 16 }}>
-            <SectionHeader title="أكواده المنشورة" />
+            <SectionHeader title="منشوراته" />
             {snippetsLoading ? (
               <ListSkeleton rows={2} />
+            ) : publicationsError && snippets.length === 0 ? (
+              <EmptyState icon="cloud-offline-outline" title={publicationsError} action="إعادة المحاولة" onAction={() => loadSnippets()} compact />
             ) : snippets.length === 0 ? (
-              <EmptyState icon="code-slash-outline" title="ما نشر أكواد بعد" compact />
+              <EmptyState icon="code-slash-outline" title="ما نشر بعد" compact />
             ) : (
               <Col gap={12}>
-                {snippets.map((s) => (
+                {snippets.map((item) => {
+                  if (item.type === 'discussion') return (
+                  <DiscussionCard key={`discussion-${item.id}`} post={item.data} hideAuthor
+                    onPress={() => router.push(`/discussion/${item.id}` as any)}
+                    onAuthorPress={() => {}}
+                    onImageRetry={() => loadSnippets()} />
+                  );
+                  const s = item.data;
+                  return (
                   <SnippetCard
-                    key={s.id}
+                    key={`code-${s.id}`}
                     snippet={s}
                     hideAuthor
                     previewLines={isDesktop ? 6 : 5}
@@ -217,15 +241,15 @@ export default function UserProfileScreen() {
                     onLike={user?.id ? () => toggleLike(s.id) : undefined}
                     onPress={() => router.push(`/code/${s.id}` as any)}
                   />
-                ))}
-                {hasMore && (
+                  );
+                })}
+                {!!publicationsError && <Text variant="caption" tone="danger">{publicationsError}</Text>}
+                {cursor && (
                   <Button
                     label="عرض المزيد"
                     variant="secondary"
-                    onPress={() => {
-                      setPage(page + 1);
-                      loadSnippets(page + 1, true);
-                    }}
+                    loading={moreLoading}
+                    onPress={() => loadSnippets(cursor, snapshot)}
                   />
                 )}
               </Col>
@@ -238,7 +262,7 @@ export default function UserProfileScreen() {
         {menu === 'confirmBlock' ? (
           <Col gap={14}>
             <Text variant="body" tone="secondary">
-              لن يستطيع مراسلتك، ولن ترى أكواده. يمكنك إلغاء الحظر لاحقاً من حسابي ← المستخدمون المحظورون.
+              لن يستطيع مراسلتك، ولن ترى منشوراته. يمكنك إلغاء الحظر لاحقاً من حسابي ← المستخدمون المحظورون.
             </Text>
             <Row gap={8}>
               <Button label="حظر" variant="danger" onPress={toggleBlock} loading={busy} style={{ flex: 1 }} />

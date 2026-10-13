@@ -244,6 +244,8 @@ export default function ConversationScreen() {
             }
             const m = item.msg;
             const mine = m.sender_id === user?.id;
+            const shared = !m.is_deleted && !!m.shared_type && !!m.shared_id;
+            const showMessageText = !shared || !/^(مشاركة (كود|منشور)|كود مشارك|منشور مشارك)$/.test(m.content.trim());
             return (
               <View style={{ alignItems: mine ? 'flex-end' : 'flex-start', marginTop: item.first ? 10 : 3 }}>
                 <Pressable
@@ -258,25 +260,27 @@ export default function ConversationScreen() {
                   accessibilityHint={m.is_deleted ? undefined : mine ? 'اضغط مطوّلاً للتعديل أو الحذف' : 'اضغط مطوّلاً للإبلاغ'}
                   style={{
                     maxWidth: '82%',
+                    width: shared ? 280 : undefined,
                     paddingHorizontal: 12,
                     paddingVertical: 8,
                     borderRadius: 16,
-                    borderTopRightRadius: mine && item.first ? 4 : 16,
-                    borderTopLeftRadius: !mine && item.first ? 4 : 16,
-                    backgroundColor: m.is_deleted ? 'transparent' : mine ? t.colors.brandStrong : t.colors.surfaceRaised,
-                    borderWidth: m.is_deleted || !mine ? 1 : 0,
+                    borderTopRightRadius: !shared && mine && item.first ? 4 : 16,
+                    borderTopLeftRadius: !shared && !mine && item.first ? 4 : 16,
+                    backgroundColor: m.is_deleted ? 'transparent' : shared ? t.colors.surfaceRaised : mine ? t.colors.brandStrong : t.colors.surfaceRaised,
+                    borderWidth: shared || m.is_deleted || !mine ? 1 : 0,
                     borderColor: t.colors.border,
+                    ...(shared ? { borderTopWidth: 2, borderTopColor: t.colors.brand, paddingTop: 14 } : {}),
                   }}
                 >
-                  <Text
+                  {showMessageText && <Text
                     variant="body"
                     selectable={!m.is_deleted}
-                    style={[{ color: m.is_deleted ? t.colors.textMuted : mine ? '#fff' : t.colors.text, fontStyle: m.is_deleted ? 'italic' : 'normal' }, Platform.OS === 'web' ? ({ wordBreak: 'break-word', overflowWrap: 'anywhere' } as any) : null]}
+                    style={[{ color: m.is_deleted ? t.colors.textMuted : mine && !shared ? '#fff' : t.colors.text, fontStyle: m.is_deleted ? 'italic' : 'normal', marginBottom: shared ? 10 : 0 }, Platform.OS === 'web' ? ({ wordBreak: 'break-word', overflowWrap: 'anywhere' } as any) : null]}
                   >
                     {m.is_deleted ? 'حُذفت هذه الرسالة' : m.content}
-                  </Text>
+                  </Text>}
                   {!m.is_deleted&&m.shared_type&&m.shared_id&&<SharedMessageCard type={m.shared_type} id={m.shared_id}/>}
-                  <Text variant="caption" style={{ color: mine && !m.is_deleted ? 'rgba(255,255,255,0.7)' : t.colors.textMuted, fontSize: 11, lineHeight: 14, marginTop: 2 }} align={mine ? 'left' : 'right'}>
+                  <Text variant="caption" style={{ color: mine && !m.is_deleted && !shared ? 'rgba(255,255,255,0.7)' : t.colors.textMuted, fontSize: 11, lineHeight: 14, marginTop: shared ? 12 : 2, ...(shared ? { paddingTop: 8, borderTopWidth: 1, borderTopColor: t.colors.border } : {}) }} align={mine ? 'left' : 'right'}>
                     {timeOf(m.created_at)}
                     {m.is_edited && !m.is_deleted ? ' · معدّلة' : ''}
                     {mine && !m.is_deleted ? (m.is_read ? ' · قُرئت' : '') : ''}
