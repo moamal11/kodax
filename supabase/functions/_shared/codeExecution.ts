@@ -4,7 +4,8 @@
  *
  * Uses Wandbox API (free, no key needed) as primary engine.
  * Kotlin uses Kotlin Playground API.
- * JS/TS/React are executed client-side (see handleRun in add.tsx).
+ * The editor runs basic JS/React locally; Node stdin programs and TypeScript
+ * use Wandbox (see runWithInput in add.tsx).
  */
 
 export interface CodeExecutionRequest {
@@ -212,7 +213,11 @@ async function executeWandbox(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        code: request.code,
+        // Wandbox compiles prog.java, so its top-level class cannot be public.
+        // Keep its name intact: constructors and references still work.
+        code: request.language === 'java'
+          ? request.code.replace(/^(\s*)public\s+(?=(?:(?:final|abstract)\s+)?class\b)/m, '$1')
+          : request.code,
         compiler,
         stdin: request.input || '',
         'compiler-option-raw': '',

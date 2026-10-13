@@ -520,7 +520,8 @@ class SupabaseService {
       .select(
         'id, username, full_name, avatar_url, province, xp, level, streak_days, is_verified'
       )
-      .order('xp', { ascending: false })
+      .order('xp', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: true })
       .limit(limit);
 
     if (error) {

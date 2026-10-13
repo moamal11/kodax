@@ -1,3 +1,4 @@
+import { leaderboardPreview } from '@/utils/leaderboardPreview';
 import { profilePath } from '@/services/profileLinks';
 import { JourneyNode } from '@/features/rewards/JourneyVisuals';
 import { RecentAchievement } from '@/features/rewards/RecentAchievement';
@@ -67,7 +68,7 @@ export default function HomeScreen() {
   }, [userId]);
 
   const loadSide = useCallback(async () => {
-    const [feed, leaders] = await Promise.all([getPublicSnippets({ limit: 2, sortBy: 'recent' }), supabaseService.getLeaderboard(5)]);
+    const [feed, leaders] = await Promise.all([getPublicSnippets({ limit: 2, sortBy: 'recent' }), supabaseService.getLeaderboard(50)]);
     const items = feed.data ?? [];
     const counts = await getSnippetCounts(items.map((s) => s.id));
     setSnippets(
@@ -111,9 +112,12 @@ export default function HomeScreen() {
         <Pressable onPress={() => router.push('/profile')} accessibilityRole="link" accessibilityLabel="ملفي الشخصي" style={{ flex: 1, minWidth: 0 }}>
           <Row gap={10}>
             <Avatar uri={profile?.avatar_url} name={name} size={44} />
-            <Text variant="label" weight="semibold" numberOfLines={1} style={{ flex: 1 }}>
+            <Row gap={3} style={{ flex: 1, minWidth: 0, justifyContent: 'flex-start' }}>
+            <Text variant="label" weight="semibold" numberOfLines={1} style={{ flexShrink: 1 }}>
               {name}
             </Text>
+            <VerifiedBadge verified={profile?.is_verified} size={14} />
+            </Row>
           </Row>
         </Pressable>
         {userId && <MessagesButton userId={userId} />}
@@ -189,7 +193,7 @@ export default function HomeScreen() {
   const side = (
     <Col gap={20} style={isDesktop ? { width: 320 } : undefined}>
       <RecentAchievement userId={userId} />
-      <LeaderboardMini users={top} meId={userId} />
+      <LeaderboardMini users={leaderboardPreview(top, userId ? { ...profile, id: userId, full_name: name } : null)} meId={userId} />
       <CoinsRow />
     </Col>
   );
@@ -339,7 +343,7 @@ function LeaderboardMini({ users, meId }: { users: any[]; meId?: string | null }
               key={u.id}
               onPress={() => router.push(me ? '/profile' : (profilePath(u.id,u.username) as any))}
               accessibilityRole="link"
-              accessibilityLabel={`المركز ${i + 1}: ${u.full_name || u.username}، ${u.xp} XP`}
+              accessibilityLabel={`${u.previewRank ? `المركز ${u.previewRank}` : `غير مصنف`}: ${u.full_name || u.username}، ${u.xp} XP`}
             >
               <Row
                 gap={10}
@@ -351,8 +355,8 @@ function LeaderboardMini({ users, meId }: { users: any[]; meId?: string | null }
                   backgroundColor: me ? t.colors.brandSoft : 'transparent',
                 }}
               >
-                <Text variant="label" tone={i < 3 ? 'xp' : 'muted'} weight="bold" tabular style={{ width: 20 }} align="center">
-                  {i + 1}
+                <Text variant="label" tone={u.previewRank && u.previewRank <= 3 ? 'xp' : 'muted'} weight="bold" tabular style={{ width: u.previewRank ? 24 : 66 }} align="center">
+                  {u.previewRank ?? 'غير مصنف'}
                 </Text>
                 <Avatar uri={u.avatar_url} name={u.full_name || u.username} size={30} />
                 <Row gap={2} style={{ flex: 1, justifyContent: 'flex-start' }}>

@@ -1,3 +1,4 @@
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
 import { profilePath } from '@/services/profileLinks';
 import { requestSignIn } from '@/services/webAccess';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -87,7 +88,7 @@ export function SnippetComments({ snippetId, count, onCount, adapter=codeAdapter
       {!c.deleted_at && <Pressable accessibilityRole="link" accessibilityLabel={`ملف ${name(c)}`} onPress={() => router.push(c.user_id === userId ? '/profile' : profilePath(c.user_id!,c.profiles?.username) as any)}><Avatar uri={c.profiles?.avatar_url} name={name(c)} size={32} /></Pressable>}
       <Col gap={6} flex={1} style={{ minWidth: 0 }}>
         {c.deleted_at ? <Text variant="bodySm" tone="muted">{c.unavailable?'التعليق غير متاح':'حُذف هذا التعليق'}</Text> : <>
-          <Row gap={8} wrap><Text variant="label" weight="semibold" style={{ flexShrink: 1 }}>{name(c)}</Text><Text variant="caption" tone="muted">{timeAgo(new Date(c.created_at))}{c.edited_at ? ' · تم التعديل' : ''}</Text></Row>
+          <Row gap={8} wrap><Text variant="label" weight="semibold" style={{ flexShrink: 1 }}>{name(c)}</Text><VerifiedBadge verified={!c.deleted_at && c.profiles?.is_verified} size={13}/><Text variant="caption" tone="muted">{timeAgo(new Date(c.created_at))}{c.edited_at ? ' · تم التعديل' : ''}</Text></Row>
           <CommentContent content={c.content} />
           {solution?.id===c.id&&<Surface variant="success" padding={8}><Text variant="label" tone="success">✓ الحل المختار</Text></Surface>}
           <Row gap={4} wrap>

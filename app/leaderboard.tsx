@@ -27,7 +27,7 @@ export default function LeaderboardScreen() {
   const request=useRef(0);
   const load = useCallback(async () => {
     const version=++request.current;
-    let q = supabase.from('profiles').select('id, full_name, username, avatar_url, xp, province, is_verified').order('xp', { ascending: false }).limit(50);
+    let q = supabase.from('profiles').select('id, full_name, username, avatar_url, xp, province, is_verified').order('xp', { ascending: false, nullsFirst: false }).order('id', { ascending: true }).limit(50);
     if (province) q = q.eq('province', province);
     const { data, error: err } = await q;
     if(version!==request.current)return;

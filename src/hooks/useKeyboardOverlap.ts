@@ -9,6 +9,7 @@
  */
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Keyboard, Platform, type View } from 'react-native';
+import { keyboardOverlapForFrame } from '@/utils/keyboardGeometry';
 
 export function useKeyboardOverlap(targetRef: RefObject<View | null>): number {
   const [overlap, setOverlap] = useState(0);
@@ -16,24 +17,30 @@ export function useKeyboardOverlap(targetRef: RefObject<View | null>): number {
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const measure = () => {
       const screenY = lastScreenY.current;
       if (screenY == null) return;
       targetRef.current?.measureInWindow((_x, y, _w, h) => {
-        setOverlap(Math.max(0, Math.round(y + h - screenY)));
+        if (alive && lastScreenY.current === screenY) setOverlap(keyboardOverlapForFrame(y, h, screenY));
       });
     };
     const show = Keyboard.addListener('keyboardDidShow', (e) => {
       lastScreenY.current = e.endCoordinates.screenY;
       measure();
       // إعادة القياس بعد استقرار التخطيط (بعض الأجهزة تغيّر حجم النافذة بعد الحدث)
-      setTimeout(measure, 150);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(measure, 150);
     });
     const hide = Keyboard.addListener('keyboardDidHide', () => {
       lastScreenY.current = null;
+      if (timer) clearTimeout(timer);
       setOverlap(0);
     });
     return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
       show.remove();
       hide.remove();
     };

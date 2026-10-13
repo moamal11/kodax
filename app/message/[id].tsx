@@ -15,6 +15,7 @@ import { getConversationDetail, sendMessage, markMessagesAsRead, subscribeToMess
 import { blockUser, unblockUser, isUserBlocked } from '@/services/codeFeedService';
 import ReportUserSheet from '@/components/social/ReportUserSheet';
 import VerifiedBadge from '@/components/ui/VerifiedBadge';
+import { useKeyboardOverlap } from '@/hooks/useKeyboardOverlap';
 import { SharedMessageCard } from '@/features/community/SharedMessageCard';
 import { showToast } from '@/components/ui/Toast';
 import { Screen, AppBar, Text, Row, Col, Avatar, IconButton, Button, Field, Sheet, ListGroup, ListRow, Surface, EmptyState, ErrorState, ListSkeleton, useTheme } from '@/design';
@@ -33,6 +34,8 @@ function dayLabel(iso: string) {
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('ar-IQ-u-nu-latn', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Baghdad' });
 
 export default function ConversationScreen() {
+  const keyboardRoot = useRef<View>(null);
+  const keyboardOverlap = useKeyboardOverlap(keyboardRoot);
   const t = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -192,7 +195,8 @@ export default function ConversationScreen() {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: t.colors.bg }}>
+    <View ref={keyboardRoot} style={{ flex: 1, backgroundColor: t.colors.bg }}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, paddingBottom: keyboardOverlap }}>
       <Screen
         header={header}
         width="reading"
@@ -220,6 +224,9 @@ export default function ConversationScreen() {
       >
         <FlatList
           ref={listRef}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
           data={rows}
           keyExtractor={(r) => r.key}
           contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 12, flexGrow: 1 }}
@@ -356,5 +363,6 @@ export default function ConversationScreen() {
         <ReportUserSheet visible onClose={() => setReport(null)} userId={other.id} userName={name} messageId={report.messageId} messagePreview={report.preview} hideBlock={blocked} onBlocked={() => setBlocked(true)} />
       )}
     </KeyboardAvoidingView>
+    </View>
   );
 }

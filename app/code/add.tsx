@@ -69,6 +69,7 @@ const PUBLISH_RULES = [
   'المحتوى المخالف يُخفى بعد البلاغات وقد يُحذف.',
 ];
 import { executeCode } from '@/services/codeExecution';
+import { needsEditorInput, needsNodeInputRuntime, promptFromInput, definesPrompt, codeWithPromptInput } from '@/services/editorInput';
 import { WebView } from 'react-native-webview';
 import MobileWebEditor, { type MobileWebEditorRef } from '@/components/editor/MobileWebEditor';
 
@@ -1406,7 +1407,13 @@ export default function AddCodeScreen() {
   // Run / Preview
   const [showRunPanel, setShowRunPanel] = useState(false);
   const [runOutput, setRunOutput] = useState('');
+  const [runInput, setRunInput] = useState('');
+  const [inputReady, setInputReady] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const [runBusy, setRunBusy] = useState(false);
+  const runBusyRef = useRef(false);
   const [showWebPreview, setShowWebPreview] = useState(false);
+  useEffect(() => { setInputReady(false); }, [language]);
 
   // Publish dialog
   const [showPublish, setShowPublish] = useState(false);
@@ -1559,19 +1566,23 @@ export default function AddCodeScreen() {
   }, [code, mode, projectFiles]);
 
   // ===== Run / Execute =====
-  const handleRun = useCallback(async () => {
+  const runWithInput = useCallback(async (stdin: string) => {
     if (mode === 'project') {
       // Show web preview for project mode
       setShowWebPreview(true);
       haptic('medium');
       return;
     }
+    if (runBusyRef.current) return;
+    runBusyRef.current = true;
+    setRunBusy(true);
+    Keyboard.dismiss();
     // For snippet mode: execute code
     setShowRunPanel(true);
     haptic('medium');
     try {
       const lang = activeLang;
-      if (lang === 'javascript' || lang === 'typescript' || lang === 'react') {
+      if ((lang === 'javascript' || lang === 'react') && !needsNodeInputRuntime(code)) {
         // Client-side execution for JS/TS/React
         const logs: string[] = [];
         const fakeConsole = {
@@ -1586,8 +1597,9 @@ export default function AddCodeScreen() {
           .replace(/console\.warn/g, '__c.warn')
           .replace(/console\.info/g, '__c.info');
         try {
-          const fn = new Function('__c', safeCode);
-          const result = fn(fakeConsole);
+          const result = definesPrompt(code)
+            ? new Function('__c', safeCode)(fakeConsole)
+            : new Function('__c', 'prompt', safeCode)(fakeConsole, promptFromInput(stdin));
           if (result !== undefined && logs.length === 0) {
             logs.push('→ ' + String(result));
           }
@@ -1600,10 +1612,10 @@ export default function AddCodeScreen() {
         setShowRunPanel(false);
         setShowWebPreview(true);
       } else {
-        // Execute via Piston API for all other languages
+        // Execute supported languages via Wandbox, supplying the complete stdin.
         setRunOutput('جاري تنفيذ الكود...');
         try {
-          const result = await executeCode({ language: lang, code });
+          const result = await executeCode({ language: lang, code: ['javascript', 'typescript'].includes(lang) ? codeWithPromptInput(code, stdin, lang) : code, input: stdin });
           if (result.success) {
             const output = result.output?.trim();
             setRunOutput(output ? `[نجاح] النتيجة:\n${output}` : '[نجاح] تم التنفيذ بنجاح (لا يوجد إخراج)');
@@ -1616,8 +1628,20 @@ export default function AddCodeScreen() {
       }
     } catch (e: any) {
       setRunOutput('[خطأ] خطأ: ' + (e.message || String(e)));
+    } finally {
+      runBusyRef.current = false;
+      setRunBusy(false);
     }
   }, [code, mode, activeLang, projectFiles, selectedLang.full]);
+
+  const handleRun = useCallback(() => {
+    if (mode !== 'project' && activeLang !== 'html' && needsEditorInput(code) && !inputReady) {
+      Keyboard.dismiss();
+      setShowInput(true);
+      return;
+    }
+    void runWithInput(runInput);
+  }, [mode, activeLang, code, inputReady, runInput, runWithInput]);
 
   // Build web preview HTML
   const webPreviewHtml = useMemo(() => {
@@ -1761,7 +1785,9 @@ export default function AddCodeScreen() {
                 variant="success"
                 size="sm"
                 onPress={handleRun}
+                loading={runBusy}
               />
+              {mode !== 'project' && activeLang !== 'html' && <IconButton icon="terminal-outline" label="مدخلات التشغيل" onPress={() => { Keyboard.dismiss(); setShowInput(true); }} disabled={runBusy} />}
               <Button label={isOwnerEdit ? 'تحديث' : 'نشر'} size="sm" onPress={() => setShowPublish(true)} />
             </Row>
           </View>
@@ -1915,6 +1941,11 @@ export default function AddCodeScreen() {
         </View>
 
         {/* ===== RUN OUTPUT ===== */}
+        <Sheet visible={showInput} onClose={() => setShowInput(false)} title="مدخلات التشغيل" maxWidth={640}
+          footer={<Row gap={8}><Button label="شغّل بالمدخلات" icon="play" loading={runBusy} onPress={() => { setInputReady(true); setShowInput(false); void runWithInput(runInput); }} style={{flex:1}}/><Button label="إلغاء" variant="ghost" onPress={() => setShowInput(false)}/></Row>}>
+          <Field label="البيانات التي يقرأها الكود" placeholder={'أحمد\n25'} value={runInput} onChangeText={setRunInput} multiline minHeight={120} maxLength={20000} />
+          <DText variant="bodySm" tone="secondary">اكتب القيم بالترتيب الذي يطلبه كودك؛ كل قيمة بسطر أو افصلها بمسافات حسب طريقة القراءة.</DText>
+        </Sheet>
         <Sheet
           visible={showRunPanel}
           onClose={() => setShowRunPanel(false)}
@@ -1922,6 +1953,7 @@ export default function AddCodeScreen() {
           maxWidth={640}
           footer={
             <Row gap={8}>
+              <Button label="المدخلات" icon="terminal-outline" variant="ghost" disabled={runBusy} onPress={() => { setShowRunPanel(false); setShowInput(true); }} />
               <Button
                 label="شغّل مجدداً"
                 icon="refresh"
@@ -1931,6 +1963,7 @@ export default function AddCodeScreen() {
                   setTimeout(handleRun, 200);
                 }}
                 style={{ flex: 1 }}
+                disabled={runBusy}
               />
               <Button label="إغلاق" variant="ghost" onPress={() => setShowRunPanel(false)} />
             </Row>
