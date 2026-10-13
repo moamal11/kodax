@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
 import { handleChat, clearMemoryCache, callGroq, violatesTeachingMode, groqTransformationOnly } from '../../supabase/functions/ai-chat/core';
-import { callOpenAI } from '../../supabase/functions/ai-chat/openai';
+import { callOpenAI, configuredOpenAISpendCap } from '../../supabase/functions/ai-chat/openai';
 import { clearProviderCooldowns, routeProviders, retryAfterMs, type ProviderResult } from '../../supabase/functions/ai-chat/routing';
 
 async function main() {
   let checks = 0;
+  assert.equal(configuredOpenAISpendCap(), null);
+  assert.equal(configuredOpenAISpendCap(''), null);
+  assert.equal(configuredOpenAISpendCap('5000000'), 5000000);
+  assert.equal(configuredOpenAISpendCap('bad'), 0);
+  checks++;
   assert(violatesTeachingMode('استخدم `text[::-1]`', 'challenge-hint'));
   assert(!violatesTeachingMode('```python\nprint(x)\n```', 'challenge-debug'));
   assert(!violatesTeachingMode('فكّر في اتجاه المرور على حروف النص.', 'challenge-hint'));

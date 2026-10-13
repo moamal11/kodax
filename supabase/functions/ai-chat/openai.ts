@@ -1,6 +1,12 @@
 import { retryAfterMs, type ProviderResult } from './routing.ts';
 
 export const OPENAI_MODEL = 'gpt-5.4-mini';
+/** No app spending ceiling unless the operator explicitly configures one. */
+export function configuredOpenAISpendCap(value?: string): number | null {
+  if (!value?.trim()) return null;
+  const cap = Number(value);
+  return Number.isSafeInteger(cap) && cap > 0 ? cap : 0;
+}
 export type SpendGuard = {
   reserve: (microUsd: number) => Promise<string | null>;
   settle: (id: string, microUsd: number) => Promise<void>;

@@ -12,6 +12,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 // @ts-ignore: Deno runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleChat, CACHE_TTL_HOURS } from './core.ts';
+import { configuredOpenAISpendCap } from './openai.ts';
 import { mergeLiveConfig, type LiveConfig } from './kodax-facts.ts';
 import type { QuotaState, UserSnapshot } from './smart.ts';
 
@@ -138,8 +139,7 @@ Deno.serve(async (req) => {
           reserve: async (microUsd) => {
             // Fail closed: no paid call if the shared reservation fails.
             // @ts-ignore: Deno runtime
-            const configured = Number(Deno.env.get('OPENAI_SPEND_CAP_MICRO_USD') || '100000');
-            const cap = Number.isSafeInteger(configured) && configured > 0 ? Math.min(configured, 2500000) : 0;
+            const cap = configuredOpenAISpendCap(Deno.env.get('OPENAI_SPEND_CAP_MICRO_USD'));
             const { data, error } = await admin.rpc('ai_provider_spend_reserve', { p_micro_usd: microUsd, p_cap_micro_usd: cap });
             if (error) throw error;
             return typeof data === 'string' ? data : null;
