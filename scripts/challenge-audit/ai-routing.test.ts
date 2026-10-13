@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { handleChat, clearMemoryCache, callGroq, violatesTeachingMode } from '../../supabase/functions/ai-chat/core';
+import { handleChat, clearMemoryCache, callGroq, violatesTeachingMode, groqTransformationOnly } from '../../supabase/functions/ai-chat/core';
+import { callOpenAI } from '../../supabase/functions/ai-chat/openai';
 import { clearProviderCooldowns, routeProviders, retryAfterMs, type ProviderResult } from '../../supabase/functions/ai-chat/routing';
 
 async function main() {
@@ -7,6 +8,12 @@ async function main() {
   assert(violatesTeachingMode('استخدم `text[::-1]`', 'challenge-hint'));
   assert(!violatesTeachingMode('```python\nprint(x)\n```', 'challenge-debug'));
   assert(!violatesTeachingMode('فكّر في اتجاه المرور على حروف النص.', 'challenge-hint'));
+  checks++;
+  assert(groqTransformationOnly('اختصر النص: نرحب بكم في المجتمع ونشكركم على المشاركة', 'general', []));
+  for (const [text, mode] of [['اختصر كود Python', 'general'], ['اشرح null', 'general'], ['اختصر النص', 'challenge-hint']]) {
+    assert(!groqTransformationOnly(text, mode, []));
+  }
+  assert(!groqTransformationOnly('اختصر النص', 'general', [{ role: 'user', content: 'code' }]));
   checks++;
   const ok = { ok: true, text: 'جواب صحيح', model: 'test', tokensUsed: 10 } as const;
   for (const simple of [true, false]) {
@@ -49,7 +56,8 @@ async function main() {
     clearMemoryCache(); clearProviderCooldowns();
     let reserves = 0, releases = 0; const requests: any[] = [];
     const result = await handleChat({
-      getUser: async () => ({ id: 'qa' }), apiKey: 'gemini-secret', groqApiKey: 'groq-secret', routingEnabled: true,
+      getUser: async () => ({ id: 'qa' }), apiKey: 'gemini-secret', groqApiKey: 'groq-secret', openaiApiKey: 'openai-secret', routingEnabled: true,
+      openaiSpend: { reserve: async () => 'hold', settle: async () => {} },
       reserveQuota: async () => { reserves++; return { allowed: true, quota: null }; },
       releaseQuota: async () => { releases++; return null; },
       fetchImpl: (async (url, init) => {
@@ -57,16 +65,17 @@ async function main() {
         if (String(url).includes('googleapis') || bothFail) return new Response('{}', { status: 503 });
         return Response.json({ choices: [{ message: { content: 'استخدم return text[::-1] لعكس النص.' } }], usage: { total_tokens: 55 } });
       }) as typeof fetch,
-    }, { message: 'صحح def reverse(text): return text', mode: 'challenge-debug', context: 'نص Unicode',
+    }, { message: 'اشرح كيف تعمل النصوص', mode: 'lesson-explain', context: 'نص Unicode',
       history: [{ role: 'user', content: 'أريد عكس النص' }, { role: 'assistant', content: 'أرسل الدالة' }] });
     assert.equal(reserves, 1); assert.equal(releases, bothFail ? 1 : 0);
     assert.equal(result.status, bothFail ? 502 : 200); assert.equal(requests.length, 2);
     if (!bothFail) {
-      assert.equal(result.body.source, 'gemini'); assert.equal(result.body.provider, 'groq');
+      assert.equal(result.body.source, 'gemini'); assert.equal(result.body.provider, 'openai');
       assert(requests[1].body.messages[0].content.includes('Unicode'));
       assert(requests[1].body.messages.some((m: any) => m.content === 'أرسل الدالة'));
-      assert.equal(requests[1].body.include_reasoning, false);
+      assert.equal(requests[1].body.reasoning_effort, 'none');
     }
+    assert(!requests.some(r => String(r.url).includes('groq')));
     checks++;
   }
   clearProviderCooldowns(); clearMemoryCache();
@@ -83,6 +92,33 @@ async function main() {
     { choices: [{ message: { content: 'x', refusal: 'no' } }] }]) {
     const result = await callGroq({ message: 'x', apiKey: 'q', fetchImpl: (async () => Response.json(payload)) as typeof fetch });
     assert(!result.ok); checks++;
+  }
+  let paidCalls = 0;
+  const denied = await callOpenAI({ apiKey: 'secret', messages: [{ role: 'user', content: 'hi' }], maxTokens: 20, timeoutMs: 1000,
+    spend: { reserve: async () => null, settle: async () => {} }, fetchImpl: (async () => { paidCalls++; return Response.json({}); }) as typeof fetch });
+  assert(!denied.ok); assert.equal(paidCalls, 0); checks++;
+  let charged = -1;
+  const paid = await callOpenAI({ apiKey: 'secret', messages: [{ role: 'user', content: 'hi' }], maxTokens: 20, timeoutMs: 1000,
+    spend: { reserve: async () => 'id', settle: async (_id, cost) => { charged = cost; } },
+    fetchImpl: (async () => Response.json({ choices: [{ message: { content: 'جواب' } }], usage: { prompt_tokens: 100, completion_tokens: 10, total_tokens: 110 } })) as typeof fetch });
+  assert(paid.ok); assert.equal(charged, 120); checks++;
+  for (const mode of ['challenge-hint', 'challenge-debug', 'lesson-explain', 'challenge-fix']) {
+    clearMemoryCache(); clearProviderCooldowns();
+    const urls: string[] = []; let released = 0;
+    const r = await handleChat({ getUser: async () => ({ id: 'qa' }), apiKey: 'g', groqApiKey: 'q', openaiApiKey: 'o', routingEnabled: true,
+      openaiSpend: { reserve: async () => 'hold', settle: async () => {} },
+      reserveQuota: async () => ({ allowed: true }), releaseQuota: async () => { released++; return null; },
+      fetchImpl: (async url => { urls.push(String(url)); return new Response('{}', { status: 503 }); }) as typeof fetch,
+    }, { message: 'صحح def add(a,b): return str(a)+str(b)', mode });
+    assert.equal(r.status,502); assert.equal(released,1); assert.equal(urls.length,2);
+    assert(!urls.some(u=>u.includes('groq'))); checks++;
+  }
+  for (const status of [401,429,503]) {
+    let settlement: number | null = null;
+    await callOpenAI({ apiKey: 'o', messages: [{ role: 'user', content: 'hi' }], maxTokens: 20, timeoutMs: 1000,
+      spend: { reserve: async () => 'id', settle: async (_id,cost) => { settlement = cost; } },
+      fetchImpl: (async () => Response.json({ error: { code: status === 401 ? 'invalid_api_key' : 'insufficient_quota' } }, { status })) as typeof fetch });
+    assert.equal(settlement, status === 503 ? null : 0); checks++;
   }
   console.log(`${checks} routing checks passed`);
 }

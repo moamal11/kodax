@@ -1,9 +1,9 @@
 /** Server-only routing. Cooldowns are per warm worker, not a global quota ledger. */
-export type Provider = 'gemini' | 'groq';
-export type ProviderAttempt = { provider: Provider; ok: boolean; status?: number; reason?: string };
+export type Provider = 'gemini' | 'groq' | 'openai';
+export type ProviderAttempt = { provider: Provider; ok: boolean; status?: number; reason?: string; errorCode?: string };
 export type ProviderResult =
   | { ok: true; text: string; tokensUsed: number; model: string; provider?: Provider; attempts?: ProviderAttempt[] }
-  | { ok: false; reason: 'rate_limited' | 'provider_error' | 'timeout' | 'network' | 'empty' | 'blocked'; status?: number; retryAfterMs?: number; attempts?: ProviderAttempt[] };
+  | { ok: false; reason: 'rate_limited' | 'provider_error' | 'timeout' | 'network' | 'empty' | 'blocked'; status?: number; errorCode?: string; retryAfterMs?: number; attempts?: ProviderAttempt[] };
 
 export const ROUTING_BUDGET_MS = 45_000;
 const cooldowns = new Map<string, number>();
@@ -18,12 +18,13 @@ export function retryAfterMs(value: string | null): number | undefined {
 export async function routeProviders(options: {
   simple: boolean;
   groqFirst?: boolean;
+  order?: Provider[];
   attempts: Partial<Record<Provider, { key: string; call: (timeoutMs: number) => Promise<ProviderResult> }>>;
   now?: () => number;
 }): Promise<ProviderResult> {
   const now = options.now ?? Date.now;
   const deadline = now() + ROUTING_BUDGET_MS;
-  const order: Provider[] = options.simple || options.groqFirst ? ['groq', 'gemini'] : ['gemini', 'groq'];
+  const order: Provider[] = options.order ?? (options.simple || options.groqFirst ? ['groq', 'gemini'] : ['gemini', 'groq']);
   let last: ProviderResult = { ok: false, reason: 'rate_limited' };
   const attempts: ProviderAttempt[] = [];
   for (const provider of order) {
@@ -34,7 +35,7 @@ export async function routeProviders(options: {
     // Leave time for the other provider, including response body consumption.
     const timeoutMs = Math.min(remaining, options.simple ? 12_000 : 25_000);
     const result = await attempt.call(timeoutMs);
-    attempts.push({ provider, ok: result.ok, ...(!result.ok ? { status: result.status, reason: result.reason } : {}) });
+    attempts.push({ provider, ok: result.ok, ...(!result.ok ? { status: result.status, reason: result.reason, errorCode: result.errorCode } : {}) });
     if (result.ok) { cooldowns.delete(attempt.key); return { ...result, provider, attempts }; }
     last = result;
     // Safety refusals must not be routed around.

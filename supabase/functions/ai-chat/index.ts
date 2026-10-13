@@ -132,6 +132,23 @@ Deno.serve(async (req) => {
         apiKey: Deno.env.get('GEMINI_API_KEY'),
         // @ts-ignore: Deno runtime
         groqApiKey: Deno.env.get('GROQ_API_KEY'),
+        // @ts-ignore: Deno runtime
+        openaiApiKey: Deno.env.get('OPENAI_API_KEY'),
+        openaiSpend: {
+          reserve: async (microUsd) => {
+            // Fail closed: no paid call if the shared reservation fails.
+            // @ts-ignore: Deno runtime
+            const configured = Number(Deno.env.get('OPENAI_SPEND_CAP_MICRO_USD') || '100000');
+            const cap = Number.isSafeInteger(configured) && configured > 0 ? Math.min(configured, 2500000) : 0;
+            const { data, error } = await admin.rpc('ai_provider_spend_reserve', { p_micro_usd: microUsd, p_cap_micro_usd: cap });
+            if (error) throw error;
+            return typeof data === 'string' ? data : null;
+          },
+          settle: async (id, microUsd) => {
+            const { error } = await admin.rpc('ai_provider_spend_settle', { p_id: id, p_micro_usd: microUsd });
+            if (error) throw error;
+          },
+        },
         // Explicit rollout switch: existing Gemini behavior until validated.
         // @ts-ignore: Deno runtime
         routingEnabled: Deno.env.get('AI_ROUTING_ENABLED') === 'true',
@@ -139,6 +156,8 @@ Deno.serve(async (req) => {
         routingTestUserIds: (Deno.env.get('AI_ROUTING_TEST_USER_IDS') || '').split(',').filter(Boolean),
         // @ts-ignore: Deno runtime
         routingTestGroqFirst: Deno.env.get('AI_ROUTING_TEST_GROQ_FIRST') === 'true',
+        // @ts-ignore: Deno runtime
+        routingTestOpenAIFirst: Deno.env.get('AI_ROUTING_TEST_OPENAI_FIRST') === 'true',
         groqModels: {
           // @ts-ignore: Deno runtime
           model: Deno.env.get('GROQ_MODEL') || undefined,

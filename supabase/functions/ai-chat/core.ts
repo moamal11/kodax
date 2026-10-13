@@ -8,7 +8,7 @@
  *   2) Cache للأسئلة العامة فقط (لا بيانات شخصية، لا كود، لا سياق محادثة) — لا يستهلك الحصة.
  *   3) حجز طلب من حصة Gemini (ai_quota_reserve على السيرفر) — يُرجع إذا فشل Gemini.
  *   4) Retrieval: الجزء المرتبط بالسؤال فقط من معرفة Kodax (knowledge.ts).
- *   5) Gemini مع آخر رسائل المحادثة (حتى لا يرحّب ويعيد المقدمات في كل رسالة).
+ *   5) اختيار مزوّد ضمن المسموح للمهمة، مع نفس آخر رسائل المحادثة والمعرفة.
  *   6) تنظيف الرد من المقدمات الفارغة + منع تسريب التعليمات الداخلية، ثم الـcache إن كان آمناً.
  */
 import { KNOWLEDGE_JSON } from './knowledge.generated.ts';
@@ -17,6 +17,7 @@ import { SmartResponder, type QuotaState, type UserSnapshot } from './smart.ts';
 import { DEFAULT_LIVE_CONFIG, type LiveConfig } from './kodax-facts.ts';
 import { normalize, looksLikeCode } from './text.ts';
 import { routeProviders, retryAfterMs, type ProviderResult } from './routing.ts';
+import { callOpenAI, OPENAI_MODEL, type SpendGuard } from './openai.ts';
 
 // الحد الأقصى لطول الرسالة (حماية التكلفة)
 export const MAX_MESSAGE_CHARS = 12000;
@@ -109,6 +110,13 @@ export function classifyQuestion(
   if (wordCount > 80 || hasCode) return 'advanced';
   if (advancedKeywords.some((kw) => lowerMessage.includes(kw))) return 'advanced';
   return 'simple';
+}
+
+/** Groq is restricted to isolated text transformations, never teaching/coding. */
+export function groqTransformationOnly(message: string, mode: string, history: HistoryItem[], context?: string): boolean {
+  if (mode !== 'general' || history.length || context || looksLikeCode(message)) return false;
+  if (!/^(?:اختصر|لخص|لخّص|أعد صياغة|اعد صياغة|رتب صياغة|summarize|rewrite)\b|^(?:اختصر|لخص|لخّص|أعد صياغة|اعد صياغة|رتب صياغة)\s/i.test(message.trim())) return false;
+  return !/(كود|برمج|درس|تحدي|اشرح|صحح|code|python|javascript|sql|c\+\+|debug|function)/i.test(message);
 }
 
 // ========================================
@@ -493,11 +501,14 @@ export interface ChatDeps {
   /** GEMINI_API_KEY من Supabase Secrets فقط */
   apiKey: string | undefined;
   groqApiKey?: string;
+  openaiApiKey?: string;
+  openaiSpend?: SpendGuard;
   groqModels?: GeminiModels;
   routingEnabled?: boolean;
   /** Server-controlled canary. Never accepted from the request body. */
   routingTestUserIds?: string[];
   routingTestGroqFirst?: boolean;
+  routingTestOpenAIFirst?: boolean;
   fetchImpl?: typeof fetch;
   /** اختياري: GEMINI_MODEL / GEMINI_MODEL_LITE من Secrets */
   models?: GeminiModels;
@@ -577,7 +588,7 @@ export async function handleChat(deps: ChatDeps, body: unknown): Promise<Reply> 
     };
   }
 
-  if (!deps.apiKey && !(routingEnabled && deps.groqApiKey)) return { status: 500, body: { error: 'Service configuration error' } };
+  if (!deps.apiKey && !(routingEnabled && (deps.groqApiKey || deps.openaiApiKey))) return { status: 500, body: { error: 'Service configuration error' } };
 
   // ===== 2) Cache =====
   const cacheable = isCacheable(message, modeStr, history, clientContext);
@@ -640,14 +651,30 @@ export async function handleChat(deps: ChatDeps, body: unknown): Promise<Reply> 
     models: deps.models,
   };
   const config = getModelConfig(classifyQuestion(message, modeStr), deps.models);
-  const ai = routingEnabled && deps.groqApiKey
+  const groqAllowed = groqTransformationOnly(message, modeStr, history, clientContext);
+  const complexity = classifyQuestion(message, modeStr);
+  const coding = looksLikeCode(message) || ['challenge-fix', 'challenge-debug', 'fix'].includes(modeStr);
+  const order = isRoutingTest && deps.routingTestOpenAIFirst ? ['openai', 'gemini'] as const
+    : groqAllowed ? ['groq', 'gemini', 'openai'] as const
+    : coding || complexity === 'advanced' ? ['openai', 'gemini'] as const : ['gemini', 'openai'] as const;
+  const ai = routingEnabled
     ? await routeProviders({
       simple: classifyQuestion(message, modeStr) === 'simple',
       groqFirst: isRoutingTest && deps.routingTestGroqFirst,
+      order: [...order],
       attempts: {
         ...(deps.apiKey ? { gemini: { key: `gemini:${config.model}`, call: (timeoutMs: number) => callGemini({ ...request, timeoutMs, validateTeachingMode: true }) } } : {}),
-        groq: { key: `groq:${getModelConfig(classifyQuestion(message, modeStr), { model: DEFAULT_GROQ_MODEL, lite: DEFAULT_GROQ_MODEL_LITE, ...deps.groqModels }).model}`,
-          call: (timeoutMs: number) => callGroq({ ...request, apiKey: deps.groqApiKey!, models: deps.groqModels, timeoutMs }) },
+        ...(groqAllowed && deps.groqApiKey ? { groq: { key: `groq:${getModelConfig(complexity, { model: DEFAULT_GROQ_MODEL, lite: DEFAULT_GROQ_MODEL_LITE, ...deps.groqModels }).model}`,
+          call: (timeoutMs: number) => callGroq({ ...request, apiKey: deps.groqApiKey!, models: deps.groqModels, timeoutMs }) } } : {}),
+        ...(deps.openaiApiKey && deps.openaiSpend ? { openai: { key: `openai:${OPENAI_MODEL}`,
+          call: async (timeoutMs: number): Promise<AIResult> => {
+            const result = await callOpenAI({ apiKey: deps.openaiApiKey!, timeoutMs, spend: deps.openaiSpend!, fetchImpl: deps.fetchImpl,
+              maxTokens: complexity === 'simple' ? 1024 : 2048,
+              messages: [{ role: 'system', content: [getSystemPrompt(complexity, modeStr, { continuation: history.length > 0, hasKnowledge: !!knowledgeText }), knowledgeText, clientContext].filter(Boolean).join('\n\n') },
+                ...history, { role: 'user', content: message }],
+            });
+            return result.ok && violatesTeachingMode(result.text, modeStr) ? { ok: false, reason: 'empty' } : result;
+          } } } : {}),
       },
     })
     : await callGemini(request);
@@ -657,13 +684,13 @@ export async function handleChat(deps: ChatDeps, body: unknown): Promise<Reply> 
     return {
       status: ai.reason === 'rate_limited' ? 503 : 502,
       body: { error: 'ai_unavailable', reason: ai.reason, message: AI_FAILURE_MESSAGES[ai.reason], quota: quota ?? null,
-        ...(isRoutingTest ? { providerStatus: ai.status } : {}) },
+        ...(isRoutingTest ? { providerStatus: ai.status, providerAttempts: ai.attempts } : {}) },
     };
   }
 
   // ===== 6) تنظيف + cache =====
   let reply = cleanReply(ai.text, history.length > 0);
-  if (leaksInternals(reply, deps.apiKey) || (deps.groqApiKey && leaksInternals(reply, deps.groqApiKey))) {
+  if (leaksInternals(reply, deps.apiKey) || (deps.groqApiKey && leaksInternals(reply, deps.groqApiKey)) || (deps.openaiApiKey && leaksInternals(reply, deps.openaiApiKey))) {
     console.warn('[ai-chat] reply withheld: looked like internal instructions');
     reply = 'ما أكدر أشارك تفاصيل الإعدادات الداخلية للمساعد. إذا عندك سؤال عن البرمجة أو عن Kodax، اسألني.';
   } else if (cacheKey && !usedLive) {
