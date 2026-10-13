@@ -54,6 +54,7 @@ import { progressService } from '@/services/progressService';
 import { hybridSyncService } from '@/services/hybridSyncService';
 import { clearBroadcastCache } from '@/services/broadcastService';
 import { isOAuthExchangeInProgress } from '@/services/deepLinkAuthService';
+import { useAppOpenTracking } from '@/hooks/useAppOpenTracking';
 
 // ===== Types =====
 
@@ -537,6 +538,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Key: isAuthenticated requires BOTH session AND profile verification
   const isAuthenticated = !!session?.user && profileVerified;
   const userId = isAuthenticated ? session!.user.id : undefined;
+  useAppOpenTracking(userId);
 
   const value = useMemo<AuthContextType>(
     () => ({
