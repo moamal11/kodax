@@ -1,10 +1,14 @@
-/** Local original-package release APK. No EAS build/upload/version mutation. */
+/** Local original-package release APK/AAB. No EAS build/upload/version mutation. */
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
+const bundleRelease = process.argv.includes('--aab');
+const appConfig = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8')).expo;
 const signing = JSON.parse(fs.readFileSync(path.join(root, '.env.android-signing.local'), 'utf8'));
+signing.version = appConfig.version;
+signing.versionCode = bundleRelease ? appConfig.android.versionCode : Math.max(signing.versionCode, appConfig.android.versionCode);
 const env = { ...process.env, KODAX_ANDROID_REVIEW: '0', KODAX_ANDROID_LOCAL: '0',
   KODAX_ANDROID_STANDALONE_APK: '1', KODAX_ANDROID_APK_VERSION_CODE: String(signing.versionCode),
   EXPO_NO_DOTENV: '1', NODE_ENV: 'production', CI: '1', NODE_OPTIONS: '--max-old-space-size=6144' };
@@ -60,18 +64,18 @@ env.KODAX_SIGNING_STORE_PASSWORD = signing.storePassword;
 env.KODAX_SIGNING_KEY_ALIAS = signing.keyAlias;
 env.KODAX_SIGNING_KEY_PASSWORD = signing.keyPassword;
 delete env.CI; // Expo embed ignores reset-cache under CI.
-execute(path.join(root, 'android/gradlew.bat'), [':app:assembleRelease', '-PreactNativeArchitectures=arm64-v8a,x86_64', '--no-daemon', '--max-workers=2', '--console=plain'], path.join(root, 'android'));
+execute(path.join(root, 'android/gradlew.bat'), [bundleRelease ? ':app:bundleRelease' : ':app:assembleRelease', bundleRelease ? '-PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64' : '-PreactNativeArchitectures=arm64-v8a,x86_64', '--no-daemon', '--max-workers=2', '--console=plain'], path.join(root, 'android'));
 const bundle = fs.readFileSync(path.join(root, 'android/app/build/generated/assets/createBundleReleaseJsAndAssets/index.android.bundle'));
 if (!bundle.includes(Buffer.from(new URL(env.EXPO_PUBLIC_SUPABASE_URL).host)) || bundle.includes(Buffer.from('http://127.0.0.1:54321'))) throw new Error('Incorrect embedded backend');
 const output = path.join(root, 'output/android-release');
 fs.mkdirSync(output, { recursive: true });
-const apk = path.join(output, `Kodax-${signing.version}-build${signing.versionCode}-20261010.apk`);
-const builtApk = path.join(root, 'android/app/build/outputs/apk/release/app-release.apk');
+const apk = path.join(output, `Kodax-${signing.version}-build${signing.versionCode}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}.${bundleRelease ? 'aab' : 'apk'}`);
+const builtApk = path.join(root, bundleRelease ? 'android/app/build/outputs/bundle/release/app-release.aab' : 'android/app/build/outputs/apk/release/app-release.apk');
 const quote = s => `'${s.replace(/'/g, "''")}'`;
 execute('powershell.exe', ['-NoProfile', '-Command', `Copy-Item -LiteralPath ${quote(builtApk)} -Destination ${quote(apk)} -Force`]);
 const metadata = { apk: path.basename(apk), createdAt: new Date().toISOString(), package: 'com.kodax.app', name: 'Kodax',
   version: signing.version, versionCode: signing.versionCode, sha256: crypto.createHash('sha256').update(fs.readFileSync(apk)).digest('hex'),
-  bytes: fs.statSync(apk).size, architectures: ['arm64-v8a', 'x86_64'], buildType: 'release', signing: signing.source,
+  bytes: fs.statSync(apk).size, architectures: bundleRelease ? ['armeabi-v7a','arm64-v8a','x86','x86_64'] : ['arm64-v8a', 'x86_64'], buildType: 'release', signing: signing.source,
   certificateSha256: signing.certificateSha256, firebase: true, otaEnabled: false, ads: 'production', backendHost: new URL(env.EXPO_PUBLIC_SUPABASE_URL).host };
-fs.writeFileSync(path.join(output, 'original-build.json'), JSON.stringify(metadata, null, 2));
+fs.writeFileSync(path.join(output, bundleRelease ? 'aab-build.json' : 'original-build.json'), JSON.stringify(metadata, null, 2));
 console.log(JSON.stringify(metadata, null, 2));

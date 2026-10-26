@@ -3,7 +3,7 @@
     "name": "Kodax",
     "slug": "kodax",
     "owner": "mo_nz",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "orientation": "portrait",
     "icon": "./assets/branding/kodax-symbol-white-on-purple.png",
     "userInterfaceStyle": "dark",
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "com.kodax.app",
-      "versionCode": 1,
+      "versionCode": 25,
       "permissions": [],
       "adaptiveIcon": {
         "foregroundImage": "./assets/branding/kodax-symbol-white-on-purple.png",
